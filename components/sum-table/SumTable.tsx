@@ -1,6 +1,7 @@
 'use client';
 import React, { useState } from "react";
 import "./styles/sum-table-styles.css";
+import { VerticalTextColumn } from "../VerticalTextColumn";
 
 const SumTable = ({
   columns,
@@ -64,53 +65,34 @@ const SumTable = ({
   };
 
   return (
-    <div className="ws-scoresheet flex border text-center text-sm sm:text-lg">
-      <div className="divide-y divide-gray-200 text-xs">
-        <div className="h-12"></div>
-        <div className="flex h-36 items-center justify-center whitespace-nowrap bg-green-200">
-          <div
-            className="w-full text-black"
-            style={{
-              writingMode: "vertical-lr",
-              textAlign: "center",
-              transform: "rotate(180deg)",
-            }}
-          >
-            Amount On Cards
-          </div>
-        </div>
-        <div className="flex h-36 items-center justify-center whitespace-nowrap bg-blue-200">
-          <div
-            className="w-full text-black"
-            style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
-          >
-            1 Point Each
-          </div>
-        </div>
-        <div className="h-12"></div>
+    <div className="flex text-center text-sm sm:text-lg">
+      <div className="text-xs border-b-2">
+        <div className="h-12 border-t-2 border-l-2"></div>
+        <VerticalTextColumn />
+        <div className="h-12 border-l-2 border-t-2"></div>
       </div>
-      <div className="divide-y divide-gray-200">
-        <div className="h-12"></div>
+      <div className="border-b-2">
+        <div className="h-12 border-t-2"></div>
         {rowHeaders.map((header, colIndex) => (
           <div
             key={colIndex}
-            className="flex h-12 items-center justify-center overflow-hidden p-2 sm:whitespace-nowrap"
+            className="h-12 flex border-t-2 items-center justify-center overflow-hidden p-2 sm:whitespace-nowrap"
           >
             <span className="text-xs sm:inline-block">{header.full}</span>
           </div>
         ))}
-        <div className="flex h-12 items-center justify-center overflow-hidden text-xs">
-          Total
+        <div className="h-12 flex border-t-2 items-center justify-center overflow-hidden text-xs">
+          <p>Total</p>
         </div>
       </div>
       <table
         id="sum-table"
-        className="w-full table-auto divide-y divide-gray-200 border-l text-center"
+        className="w-full text-center border-l-2 border-b-2 border-r-2"
       >
-        <thead className="text-gray-900">
-          <tr className="divide-x">
+        <thead>
+          <tr>
             {headerData.map((headerValue, colIndex) => (
-              <th key={colIndex} className="h-12">
+              <th key={colIndex} className="h-12 border-l-2 border-b-2 border-t-2">
                 <input
                   className="w-full text-center uppercase text-black sm:text-sm"
                   type="text"
@@ -124,9 +106,9 @@ const SumTable = ({
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-200">
+        <tbody className="divide-y-2">
           {tableData.map((row, rowIndex) => (
-            <tr className="h-12 divide-x" key={rowIndex}>
+            <tr className="h-12 divide-x-2" key={rowIndex}>
               {row.map((cellValue, colIndex) => (
                 <td
                   key={`${colIndex}-${rowIndex}`}
@@ -151,7 +133,7 @@ const SumTable = ({
               ))}
             </tr>
           ))}
-          <tr className="h-12 divide-x">
+          <tr className="divide-x-2">
             {Array(columns)
               .fill("")
               .map((_, colIndex) => (
