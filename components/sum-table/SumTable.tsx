@@ -92,13 +92,17 @@ const SumTable = ({
         <thead>
           <tr>
             {headerData.map((headerValue, colIndex) => (
-              <th key={colIndex} className="h-12 border-l-2 border-b-2 border-t-2">
+              <th
+                key={colIndex}
+                className="h-12 border-l-2 border-b-2 border-t-2"
+              >
                 <input
                   className="w-full text-center uppercase text-black sm:text-sm"
+                  placeholder={`Player ${colIndex + 1}`}
                   type="text"
                   value={headerValue}
-                  onChange={e => handleHeaderChange(e, colIndex)}
-                  onKeyDown={e => handleTableKeyDown(e, 0, colIndex, true)}
+                  onChange={(e) => handleHeaderChange(e, colIndex)}
+                  onKeyDown={(e) => handleTableKeyDown(e, 0, colIndex, true)}
                   id={`header-${colIndex}-0`}
                   maxLength={3}
                 />
@@ -118,13 +122,13 @@ const SumTable = ({
                     className="custom-number-input w-full text-center sm:text-sm"
                     type="text"
                     value={cellValue}
-                    onChange={e => handleInputChange(e, rowIndex, colIndex)}
+                    onChange={(e) => handleInputChange(e, rowIndex, colIndex)}
                     pattern="\d*"
                     inputMode="numeric"
                     min={0}
                     max={999}
                     step={1}
-                    onKeyDown={e =>
+                    onKeyDown={(e) =>
                       handleTableKeyDown(e, rowIndex, colIndex, false)
                     }
                     id={`input-${colIndex}-${rowIndex}`}
@@ -138,7 +142,7 @@ const SumTable = ({
               .fill("")
               .map((_, colIndex) => (
                 <td key={colIndex} className="text-sm font-semibold">
-                  {calculateSum(colIndex)}
+                  {calculateSum(colIndex) == 0 ? <></> : calculateSum(colIndex)}
                 </td>
               ))}
           </tr>

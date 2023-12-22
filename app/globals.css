@@ -6,4 +6,7 @@
   main {
     @apply h-screen flex flex-col justify-end p-2;
   }
+  input {
+    @apply placeholder:opacity-50 placeholder:capitalize focus:placeholder:invisible
+  }
 }

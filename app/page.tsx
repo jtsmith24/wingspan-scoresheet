@@ -1,7 +1,7 @@
 import SumTable from '@/components/sum-table/SumTable'
 
 export default function Home() {
-  const inputColumns = 6;
+  const inputColumns = 5;
   const inputRows = 6;
   const rowHeaders = [
     { full: "Birds", icon: "fas fa-feather", color: "text-green-500" },
