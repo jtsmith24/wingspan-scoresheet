@@ -93,7 +93,7 @@ const SumTable = ({
             {headerData.map((headerValue, colIndex) => (
               <th key={colIndex}>
                 <input
-                  className="text-center sm:text-sm"
+                  className="text-center uppercase sm:text-sm"
                   placeholder={`P${colIndex + 1}`}
                   type="text"
                   value={headerValue}
