@@ -4,9 +4,23 @@
 
 @layer base {
   main {
-    @apply h-screen flex flex-col justify-end p-2;
+    @apply h-screen flex flex-col justify-center bg-slate-800;
   }
+
   input {
-    @apply placeholder:opacity-50 placeholder:capitalize focus:placeholder:invisible
+    @apply w-full placeholder:opacity-50 placeholder:capitalize placeholder:text-xs 
+    placeholder:text-black bg-transparent 
+    focus:placeholder:invisible focus:outline-none;
+  }
+
+  tr {
+    @apply divide-x-2 divide-slate-500 border-t-2 border-slate-500;
+  }
+
+  th,
+  td,
+  .empty-cell,
+  .row-head {
+    @apply h-20 bg-amber-300 bg-opacity-95 text-black;
   }
 }
