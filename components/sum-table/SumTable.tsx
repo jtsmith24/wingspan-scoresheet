@@ -1,149 +1,357 @@
 "use client";
-import React, { useState } from "react";
+import React from "react";
 import "./styles/sum-table-styles.css";
-import { VerticalTextColumn } from "../VerticalTextColumn";
+import { ScoreIcon, ScoreIconName } from "../ScoreIcon";
+import { CurrentGame, playerHasData } from "@/lib/game";
+import { Move, nextCell } from "@/lib/gridNavigation";
+import {
+  categoriesFor,
+  CategoryId,
+  GROUP_LABELS,
+  Habitat,
+  HABITAT_LABELS,
+  HABITATS,
+  usesFriendlyNectarTies,
+} from "@/lib/rules";
+import {
+  describeTiebreak,
+  displayName,
+  isValidScoreInput,
+  parseScore,
+  PlayerSheet,
+  scoreGame,
+  scoreNectarHabitat,
+  summarize,
+} from "@/lib/scoring";
+
+const ICONS: Partial<Record<CategoryId | Habitat, ScoreIconName>> = {
+  birds: "bird",
+  bonus: "bonus",
+  goals: "goal",
+  eggs: "egg",
+  food: "food",
+  tucked: "tucked",
+  duet: "duet",
+  hummingbirds: "hummingbird",
+  forest: "forest",
+  grassland: "grassland",
+  wetland: "wetland",
+};
+
+/** One row of inputs on the sheet: a scoring category or a nectar habitat. */
+interface InputRow {
+  key: string;
+  label: string;
+  hint: string;
+  icon?: ScoreIconName;
+  group: string;
+  allowsNegative?: boolean;
+  value: (p: PlayerSheet) => string;
+  update: (p: PlayerSheet, value: string) => PlayerSheet;
+  /** Nectar points earned in this habitat, shown beside the count. */
+  points?: number[];
+}
+
+const KEY_MOVES: Record<string, Move> = {
+  ArrowUp: "up",
+  ArrowDown: "down",
+  ArrowLeft: "left",
+  ArrowRight: "right",
+};
+
+const sheetTitle = ({ config, players }: CurrentGame) => {
+  if (config.asia === "duet") return "Duet";
+  if (config.asia === "flock") return "Flock";
+  return players.length === 1 ? "Solo" : "Multiplayer";
+};
 
 const SumTable = ({
-  columns,
-  rows,
-  rowHeaders = [],
+  game,
+  onPlayersChange,
+  rememberedNames,
+  onAddPlayer,
+  onRemovePlayer,
 }: {
-  columns: number;
-  rows: number;
-  rowHeaders: Array<{ full: string; icon: string; color: string }>;
+  game: CurrentGame;
+  onPlayersChange: (players: PlayerSheet[]) => void;
+  rememberedNames: string[];
+  /** When set, the sheet gets a "+ Player" column. */
+  onAddPlayer?: () => void;
+  /** When set, each name gets a remove button. */
+  onRemovePlayer?: (col: number) => void;
 }) => {
-  const [tableData, setTableData] = useState(
-    Array.from({ length: rows }, () => Array(columns).fill(""))
-  );
-  const [headerData, setHeaderData] = useState(Array(columns).fill(""));
-  const handleInputChange = (e: any, rowIndex: number, colIndex: number) => {
-    if (!validateNumberInput(e.target.value)) return;
-    const newTableData = [...tableData];
-    newTableData[rowIndex][colIndex] = e.target.value;
-    setTableData(newTableData);
-  };
+  const { config, players } = game;
+  const { totals, outcome } = scoreGame(config, players);
+  const names = players.map(displayName);
 
-  const handleHeaderChange = (e: any, colIndex: number) => {
-    const newHeaderData = [...headerData];
-    newHeaderData[colIndex] = e.target.value;
-    setHeaderData(newHeaderData);
-  };
+  const rows: InputRow[] = categoriesFor(config)
+    .filter(c => c.id !== "nectar")
+    .map(c => ({
+      key: c.id,
+      label: c.label,
+      hint: c.hint,
+      icon: ICONS[c.id],
+      group: GROUP_LABELS[c.group],
+      allowsNegative: c.allowsNegative,
+      value: p => p.scores[c.id] ?? "",
+      update: (p, v) => ({ ...p, scores: { ...p.scores, [c.id]: v } }),
+    }));
 
-  const calculateSum = (colIndex: number) => {
-    return tableData.reduce(
-      (sum, row) => sum + (parseInt(row[colIndex]) || 0),
-      0
+  if (config.oceania) {
+    for (const habitat of HABITATS) {
+      rows.push({
+        key: `nectar-${habitat}`,
+        label: HABITAT_LABELS[habitat],
+        hint: `Nectar spent in the ${HABITAT_LABELS[habitat].toLowerCase()}`,
+        icon: ICONS[habitat],
+        group: `Nectar ${GROUP_LABELS.majority}`,
+        value: p => p.nectarSpent[habitat] ?? "",
+        update: (p, v) => ({
+          ...p,
+          nectarSpent: { ...p.nectarSpent, [habitat]: v },
+        }),
+        points: scoreNectarHabitat(
+          players.map(p => parseScore(p.nectarSpent[habitat])),
+          usesFriendlyNectarTies(config)
+        ),
+      });
+    }
+  }
+
+  // Unused food only matters when players are tied for the most points.
+  const showTiebreak = outcome.leaders.length > 1;
+  const tiebreakRow = rows.length;
+  const rowCount = showTiebreak ? rows.length + 1 : rows.length;
+  const isEnabled = (row: number, col: number) =>
+    row < tiebreakRow || outcome.leaders.includes(col);
+
+  const setPlayer = (col: number, next: PlayerSheet) =>
+    onPlayersChange(players.map((p, i) => (i === col ? next : p)));
+
+  const handleCellChange = (
+    value: string,
+    row: number,
+    col: number,
+    allowsNegative = false
+  ) => {
+    if (!isValidScoreInput(value, allowsNegative)) return;
+    const player = players[col];
+    setPlayer(
+      col,
+      row === tiebreakRow
+        ? { ...player, unusedFood: value }
+        : rows[row].update(player, value)
     );
   };
 
-  const validateNumberInput = (input: any) => {
-    const re = /^[0-9]+$/;
-    if (input === "" || (re.test(input) && input.length < 4)) {
-      return true;
-    }
-    return false;
+  const focus = (id: string) =>
+    (document.getElementById(id) as HTMLInputElement | null)?.focus();
+
+  const handleCellKeyDown = (
+    e: React.KeyboardEvent,
+    row: number,
+    col: number
+  ) => {
+    const move: Move | undefined =
+      e.key === "Enter" ? (e.shiftKey ? "up-wrap" : "down-wrap") : KEY_MOVES[e.key];
+    if (!move) return;
+    e.preventDefault();
+    const next = nextCell({ row, col }, move, rowCount, players.length, c =>
+      isEnabled(c.row, c.col)
+    );
+    if (next) focus(`cell-${next.row}-${next.col}`);
+    else if (row === 0 && (move === "up" || move === "up-wrap"))
+      focus(`name-${col}`);
   };
 
-  const handleTableKeyDown = (
-    e: any,
-    rowIndex: number,
-    colIndex: number,
-    isHeaderRow: boolean
-  ) => {
-    if (e.code === "Enter" || e.key === "Enter") {
+  const handleNameKeyDown = (e: React.KeyboardEvent, col: number) => {
+    if (e.key === "Enter" || e.key === "ArrowDown") {
       e.preventDefault();
-      const nextRowIndex = isHeaderRow ? 0 : rowIndex + 1;
-      if (nextRowIndex < tableData.length) {
-        const nextInput = document.querySelector(
-          `#input-${colIndex}-${nextRowIndex}`
-        ) as HTMLInputElement;
-        if (nextInput) {
-          nextInput.focus();
-        }
-      }
+      focus(`cell-0-${col}`);
     }
   };
+
+  const renderInput = (
+    value: string,
+    row: number,
+    col: number,
+    label: string,
+    allowsNegative?: boolean
+  ) => (
+    <input
+      className="score-input"
+      type="text"
+      value={value}
+      onChange={e => handleCellChange(e.target.value, row, col, allowsNegative)}
+      onKeyDown={e => handleCellKeyDown(e, row, col)}
+      onFocus={e => e.target.select()}
+      inputMode={allowsNegative ? "text" : "numeric"}
+      id={`cell-${row}-${col}`}
+      aria-label={`${label}, ${names[col]}`}
+      disabled={!isEnabled(row, col)}
+    />
+  );
+
+  const result = summarize(outcome, names);
+  const detail = describeTiebreak(
+    outcome,
+    names,
+    players.map(p => p.unusedFood)
+  );
+  const circled =
+    outcome.decision === "needs-food" || outcome.decision === "none"
+      ? []
+      : outcome.winners;
 
   return (
-    <div className="flex text-center text-sm sm:text-lg p-2 sm:p-32">
-      <div className="flex border-l-2 border-r-2 border-b-2 border-slate-500 drop-shadow-md">
-        <div className="text-xs">
-          <div className="empty-cell border-t-2 border-slate-500"></div>
-          <VerticalTextColumn />
-          <div className="empty-cell border-t-2 border-slate-500"></div>
-        </div>
-        <div>
-          <div className="empty-cell border-t-2 border-slate-500"></div>
-          {rowHeaders.map((header, colIndex) => (
-            <div
-              key={colIndex}
-              className="row-head border-t-2 border-slate-500 flex items-center justify-center overflow-hidden p-2 sm:whitespace-nowrap"
-            >
-              <span className="text-xs sm:inline-block">{header.full}</span>
-            </div>
-          ))}
-          <div className="row-head border-t-2 border-slate-500 flex items-center justify-center overflow-hidden text-xs">
-            <p>Total</p>
-          </div>
-        </div>
-      </div>
-      <table id="sum-table" className="w-full text-center border-2 border-l-0 border-slate-500">
-        <thead>
-          <tr className="border-t-2 border-slate-500">
-            {headerData.map((headerValue, colIndex) => (
-              <th key={colIndex}>
-                <input
-                  className="text-center uppercase sm:text-sm"
-                  placeholder={`P${colIndex + 1}`}
-                  type="text"
-                  value={headerValue}
-                  onChange={(e) => handleHeaderChange(e, colIndex)}
-                  onKeyDown={(e) => handleTableKeyDown(e, 0, colIndex, true)}
-                  id={`header-${colIndex}-0`}
-                  maxLength={3}
-                />
-              </th>
+    <div className="score-sheet">
+      <div className="sheet-scroll">
+        <table
+          id="sum-table"
+          style={{
+            minWidth: `calc(${onAddPlayer ? 11.5 : 9}rem + ${players.length * 3}rem)`,
+          }}
+        >
+          <colgroup>
+            <col className="group-col" />
+            <col className="label-col" />
+            {players.map(p => (
+              <col key={p.id} />
             ))}
-          </tr>
-        </thead>
-        <tbody>
-          {tableData.map((row, rowIndex) => (
-            <tr key={rowIndex}>
-              {row.map((cellValue, colIndex) => (
-                <td
-                  key={`${colIndex}-${rowIndex}`}
-                  className="whitespace-nowrap"
-                >
+            {onAddPlayer && <col className="add-col" />}
+          </colgroup>
+          <thead>
+            <tr>
+              <th colSpan={2} className="sheet-title hand-caps">
+                {sheetTitle(game)}
+              </th>
+              {players.map((player, col) => (
+                <th key={player.id} className="player-cell">
                   <input
-                    className="custom-number-input text-center sm:text-sm"
+                    className="player-input"
+                    placeholder={`P${col + 1}`}
                     type="text"
-                    value={cellValue}
-                    onChange={(e) => handleInputChange(e, rowIndex, colIndex)}
-                    pattern="\d*"
-                    inputMode="numeric"
-                    min={0}
-                    max={999}
-                    step={1}
-                    onKeyDown={(e) =>
-                      handleTableKeyDown(e, rowIndex, colIndex, false)
+                    value={player.name}
+                    onChange={e =>
+                      setPlayer(col, { ...player, name: e.target.value })
                     }
-                    id={`input-${colIndex}-${rowIndex}`}
+                    onKeyDown={e => handleNameKeyDown(e, col)}
+                    id={`name-${col}`}
+                    list="remembered-names"
+                    maxLength={3}
+                    autoComplete="off"
+                    aria-label={`Player ${col + 1} name`}
                   />
-                </td>
+                  {onRemovePlayer && (
+                    <button
+                      type="button"
+                      className="remove-player"
+                      onClick={() => onRemovePlayer(col)}
+                      aria-label={`Remove ${names[col]}`}
+                    >
+                      ×
+                    </button>
+                  )}
+                </th>
               ))}
+              {onAddPlayer && (
+                <th className="add-cell">
+                  <button
+                    type="button"
+                    className="add-player hand-caps"
+                    onClick={onAddPlayer}
+                  >
+                    +<span className="add-player-label"> Player</span>
+                  </button>
+                </th>
+              )}
             </tr>
-          ))}
-          <tr>
-            {Array(columns)
-              .fill("")
-              .map((_, colIndex) => (
-                <td key={colIndex} className="text-sm font-semibold">
-                  {calculateSum(colIndex) == 0 ? <></> : calculateSum(colIndex)}
+          </thead>
+          <tbody>
+            {rows.map((row, rowIndex) => {
+              const startsGroup =
+                rowIndex === 0 || rows[rowIndex - 1].group !== row.group;
+              return (
+                <tr key={row.key} className={startsGroup ? "group-start" : ""}>
+                  {startsGroup && (
+                    <th
+                      rowSpan={rows.filter(r => r.group === row.group).length}
+                      className="group-label hand-caps"
+                    >
+                      <span>{row.group}</span>
+                    </th>
+                  )}
+                  <th scope="row" className="row-label hand-caps" title={row.hint}>
+                    {row.icon && <ScoreIcon name={row.icon} />}
+                    <span>{row.label}</span>
+                  </th>
+                  {players.map((player, col) => (
+                    <td key={player.id} className="score-cell">
+                      {renderInput(
+                        row.value(player),
+                        rowIndex,
+                        col,
+                        row.label,
+                        row.allowsNegative
+                      )}
+                      {row.points && row.points[col] > 0 && (
+                        <span className="nectar-points" aria-hidden="true">
+                          +{row.points[col]}
+                        </span>
+                      )}
+                    </td>
+                  ))}
+                  {onAddPlayer && <td className="add-cell" />}
+                </tr>
+              );
+            })}
+            <tr className="total-row">
+              <th colSpan={2} scope="row" className="hand-caps">
+                Total
+              </th>
+              {totals.map((total, col) => (
+                <td key={players[col].id}>
+                  {playerHasData(players[col]) && (
+                    <span className={circled.includes(col) ? "leader" : ""}>
+                      {total}
+                    </span>
+                  )}
                 </td>
               ))}
-          </tr>
-        </tbody>
-      </table>
+              {onAddPlayer && <td className="add-cell" />}
+            </tr>
+            {showTiebreak && (
+              <tr className="tiebreak-row">
+                <th colSpan={2} scope="row" className="row-label hand-caps">
+                  <ScoreIcon name="food" />
+                  <span>Unused food</span>
+                  <small>Tiebreak</small>
+                </th>
+                {players.map((player, col) => (
+                  <td key={player.id} className="score-cell">
+                    {renderInput(player.unusedFood, tiebreakRow, col, "Unused food")}
+                  </td>
+                ))}
+                {onAddPlayer && <td className="add-cell" />}
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+      {outcome.decision !== "none" && (
+        <p className="sheet-result" aria-live="polite">
+          {result}
+          {outcome.decision === "needs-food" && (
+            <span> · enter unused food to break the tie</span>
+          )}
+          {detail && <span className="sheet-result-detail">{detail}</span>}
+        </p>
+      )}
+      <datalist id="remembered-names">
+        {rememberedNames.map(name => (
+          <option key={name} value={name} />
+        ))}
+      </datalist>
     </div>
   );
 };

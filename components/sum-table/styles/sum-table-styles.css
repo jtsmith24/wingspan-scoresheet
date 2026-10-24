@@ -1,5 +1,571 @@
-.custom-number-input::-webkit-inner-spin-button,
-.custom-number-input::-webkit-outer-spin-button {
+/* Card stock: paper tone, a faint wash in the edition's colors, and grain */
+.score-sheet {
+  position: relative;
+  width: 100%;
+  max-width: 46rem;
+  padding: 0.75rem;
+  border-radius: 0.6rem;
+  background-color: var(--paper);
+  background-image: radial-gradient(
+      ellipse at 0% 0%,
+      color-mix(in srgb, var(--wash-2) 55%, transparent) 0%,
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse at 100% 100%,
+      color-mix(in srgb, var(--wash-1) 40%, transparent) 0%,
+      transparent 55%
+    );
+  box-shadow: 0 1px 2px rgba(60, 45, 30, 0.15),
+    0 12px 32px -8px rgba(60, 45, 30, 0.35);
+  transition: background-image 0.4s;
+}
+
+.score-sheet::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0.35;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .38 0 0 0 0 .3 0 0 0 .5 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+#sum-table {
+  position: relative;
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  color: var(--ink);
+  border: 1.5px solid var(--ink);
+}
+
+#sum-table th,
+#sum-table td {
+  border: 1px solid var(--rule);
+  height: 3.25rem;
+  padding: 0;
+  text-align: center;
+}
+
+/* Header */
+.sheet-title {
+  text-align: left !important;
+  padding-left: 0.6rem !important;
+  font-size: 1.15rem;
+  letter-spacing: 0.04em;
+  border-bottom: 1.5px solid var(--ink) !important;
+}
+
+.player-cell {
+  border-bottom: 1.5px solid var(--ink) !important;
+}
+
+.player-input {
+  height: 100%;
+  text-align: center;
+  font-family: var(--font-hand);
+  font-size: 1.35rem;
+  text-transform: uppercase;
+  color: var(--pen);
+}
+
+.player-input::placeholder {
+  font-family: var(--font-label);
+  font-size: 1rem;
+  color: var(--ink);
+  opacity: 0.35;
+}
+
+.player-input:focus::placeholder {
+  opacity: 0;
+}
+
+/* Rotated group labels, as printed on the pad */
+#sum-table .group-col {
+  width: 1.9rem;
+}
+
+#sum-table .label-col {
+  width: 10.5rem;
+}
+
+#sum-table .group-label {
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  border-right: 1.5px solid var(--ink);
+}
+
+.group-label span {
+  display: inline-block;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+
+tr.group-start:not(:first-child) > * {
+  border-top: 1.5px solid var(--ink) !important;
+}
+
+.row-label {
+  font-weight: normal;
+  font-size: 1.05rem;
+  line-height: 1.05;
+  letter-spacing: 0.02em;
+  text-align: left !important;
+  padding: 0 0.5rem !important;
+}
+
+.row-label > * {
+  vertical-align: middle;
+}
+
+.score-icon {
+  display: inline-block;
+  width: 1.35rem;
+  height: 1.35rem;
+  margin-right: 0.4rem;
+  opacity: 0.8;
+}
+
+/* Handwritten entries */
+.score-cell {
+  transition: background-color 0.15s;
+}
+
+.score-cell:focus-within {
+  background-color: color-mix(in srgb, var(--wash-1) 30%, transparent);
+}
+
+.score-input {
+  height: 100%;
+  text-align: center;
+  font-family: var(--font-hand);
+  font-size: 1.6rem;
+  color: var(--pen);
+  caret-color: var(--pen);
+}
+
+.score-input::-webkit-inner-spin-button,
+.score-input::-webkit-outer-spin-button {
   -webkit-appearance: none;
   margin: 0;
+}
+
+/* Total */
+.total-row > * {
+  height: 3.75rem !important;
+  border-top: 3px double var(--ink) !important;
+}
+
+.total-row th {
+  font-size: 1.4rem;
+  letter-spacing: 0.12em;
+  font-weight: normal;
+}
+
+.total-row td {
+  font-family: var(--font-hand);
+  font-size: 1.75rem;
+  color: var(--pen);
+}
+
+/* The leader gets circled, the way players do it on paper */
+.leader {
+  position: relative;
+  display: inline-block;
+  padding: 0 0.35em;
+}
+
+.leader::after {
+  content: "";
+  position: absolute;
+  inset: -0.2em -0.3em;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 60' preserveAspectRatio='none'%3E%3Cpath d='M58 6C30 3 6 14 5 31s22 26 47 25 44-10 43-27S70 3 40 7' fill='none' stroke='%23283350' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E")
+    center / 100% 100% no-repeat;
+  pointer-events: none;
+}
+
+@media (max-width: 640px) {
+  .score-sheet {
+    padding: 0.5rem;
+  }
+  #sum-table .label-col {
+    width: 6.25rem;
+  }
+  #sum-table .group-col {
+    width: 1.5rem;
+  }
+  .row-label {
+    font-size: 0.85rem;
+    padding: 0 0.3rem !important;
+  }
+  .score-icon {
+    display: block;
+    width: 1.1rem;
+    height: 1.1rem;
+    margin: 0 0 0.15rem;
+  }
+  .sheet-title {
+    font-size: 0.95rem;
+    padding-left: 0.3rem !important;
+  }
+  .score-input {
+    font-size: 1.35rem;
+  }
+  .player-input {
+    font-size: 1.1rem;
+  }
+  .total-row th {
+    font-size: 1.1rem;
+  }
+  .total-row td {
+    font-size: 1.4rem;
+  }
+}
+
+/* Scorepad: tabs, sheet, actions */
+.scorepad {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  max-width: 46rem;
+}
+
+.sheet-scroll {
+  position: relative;
+  overflow-x: auto;
+}
+
+.score-cell {
+  position: relative;
+}
+
+.score-input:disabled {
+  cursor: default;
+}
+
+.score-cell:has(.score-input:disabled) {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent 0 6px,
+    color-mix(in srgb, var(--rule) 18%, transparent) 6px 7px
+  );
+}
+
+/* Points earned in a habitat, pencilled in the corner */
+.nectar-points {
+  position: absolute;
+  top: 0.15rem;
+  right: 0.3rem;
+  font-family: var(--font-hand);
+  font-size: 0.85rem;
+  color: var(--pen);
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.tiebreak-row > * {
+  border-top: 1px dashed var(--ink) !important;
+}
+
+.tiebreak-row th {
+  text-align: left !important;
+}
+
+.tiebreak-row small {
+  display: block;
+  margin-left: 1.75rem;
+  font-size: 0.75rem;
+  opacity: 0.6;
+}
+
+.sheet-result {
+  position: relative;
+  margin: 0.6rem 0.4rem 0.1rem;
+  font-family: var(--font-hand);
+  font-size: 1.25rem;
+  color: var(--pen);
+  text-align: center;
+}
+
+.sheet-result-detail {
+  display: block;
+  font-size: 1rem;
+  opacity: 0.75;
+}
+
+.sheet-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.ink-button {
+  padding: 0.3rem 1.2rem;
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  font-size: 1.1rem;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--paper) 70%, transparent);
+  transition: background-color 0.15s, opacity 0.15s;
+}
+
+.ink-button:hover:not(:disabled) {
+  background: var(--paper);
+}
+
+.ink-button-primary {
+  color: var(--paper);
+  background: var(--ink);
+}
+
+.ink-button-primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--ink) 85%, var(--paper));
+}
+
+.ink-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.history-count {
+  font-size: 1rem;
+  opacity: 0.65;
+}
+
+.storage-note {
+  max-width: 28rem;
+  font-family: var(--font-label);
+  text-align: center;
+  opacity: 0.75;
+}
+
+/* Expansion tabs */
+.sheet-with-tabs {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.text-link {
+  margin-left: 0.5rem;
+  border-bottom: 1.5px solid var(--ink);
+  font-family: var(--font-label);
+  color: var(--ink);
+}
+
+.expansion-tabs {
+  display: flex;
+  align-self: stretch;
+  align-items: flex-end;
+  gap: 0.3rem;
+  height: 2.4rem;
+  padding-left: 1rem;
+  margin-bottom: -0.7rem;
+}
+
+.tab-short {
+  display: none;
+}
+
+.expansion-tab {
+  --tone: #ccc;
+  display: flex;
+  flex-shrink: 0;
+  align-items: baseline;
+  gap: 0.35rem;
+  padding: 0.25rem 0.8rem 0.9rem;
+  border-radius: 0.45rem 0.45rem 0 0;
+  font-size: 0.95rem;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--tone) 35%, var(--paper));
+  opacity: 0.75;
+  transform: translateY(0.45rem);
+  transition: transform 0.15s, background-color 0.15s, opacity 0.15s;
+}
+
+.expansion-tab:hover {
+  opacity: 1;
+}
+
+.expansion-tab.is-on {
+  background: var(--tone);
+  opacity: 1;
+  transform: none;
+  box-shadow: 0 -2px 6px -2px rgba(60, 45, 30, 0.3);
+}
+
+.tab-european { --tone: #a49ad3; }
+.tab-oceania { --tone: #f0cf72; }
+.tab-asia { --tone: #eaa7b8; }
+.tab-americas { --tone: #97c79a; }
+
+.tab-base { --tone: #a9cfe6; }
+.tab-mix { --tone: #d8cbb8; }
+
+.expansion-tab {
+  position: relative;
+}
+
+/* Asia mode dropdown */
+.mode-select {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.mode-select select {
+  appearance: none;
+  padding: 0 1rem 0 0.4rem;
+  border: none;
+  border-bottom: 1.5px solid currentColor;
+  background: transparent;
+  font: inherit;
+  font-size: 0.9em;
+  color: inherit;
+  cursor: pointer;
+}
+
+.mode-select::after {
+  content: "▾";
+  position: absolute;
+  right: 0.1rem;
+  font-size: 0.75em;
+  pointer-events: none;
+}
+
+.expansion-tabs-wrap {
+  position: relative;
+  align-self: stretch;
+}
+
+.mix-popover {
+  position: absolute;
+  top: 2.4rem;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  width: max-content;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--rule);
+  border-radius: 0.6rem;
+  background: var(--paper);
+  box-shadow: 0 14px 30px -10px rgba(60, 45, 30, 0.5);
+}
+
+.mix-hint {
+  font-size: 0.9rem;
+  opacity: 0.65;
+}
+
+.mix-option {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 1.05rem;
+  cursor: pointer;
+}
+
+.mix-option input {
+  width: auto;
+  accent-color: var(--ink);
+}
+
+.mix-clear {
+  align-self: flex-end;
+  margin-top: 0.2rem;
+  font-size: 1rem;
+}
+
+.mix-clear:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.mix-swatch {
+  width: 0.8rem;
+  height: 0.8rem;
+  border-radius: 50%;
+  background: var(--tone);
+}
+
+#sum-table .add-col {
+  width: 5.25rem;
+}
+
+#sum-table .add-cell {
+  border-style: dashed;
+}
+
+.add-player {
+  width: 100%;
+  height: 100%;
+  font-size: 1rem;
+  color: var(--ink);
+  opacity: 0.55;
+}
+
+.add-player:hover {
+  opacity: 1;
+}
+
+.player-cell {
+  position: relative;
+}
+
+.remove-player {
+  position: absolute;
+  top: 0.1rem;
+  right: 0.3rem;
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--ink);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.player-cell:hover .remove-player,
+.player-cell:focus-within .remove-player {
+  opacity: 0.6;
+}
+
+@media (hover: none) {
+  .remove-player {
+    opacity: 0.35;
+  }
+}
+
+@media (max-width: 640px) {
+  .expansion-tabs {
+    gap: 0.2rem;
+    padding-left: 0.5rem;
+  }
+  .expansion-tab {
+    padding: 0.25rem 0.5rem 0.9rem;
+    font-size: 0.85rem;
+  }
+  #sum-table .add-col {
+    width: 2.5rem;
+  }
+  .add-player-label {
+    display: none;
+  }
+  .mix-popover {
+    left: auto !important;
+    right: 0;
+  }
+  .expansion-tab:not(.is-on) .tab-long {
+    display: none;
+  }
+  .expansion-tab:not(.is-on) .tab-short {
+    display: inline;
+  }
 }
