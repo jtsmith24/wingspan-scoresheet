@@ -1,7 +1,13 @@
 "use client";
-import React, { useEffect, useState, useSyncExternalStore } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import SumTable from "./sum-table/SumTable";
 import { Expansion, ExpansionTabs } from "./GameSetup";
+import { PastGames } from "./PastGames";
 import {
   addToHistory,
   CurrentGame,
@@ -12,6 +18,8 @@ import {
   newGame,
   playerHasData,
   rememberNames,
+  removeFromHistory,
+  SavedGame,
   toSavedGame,
 } from "@/lib/game";
 import {
@@ -56,6 +64,7 @@ const LoadedScorepad = () => {
   const [canPersist, setCanPersist] = useState(() => getStore().persistent);
   // The expansion picked most recently; the palette follows it while it's on.
   const [preferred, setPreferred] = useState(readPreferred);
+  const [pastOpen, setPastOpen] = useState(false);
 
   const theme = themeFor(game.config, preferred);
   useEffect(() => {
@@ -152,18 +161,35 @@ const LoadedScorepad = () => {
     setGame({ ...game, savedAs: saved.id, dirty: false });
   };
 
-  const startNewGame = () => {
+  const startNewGame = (
+    config = game.config,
+    playerNames = game.players.map(p => p.name)
+  ) => {
     if (
       hasUnsavedScores(game) &&
       !window.confirm("Start a new game? These scores haven't been saved.")
     )
-      return;
-    setGame(
-      newGame(
-        game.config,
-        game.players.map(p => p.name)
-      )
+      return false;
+    setGame(newGame(config, playerNames));
+    return true;
+  };
+
+  const closePast = useCallback(() => setPastOpen(false), []);
+
+  const deleteGame = (id: string) => {
+    const next = removeFromHistory(history, id);
+    setHistory(next);
+    saveHistory(next);
+    // The sheet on screen was that game: saving it again makes a new entry.
+    if (game.savedAs === id) setGame({ ...game, savedAs: undefined });
+  };
+
+  const playAgain = (saved: SavedGame) => {
+    // Unnamed players were saved as "Player 2" and so on; start those blank.
+    const playerNames = saved.players.map(p =>
+      /^Player \d+$/.test(p.name) ? "" : p.name
     );
+    if (startNewGame(saved.config, playerNames)) setPastOpen(false);
   };
 
   const { config, players } = game;
@@ -207,15 +233,31 @@ const LoadedScorepad = () => {
         >
           {saveLabel}
         </button>
-        <button type="button" className="ink-button" onClick={startNewGame}>
+        <button
+          type="button"
+          className="ink-button"
+          onClick={() => startNewGame()}
+        >
           New game
         </button>
         {history.length > 0 && (
-          <span className="history-count">
-            {history.length} saved {history.length === 1 ? "game" : "games"}
-          </span>
+          <button
+            type="button"
+            className="text-link history-link"
+            onClick={() => setPastOpen(true)}
+          >
+            Past games · {history.length}
+          </button>
         )}
       </div>
+      {pastOpen && (
+        <PastGames
+          history={history}
+          onClose={closePast}
+          onDelete={deleteGame}
+          onPlayAgain={playAgain}
+        />
+      )}
       {!canPersist && (
         <p className="storage-note">
           This browser isn&apos;t letting the app store anything, so scores will

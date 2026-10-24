@@ -84,6 +84,15 @@ describe("games and history", () => {
     expect(saved.players[1].name).toBe("Player 2");
   });
 
+  it("leaves empty columns out of a saved game", () => {
+    const game = newGame(DEFAULT_CONFIG, ["Jordan", "Sam", ""]);
+    game.players[0].scores.birds = "40";
+    game.players[1].scores.birds = "30";
+    const saved = toSavedGame(game);
+    expect(saved.players.map((p) => p.name)).toEqual(["Jordan", "Sam"]);
+    expect(saved.winners).toEqual([0]);
+  });
+
   it("adds newest first, deletes by id, and caps the list", () => {
     const a = toSavedGame(newGame());
     const b = toSavedGame(newGame());

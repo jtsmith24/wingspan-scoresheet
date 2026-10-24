@@ -1,0 +1,220 @@
+"use client";
+import React, { useEffect, useState } from "react";
+import { ScoreIcon } from "./ScoreIcon";
+import { CATEGORY_ICONS } from "./sum-table/SumTable";
+import { SavedGame } from "@/lib/game";
+import { categoriesFor, describeConfig, GROUP_LABELS } from "@/lib/rules";
+
+const formatDay = (iso: string) =>
+  new Date(iso).toLocaleDateString(undefined, {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+  });
+
+// A slight, stable tilt per slip so the stack looks hand-torn.
+const TILTS = [-0.6, 0.5, -0.3, 0.7, -0.45, 0.35];
+
+const Total = ({ game, col }: { game: SavedGame; col: number }) =>
+  game.winners.includes(col) ? (
+    <span className="leader">{game.players[col].total}</span>
+  ) : (
+    <>{game.players[col].total}</>
+  );
+
+/** Unfolded slip: the saved game's full sheet, read-only. */
+const FullSheet = ({ game }: { game: SavedGame }) => {
+  const categories = categoriesFor(game.config);
+  const tiebreak = game.decision === "food" || game.decision === "shared";
+  return (
+    <div className="sheet-scroll">
+      <table
+        id="sum-table"
+        className="past-sheet"
+        style={{ minWidth: `calc(9rem + ${game.players.length * 3}rem)` }}
+      >
+        <colgroup>
+          <col className="group-col" />
+          <col className="label-col" />
+          {game.players.map((_, i) => (
+            <col key={i} />
+          ))}
+        </colgroup>
+        <thead>
+          <tr>
+            <th colSpan={2} className="sheet-title hand-caps">
+              {game.players.length === 1 ? "Solo" : "Multiplayer"}
+            </th>
+            {game.players.map((p, i) => (
+              <th key={i} className="player-cell past-name">
+                {p.name}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {categories.map((c, row) => {
+            const starts = row === 0 || categories[row - 1].group !== c.group;
+            const icon = CATEGORY_ICONS[c.id];
+            return (
+              <tr key={c.id} className={starts ? "group-start" : ""}>
+                {starts && (
+                  <th
+                    rowSpan={categories.filter(x => x.group === c.group).length}
+                    className="group-label hand-caps"
+                  >
+                    <span>{GROUP_LABELS[c.group]}</span>
+                  </th>
+                )}
+                <th scope="row" className="row-label hand-caps">
+                  {icon && <ScoreIcon name={icon} />}
+                  <span>{c.label}</span>
+                </th>
+                {game.players.map((p, i) => (
+                  <td key={i} className="past-cell">
+                    {p.breakdown[c.id] ?? 0}
+                  </td>
+                ))}
+              </tr>
+            );
+          })}
+          <tr className="total-row">
+            <th colSpan={2} scope="row" className="hand-caps">
+              Total
+            </th>
+            {game.players.map((_, i) => (
+              <td key={i}>
+                <Total game={game} col={i} />
+              </td>
+            ))}
+          </tr>
+          {tiebreak && (
+            <tr className="tiebreak-row">
+              <th colSpan={2} scope="row" className="row-label hand-caps">
+                <ScoreIcon name="food" />
+                <span>Unused food</span>
+              </th>
+              {game.players.map((p, i) => (
+                <td key={i} className="past-cell">
+                  {p.unusedFood ?? "–"}
+                </td>
+              ))}
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+export const PastGames = ({
+  history,
+  onClose,
+  onDelete,
+  onPlayAgain,
+}: {
+  history: SavedGame[];
+  onClose: () => void;
+  onDelete: (id: string) => void;
+  onPlayAgain: (game: SavedGame) => void;
+}) => {
+  const [openId, setOpenId] = useState<string>();
+  const open = history.find(g => g.id === openId);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div className="past-games">
+      <div className="past-dim" onClick={onClose} />
+      <aside
+        className={`past-drawer${open ? " is-open" : ""}`}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Past games"
+      >
+        <div className="past-head hand-caps">
+          {open ? (
+            <button type="button" onClick={() => setOpenId(undefined)}>
+              ← Past games
+            </button>
+          ) : (
+            <h2>Past games</h2>
+          )}
+          <button type="button" className="past-close" onClick={onClose}>
+            Close ✕
+          </button>
+        </div>
+
+        {open ? (
+          <article className="past-slip past-slip-full">
+            <header className="hand-caps">
+              <span>{formatDay(open.finishedAt)}</span>
+              <span className="past-muted">{describeConfig(open.config)}</span>
+            </header>
+            <FullSheet game={open} />
+            <p className="sheet-result">
+              {open.summary}
+              {open.detail && (
+                <span className="sheet-result-detail">{open.detail}</span>
+              )}
+            </p>
+            <div className="past-actions hand-caps">
+              <button type="button" onClick={() => onPlayAgain(open)}>
+                Play again with these players
+              </button>
+              <button
+                type="button"
+                className="past-muted"
+                onClick={() => {
+                  if (window.confirm("Delete this game from your history?")) {
+                    setOpenId(undefined);
+                    onDelete(open.id);
+                  }
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </article>
+        ) : history.length === 0 ? (
+          <p className="past-empty">
+            Saved games will be torn off and kept here.
+          </p>
+        ) : (
+          history.map((g, i) => (
+            <button
+              key={g.id}
+              type="button"
+              className="past-slip"
+              style={{ rotate: `${TILTS[i % TILTS.length]}deg` }}
+              onClick={() => setOpenId(g.id)}
+              aria-label={`${formatDay(g.finishedAt)}: ${g.summary}. Open full sheet`}
+            >
+              <header className="hand-caps">
+                <span>{formatDay(g.finishedAt)}</span>
+                <span className="past-muted">{describeConfig(g.config)}</span>
+              </header>
+              <div className="past-scores">
+                {g.players.map((p, col) => (
+                  <div key={col}>
+                    <span className="hand-caps">{p.name}</span>
+                    <span className="past-total">
+                      <Total game={g} col={col} />
+                    </span>
+                  </div>
+                ))}
+              </div>
+              {g.detail && <p className="past-note">{g.detail}</p>}
+            </button>
+          ))
+        )}
+      </aside>
+    </div>
+  );
+};

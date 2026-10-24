@@ -24,7 +24,9 @@ import {
   summarize,
 } from "@/lib/scoring";
 
-const ICONS: Partial<Record<CategoryId | Habitat, ScoreIconName>> = {
+export const CATEGORY_ICONS: Partial<
+  Record<CategoryId | Habitat, ScoreIconName>
+> = {
   birds: "bird",
   bonus: "bonus",
   goals: "goal",
@@ -90,7 +92,7 @@ const SumTable = ({
       key: c.id,
       label: c.label,
       hint: c.hint,
-      icon: ICONS[c.id],
+      icon: CATEGORY_ICONS[c.id],
       group: GROUP_LABELS[c.group],
       allowsNegative: c.allowsNegative,
       value: p => p.scores[c.id] ?? "",
@@ -103,7 +105,7 @@ const SumTable = ({
         key: `nectar-${habitat}`,
         label: HABITAT_LABELS[habitat],
         hint: `Nectar spent in the ${HABITAT_LABELS[habitat].toLowerCase()}`,
-        icon: ICONS[habitat],
+        icon: CATEGORY_ICONS[habitat],
         group: `Nectar ${GROUP_LABELS.majority}`,
         value: p => p.nectarSpent[habitat] ?? "",
         update: (p, v) => ({
@@ -153,7 +155,11 @@ const SumTable = ({
     col: number
   ) => {
     const move: Move | undefined =
-      e.key === "Enter" ? (e.shiftKey ? "up-wrap" : "down-wrap") : KEY_MOVES[e.key];
+      e.key === "Enter"
+        ? e.shiftKey
+          ? "up-wrap"
+          : "down-wrap"
+        : KEY_MOVES[e.key];
     if (!move) return;
     e.preventDefault();
     const next = nextCell({ row, col }, move, rowCount, players.length, c =>
@@ -281,7 +287,11 @@ const SumTable = ({
                       <span>{row.group}</span>
                     </th>
                   )}
-                  <th scope="row" className="row-label hand-caps" title={row.hint}>
+                  <th
+                    scope="row"
+                    className="row-label hand-caps"
+                    title={row.hint}
+                  >
                     {row.icon && <ScoreIcon name={row.icon} />}
                     <span>{row.label}</span>
                   </th>
@@ -329,7 +339,12 @@ const SumTable = ({
                 </th>
                 {players.map((player, col) => (
                   <td key={player.id} className="score-cell">
-                    {renderInput(player.unusedFood, tiebreakRow, col, "Unused food")}
+                    {renderInput(
+                      player.unusedFood,
+                      tiebreakRow,
+                      col,
+                      "Unused food"
+                    )}
                   </td>
                 ))}
                 {onAddPlayer && <td className="add-cell" />}

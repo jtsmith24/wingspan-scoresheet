@@ -81,13 +81,16 @@ export function hasUnsavedScores(game: CurrentGame): boolean {
 }
 
 export function toSavedGame(game: CurrentGame, finishedAt = new Date()): SavedGame {
-  const { breakdowns, totals, outcome } = scoreGame(game.config, game.players);
-  const names = game.players.map(displayName);
+  // Columns nobody wrote in (an extra "Player 4") aren't part of the game.
+  const scored = game.players.filter(playerHasData);
+  const players = scored.length ? scored : game.players;
+  const { breakdowns, totals, outcome } = scoreGame(game.config, players);
+  const names = players.map(displayName);
   return {
     id: game.savedAs ?? newId(),
     finishedAt: finishedAt.toISOString(),
     config: game.config,
-    players: game.players.map((p, i) => ({
+    players: players.map((p, i) => ({
       name: names[i],
       breakdown: breakdowns[i],
       total: totals[i],
@@ -100,7 +103,7 @@ export function toSavedGame(game: CurrentGame, finishedAt = new Date()): SavedGa
       describeTiebreak(
         outcome,
         names,
-        game.players.map((p) => p.unusedFood),
+        players.map((p) => p.unusedFood),
       ) ?? undefined,
   };
 }
