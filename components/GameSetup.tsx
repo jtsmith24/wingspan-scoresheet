@@ -33,7 +33,7 @@ const isOn = (config: GameConfig, id: Expansion) =>
 
 /** Closes a popover on Escape or a press anywhere outside `refs`. */
 function useDismiss(
-  refs: React.RefObject<HTMLElement>[],
+  refs: React.RefObject<HTMLElement | null>[],
   open: boolean,
   close: () => void
 ) {
@@ -95,6 +95,7 @@ export const ExpansionTabs = ({
   onSelectOnly: (edition: Edition) => void;
 }) => {
   const [mixOpen, setMixOpen] = useState(false);
+  const [mixLeft, setMixLeft] = useState(0);
   const mixTabRef = useRef<HTMLDivElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   // Clicking another tab counts as outside, so it closes the checklist too.
@@ -147,18 +148,17 @@ export const ExpansionTabs = ({
           <button
             type="button"
             aria-expanded={mixOpen}
-            onClick={() => setMixOpen(o => !o)}
+            onClick={() => {
+              setMixLeft(mixTabRef.current?.offsetLeft ?? 0);
+              setMixOpen(o => !o);
+            }}
           >
             {mixed ? `Mix · ${active.length}` : "Mix"}
           </button>
         </div>
       </div>
       {mixOpen && (
-        <div
-          ref={popoverRef}
-          className="mix-popover"
-          style={{ left: mixTabRef.current?.offsetLeft ?? 0 }}
-        >
+        <div ref={popoverRef} className="mix-popover" style={{ left: mixLeft }}>
           <p className="mix-hint">Shuffling expansions together?</p>
           {EXPANSIONS.map(e => (
             <label key={e.id} className="mix-option">

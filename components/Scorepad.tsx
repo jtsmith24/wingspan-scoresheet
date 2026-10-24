@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useSyncExternalStore } from "react";
 import SumTable from "./sum-table/SumTable";
 import { Expansion, ExpansionTabs } from "./GameSetup";
 import {
@@ -12,7 +12,6 @@ import {
   newGame,
   playerHasData,
   rememberNames,
-  SavedGame,
   toSavedGame,
 } from "@/lib/game";
 import {
@@ -30,26 +29,33 @@ import { Edition, themeFor } from "@/lib/theme";
 
 const THEME_KEY = "wingspan-edition";
 
-export const Scorepad = () => {
-  const [game, setGame] = useState<CurrentGame>(() => newGame());
-  const [history, setHistory] = useState<SavedGame[]>([]);
-  const [names, setNames] = useState<string[]>([]);
-  const [loaded, setLoaded] = useState(false);
-  const [canPersist, setCanPersist] = useState(true);
-  // The expansion picked most recently; the palette follows it while it's on.
-  const [preferred, setPreferred] = useState<Edition>();
+const subscribeNever = () => () => {};
 
-  // Storage only exists in the browser, so load after the first render.
-  useEffect(() => {
-    setGame(loadCurrentGame());
-    setHistory(loadHistory());
-    setNames(loadNames());
-    setCanPersist(getStore().persistent);
-    try {
-      setPreferred((localStorage.getItem(THEME_KEY) as Edition) ?? undefined);
-    } catch {}
-    setLoaded(true);
-  }, []);
+/** Saved games live in browser storage, so the sheet only renders there. */
+export const Scorepad = () => {
+  const inBrowser = useSyncExternalStore(
+    subscribeNever,
+    () => true,
+    () => false
+  );
+  return inBrowser ? <LoadedScorepad /> : null;
+};
+
+const readPreferred = () => {
+  try {
+    return (localStorage.getItem(THEME_KEY) as Edition) ?? undefined;
+  } catch {
+    return undefined;
+  }
+};
+
+const LoadedScorepad = () => {
+  const [game, setGameState] = useState(loadCurrentGame);
+  const [history, setHistory] = useState(loadHistory);
+  const [names, setNames] = useState(loadNames);
+  const [canPersist, setCanPersist] = useState(() => getStore().persistent);
+  // The expansion picked most recently; the palette follows it while it's on.
+  const [preferred, setPreferred] = useState(readPreferred);
 
   const theme = themeFor(game.config, preferred);
   useEffect(() => {
@@ -63,12 +69,14 @@ export const Scorepad = () => {
     } catch {}
   };
 
-  useEffect(() => {
-    if (loaded) setCanPersist(saveCurrentGame(game));
-  }, [game, loaded]);
+  // Every change is saved straight away so a closed tab loses nothing.
+  const setGame = (next: CurrentGame) => {
+    setGameState(next);
+    setCanPersist(saveCurrentGame(next));
+  };
 
   const edit = (changes: Partial<CurrentGame>) =>
-    setGame(g => ({ ...g, ...changes, dirty: true }));
+    setGame({ ...game, ...changes, dirty: true });
 
   const setConfig = (config: GameConfig) => {
     const dropped = game.players.slice(playerLimits(config).max);

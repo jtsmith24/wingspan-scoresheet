@@ -1,6 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 /* Washes follow each box's cover art; set via data-edition on <html> */
 :root {
