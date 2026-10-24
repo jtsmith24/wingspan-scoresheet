@@ -11,7 +11,7 @@ Wingspan Scoresheet is a digital version of the multiplayer score sheet that com
 - Expansion support: European, Oceania (nectar majorities), Asia (Duet and Flock) and Americas (hummingbird track), alone or mixed.
 - Tiebreaks on unused food, with shared wins when still tied.
 - Games auto-save in the browser, and finished games can be saved to a history.
-- Planned integration with Pocketbase for user accounts and syncing games across devices.
+- Games are stored on the device; syncing across devices may come later.
 
 ## Tech Stack
 
@@ -19,7 +19,7 @@ This project is built using:
 
 - **Frontend:** React and Next.js for the application framework.
 - **Styling:** Tailwind CSS for utility-first styling.
-- **Database Integration (Planned):** Pocketbase for supporting user accounts and saving game data in the future.
+- **Storage:** the browser's local storage, so no account or server is needed.
 
 ## Demo Link
 
@@ -67,4 +67,3 @@ Jordan Smith - <jordansmithdev@gmail.com>
 - [React](https://reactjs.org/)
 - [Next.js](https://nextjs.org/)
 - [Tailwind CSS](https://tailwindcss.com/)
-- [Pocketbase](https://pocketbase.io/)
