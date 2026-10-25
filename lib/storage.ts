@@ -81,5 +81,4 @@ export function createStore(storage: Storage | null = resolveStorage()): KeyValu
 export const STORAGE_KEYS = {
   current: "wingspan-scoresheet:v1:current",
   history: "wingspan-scoresheet:v1:history",
-  names: "wingspan-scoresheet:v1:names",
 } as const;

@@ -18,7 +18,6 @@ import {
   hasUnsavedScores,
   newGame,
   playerHasData,
-  rememberNames,
   removeFromHistory,
   SavedGame,
   toSavedGame,
@@ -27,10 +26,8 @@ import {
   getStore,
   loadCurrentGame,
   loadHistory,
-  loadNames,
   saveCurrentGame,
   saveHistory,
-  saveNames,
 } from "@/lib/persistence";
 import { STORAGE_KEYS } from "@/lib/storage";
 import { withCodes } from "@/lib/names";
@@ -65,7 +62,6 @@ const readPreferred = () => {
 const LoadedScorepad = () => {
   const [game, setGameState] = useState(loadCurrentGame);
   const [history, setHistory] = useState(loadHistory);
-  const [names, setNames] = useState(loadNames);
   const [canPersist, setCanPersist] = useState(() => getStore().persistent);
   // The expansion picked most recently; the palette follows it while it's on.
   const [preferred, setPreferred] = useState(readPreferred);
@@ -80,11 +76,10 @@ const LoadedScorepad = () => {
     } catch {}
   }, [theme]);
 
-  // Another tab saved or deleted a game: pick up its history and names.
+  // Another tab saved or deleted a game: pick up its history.
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
       if (e.key === STORAGE_KEYS.history) setHistory(loadHistory());
-      if (e.key === STORAGE_KEYS.names) setNames(loadNames());
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
@@ -196,13 +191,7 @@ const LoadedScorepad = () => {
     // If storage is full the game is still kept for this visit, and the
     // storage note below explains it won't last.
     if (!saveHistory(nextHistory)) setCanPersist(false);
-    const nextNames = rememberNames(
-      loadNames(),
-      game.players.map(p => p.name)
-    );
-    saveNames(nextNames);
     setHistory(nextHistory);
-    setNames(nextNames);
     setGame({ ...game, savedAs: saved.id, dirty: false });
   };
 
@@ -294,7 +283,6 @@ const LoadedScorepad = () => {
         <SumTable
           game={game}
           onPlayersChange={next => edit({ players: next })}
-          rememberedNames={names}
           onAddPlayer={
             players.length < limits.max
               ? () => setPlayerCount(players.length + 1)

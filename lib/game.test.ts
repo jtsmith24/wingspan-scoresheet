@@ -9,7 +9,6 @@ import {
   isHistory,
   MAX_HISTORY,
   newGame,
-  rememberNames,
   removeFromHistory,
   toSavedGame,
 } from "./game";
@@ -172,10 +171,6 @@ describe("games and history", () => {
     expect(hasUnsavedScores(game)).toBe(true);
     expect(hasUnsavedScores({ ...game, savedAs: "x", dirty: false })).toBe(false);
     expect(hasUnsavedScores({ ...game, savedAs: "x", dirty: true })).toBe(true);
-  });
-
-  it("remembers distinct names, most recent first", () => {
-    expect(rememberNames(["Sam", "Jordan"], ["jordan", " Alex ", ""])).toEqual(["jordan", "Alex", "Sam"]);
   });
 
   it("rejects malformed stored data", () => {

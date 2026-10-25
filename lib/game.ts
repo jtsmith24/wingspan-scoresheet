@@ -46,7 +46,6 @@ export interface SavedGame {
 }
 
 export const MAX_HISTORY = 200;
-export const MAX_REMEMBERED_NAMES = 20;
 
 export function newId(): string {
   try {
@@ -205,20 +204,6 @@ export function removeFromHistory(
   return history.filter(g => g.id !== id);
 }
 
-/** Most-recent-first list of distinct names (case-insensitive). */
-export function rememberNames(previous: string[], used: string[]): string[] {
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const raw of [...used, ...previous]) {
-    const name = raw.trim();
-    const key = name.toLowerCase();
-    if (!name || seen.has(key)) continue;
-    seen.add(key);
-    out.push(name);
-  }
-  return out.slice(0, MAX_REMEMBERED_NAMES);
-}
-
 // --- Runtime validation for data read back from storage ---------------------
 
 function isObject(v: unknown): v is Record<string, unknown> {
@@ -313,8 +298,4 @@ function isSavedGame(v: unknown): v is SavedGame {
 
 export function isHistory(v: unknown): v is SavedGame[] {
   return Array.isArray(v) && v.every(isSavedGame);
-}
-
-export function isNameList(v: unknown): v is string[] {
-  return Array.isArray(v) && v.every(n => typeof n === "string");
 }

@@ -74,13 +74,11 @@ export const sheetTitle = ({
 const SumTable = ({
   game,
   onPlayersChange,
-  rememberedNames,
   onAddPlayer,
   onRemovePlayer,
 }: {
   game: CurrentGame;
   onPlayersChange: (players: PlayerSheet[]) => void;
-  rememberedNames: string[];
   /** When set, the sheet gets a "+ Player" column. */
   onAddPlayer?: () => void;
   /** When set, each name gets a remove button. */
@@ -292,7 +290,6 @@ const SumTable = ({
                     onBlur={() => finishName(col)}
                     onKeyDown={e => handleNameKeyDown(e, col)}
                     id={`name-${col}`}
-                    list="remembered-names"
                     maxLength={MAX_NAME_LENGTH}
                     autoComplete="off"
                     autoCapitalize="words"
@@ -420,11 +417,6 @@ const SumTable = ({
           {detail && <span className="sheet-result-detail">{detail}</span>}
         </p>
       )}
-      <datalist id="remembered-names">
-        {rememberedNames.map(name => (
-          <option key={name} value={name} />
-        ))}
-      </datalist>
     </div>
   );
 };
