@@ -67,6 +67,22 @@ const Toggle = ({ on, label }: { on: boolean; label: string }) => (
   <span className={`mk-pill hand-caps${on ? " is-on" : ""}`}>{label}</span>
 );
 
+/** A pill in the expansion's own colour: pale when off, full when on. */
+const TonePill = ({
+  id,
+  on,
+  children,
+}: {
+  id: Box;
+  on: boolean;
+  children: React.ReactNode;
+}) => (
+  <span className={`mk-tpill hand-caps tab-${id}${on ? " is-on" : ""}`}>
+    {on && <span className="mk-tick">✓</span>}
+    {children}
+  </span>
+);
+
 export default function Mockups() {
   const picked: Box[] = ["european", "oceania"];
   return (
@@ -187,6 +203,45 @@ export default function Mockups() {
         </div>
         <p className="mk-note mk-muted">
           Right: Asia on its own, with its mode inside the pill.
+        </p>
+      </section>
+
+      <section className="mk-option">
+        <h2 className="hand-caps">D · Pills in each expansion&apos;s colour</h2>
+        <p className="mk-note">
+          C, but every pill wears its box&apos;s colour: pale and outlined when
+          off, solid with a tick when on. The colours match the tabs and
+          swatches you know from the sheet.
+        </p>
+        <div className="mk-pair">
+          <Phone
+            tabs={
+              <div className="mk-pills">
+                <span className="mk-pills-label">Expansions</span>
+                {BOXES.map(b => (
+                  <TonePill key={b.id} id={b.id} on={picked.includes(b.id)}>
+                    {b.label}
+                  </TonePill>
+                ))}
+              </div>
+            }
+          />
+          <Phone
+            tabs={
+              <div className="mk-pills">
+                <span className="mk-pills-label">Expansions</span>
+                {BOXES.map(b => (
+                  <TonePill key={b.id} id={b.id} on={b.id === "asia"}>
+                    {b.id === "asia" ? "Asia · Duet ▾" : b.label}
+                  </TonePill>
+                ))}
+              </div>
+            }
+          />
+        </div>
+        <p className="mk-note mk-muted">
+          Left: European and Oceania mixed. Right: Asia on its own, in Duet
+          mode.
         </p>
       </section>
     </main>

@@ -100,3 +100,26 @@
   color: var(--paper);
   background: var(--ink);
 }
+
+/* D: pills in the expansion's colour (--tone comes from .tab-*) */
+.mk-tpill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  min-height: 2.5rem;
+  padding: 0 0.6rem;
+  border: 1.5px solid color-mix(in srgb, var(--tone) 80%, var(--ink));
+  border-radius: 999px;
+  font-size: 0.85rem;
+  color: color-mix(in srgb, var(--ink) 75%, transparent);
+  background: color-mix(in srgb, var(--tone) 22%, var(--paper));
+}
+.mk-tpill.is-on {
+  border-color: color-mix(in srgb, var(--tone) 60%, var(--ink));
+  color: var(--ink);
+  background: var(--tone);
+  box-shadow: 0 2px 5px -2px rgba(60, 45, 30, 0.45);
+}
+.mk-tick {
+  font-size: 0.8em;
+}
