@@ -1,0 +1,194 @@
+// Temporary: takes on choosing expansions with a single multi-select.
+import "./mockups.css";
+import "../../components/sum-table/styles/sum-table-styles.css";
+
+type Box = "european" | "oceania" | "asia" | "americas";
+const BOXES: { id: Box; label: string }[] = [
+  { id: "european", label: "European" },
+  { id: "oceania", label: "Oceania" },
+  { id: "asia", label: "Asia" },
+  { id: "americas", label: "Americas" },
+];
+const label = (id: Box) => BOXES.find(b => b.id === id)!.label;
+
+/** Phone-width frame: the tab row, then the top of the score sheet. */
+const Phone = ({
+  tabs,
+  children,
+}: {
+  tabs: React.ReactNode;
+  children?: React.ReactNode;
+}) => (
+  <div className="mk-phone">
+    <div className="mk-top hand-caps">{tabs}</div>
+    <div className="mk-sheet" aria-hidden="true">
+      {["Birds", "Bonus cards", "End-of-round", "Eggs"].map(r => (
+        <span key={r} className="hand-caps">
+          {r}
+        </span>
+      ))}
+    </div>
+    {children}
+  </div>
+);
+
+const Tab = ({
+  tone,
+  on,
+  children,
+}: {
+  tone: string;
+  on?: boolean;
+  children: React.ReactNode;
+}) => (
+  <div className={`expansion-tab tab-${tone}${on ? " is-on" : ""}`}>
+    <button type="button">{children}</button>
+  </div>
+);
+
+/** The checklist, shared by A and B. */
+const Checklist = ({ on }: { on: Box[] }) => (
+  <div className="mix-popover mk-pop">
+    <p className="mix-hint">Which expansions are in the box?</p>
+    {BOXES.map(b => (
+      <label key={b.id} className="mix-option">
+        <input type="checkbox" readOnly checked={on.includes(b.id)} />
+        <span className={`mix-swatch tab-${b.id}`} />
+        {b.label}
+      </label>
+    ))}
+    <button type="button" className="text-link mix-clear">
+      Done
+    </button>
+  </div>
+);
+
+const Toggle = ({ on, label }: { on: boolean; label: string }) => (
+  <span className={`mk-pill hand-caps${on ? " is-on" : ""}`}>{label}</span>
+);
+
+export default function Mockups() {
+  const picked: Box[] = ["european", "oceania"];
+  return (
+    <main className="mk">
+      <p className="mk-intro">
+        One place to pick expansions, ticking as many as are in the box. Each
+        option shows the sheet as you&apos;d see it, then with the picker open.
+      </p>
+
+      <section className="mk-option">
+        <h2 className="hand-caps">A · One Expansions tab</h2>
+        <p className="mk-note">
+          Two tabs only. The second names what&apos;s ticked; tap it for the
+          checklist. With nothing ticked it just says Expansions.
+        </p>
+        <div className="mk-pair">
+          <Phone
+            tabs={
+              <div className="expansion-tabs mk-tabs">
+                <Tab tone="base">Base</Tab>
+                <Tab tone="european" on>
+                  European + Oceania ▾
+                </Tab>
+              </div>
+            }
+          />
+          <Phone
+            tabs={
+              <div className="expansion-tabs mk-tabs">
+                <Tab tone="base">Base</Tab>
+                <Tab tone="european" on>
+                  European + Oceania ▴
+                </Tab>
+              </div>
+            }
+          >
+            <Checklist on={picked} />
+          </Phone>
+        </div>
+      </section>
+
+      <section className="mk-option">
+        <h2 className="hand-caps">B · A tab per box in play</h2>
+        <p className="mk-note">
+          Base is always there; each ticked expansion gets its own coloured
+          tab, and + Add opens the checklist. You see your table&apos;s boxes at a
+          glance, and nothing you aren&apos;t using.
+        </p>
+        <div className="mk-pair">
+          <Phone
+            tabs={
+              <div className="expansion-tabs mk-tabs">
+                <Tab tone="base" on>
+                  Base
+                </Tab>
+                {picked.map(id => (
+                  <Tab key={id} tone={id} on>
+                    {label(id)}
+                  </Tab>
+                ))}
+                <Tab tone="mix">+ Add</Tab>
+              </div>
+            }
+          />
+          <Phone
+            tabs={
+              <div className="expansion-tabs mk-tabs">
+                <Tab tone="base" on>
+                  Base
+                </Tab>
+                {picked.map(id => (
+                  <Tab key={id} tone={id} on>
+                    {label(id)}
+                  </Tab>
+                ))}
+                <Tab tone="mix" on>
+                  + Add
+                </Tab>
+              </div>
+            }
+          >
+            <Checklist on={picked} />
+          </Phone>
+        </div>
+      </section>
+
+      <section className="mk-option">
+        <h2 className="hand-caps">C · Pills above the sheet</h2>
+        <p className="mk-note">
+          No tabs and no popup: every expansion is a pill you tap on or off,
+          always in view. Nothing to open; the sheet sits right under them.
+        </p>
+        <div className="mk-pair">
+          <Phone
+            tabs={
+              <div className="mk-pills">
+                <span className="mk-pills-label">Expansions</span>
+                {BOXES.map(b => (
+                  <Toggle key={b.id} on={picked.includes(b.id)} label={b.label} />
+                ))}
+              </div>
+            }
+          />
+          <Phone
+            tabs={
+              <div className="mk-pills">
+                <span className="mk-pills-label">Expansions</span>
+                {BOXES.map(b => (
+                  <Toggle
+                    key={b.id}
+                    on={b.id === "asia"}
+                    label={b.id === "asia" ? "Asia · Duet ▾" : b.label}
+                  />
+                ))}
+              </div>
+            }
+          />
+        </div>
+        <p className="mk-note mk-muted">
+          Right: Asia on its own, with its mode inside the pill.
+        </p>
+      </section>
+    </main>
+  );
+}
