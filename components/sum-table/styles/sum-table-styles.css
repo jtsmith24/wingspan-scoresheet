@@ -33,12 +33,20 @@
 }
 
 #sum-table {
+  /* Narrowest the sheet gets before it scrolls: fixed columns plus players. */
+  --fixed: 9rem;
+  --col-min: 3rem;
   position: relative;
   width: 100%;
+  min-width: calc(var(--fixed) + var(--players, 2) * var(--col-min));
   border-collapse: collapse;
   table-layout: fixed;
   color: var(--ink);
   border: 1.5px solid var(--ink);
+}
+
+#sum-table.has-add {
+  --fixed: 11.5rem;
 }
 
 #sum-table th,
@@ -78,8 +86,51 @@
   opacity: 0.35;
 }
 
-.player-input:focus::placeholder {
-  opacity: 0;
+/* Typing a full name: a wider box floats over the header. */
+.player-input.is-editing {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 5;
+  width: 9rem;
+  height: 2.6rem;
+  translate: -50% -50%;
+  padding: 0 0.5rem;
+  border: 1.5px solid var(--ink);
+  border-radius: 0.35rem;
+  background: var(--paper);
+  box-shadow: 0 6px 16px -6px rgba(60, 45, 30, 0.45);
+  text-transform: none;
+}
+
+.player-input.is-editing.edit-from-end {
+  left: auto;
+  right: 0;
+  translate: 0 -50%;
+}
+
+.player-input.is-editing::placeholder {
+  font-family: var(--font-hand);
+  opacity: 0.4;
+}
+
+/* Who each code stands for, under the sheet. */
+.name-key {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.15rem 0.9rem;
+  margin: 0.55rem 0.4rem 0;
+  font-family: var(--font-hand);
+  font-size: 1.05rem;
+  color: var(--pen);
+}
+
+.name-key b {
+  font-family: var(--font-label);
+  font-weight: normal;
+  color: var(--ink);
 }
 
 /* Rotated group labels, as printed on the pad */
@@ -157,7 +208,7 @@ tr.group-start:not(:first-child) > * {
 /* Total */
 .total-row > * {
   height: 3.75rem !important;
-  border-top: 3px solid var(--ink) !important;
+  border-top: 1.5px solid var(--ink) !important;
 }
 
 .total-row th {
@@ -192,8 +243,16 @@ tr.group-start:not(:first-child) > * {
   .score-sheet {
     padding: 0.5rem;
   }
+  /* Five players fit a 360px phone without scrolling. */
+  #sum-table {
+    --fixed: 7.4rem;
+    --col-min: 2.5rem;
+  }
+  #sum-table.has-add {
+    --fixed: 9.9rem;
+  }
   #sum-table .label-col {
-    width: 6.25rem;
+    width: 5.9rem;
   }
   #sum-table .group-col {
     width: 1.5rem;
@@ -736,7 +795,7 @@ button.past-slip:hover {
     right: 0;
   }
   .past-sheet .label-col {
-    width: 6.25rem !important;
+    width: 5.9rem !important;
   }
   .expansion-tab:not(.is-on) .tab-long {
     display: none;

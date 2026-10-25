@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { ScoreIcon } from "./ScoreIcon";
 import { CATEGORY_ICONS, sheetTitle } from "./sum-table/SumTable";
 import { SavedGame } from "@/lib/game";
+import { shortCodes } from "@/lib/names";
 import { categoriesFor, describeConfig, GROUP_LABELS } from "@/lib/rules";
 
 const formatDay = (iso: string) =>
@@ -11,6 +12,17 @@ const formatDay = (iso: string) =>
     month: "short",
     day: "numeric",
   });
+
+// Unnamed players were saved as "Player 2" and so on.
+const isPlaceholder = (name: string) => /^Player \d+$/.test(name);
+
+/** Header codes for a saved game, with P1, P2… for unnamed players. */
+const codesFor = (game: SavedGame) => {
+  const codes = shortCodes(
+    game.players.map(p => (isPlaceholder(p.name) ? "" : p.name))
+  );
+  return codes.map((c, i) => c || `P${i + 1}`);
+};
 
 // A slight, stable tilt per slip so the stack looks hand-torn.
 const TILTS = [-0.6, 0.5, -0.3, 0.7, -0.45, 0.35];
@@ -26,85 +38,104 @@ const Total = ({ game, col }: { game: SavedGame; col: number }) =>
 /** Unfolded slip: the saved game's full sheet, read-only. */
 const FullSheet = ({ game }: { game: SavedGame }) => {
   const categories = categoriesFor(game.config);
+  const codes = codesFor(game);
+  const legend = game.players.flatMap((p, i) =>
+    !isPlaceholder(p.name) && p.name.toUpperCase() !== codes[i]
+      ? [{ code: codes[i], name: p.name }]
+      : []
+  );
   const tiebreak = game.decision === "food" || game.decision === "shared";
   return (
-    <div className="sheet-scroll">
-      <table
-        id="sum-table"
-        className="past-sheet"
-        style={{ minWidth: `calc(9rem + ${game.players.length * 3}rem)` }}
-      >
-        <colgroup>
-          <col className="group-col" />
-          <col className="label-col" />
-          {game.players.map((_, i) => (
-            <col key={i} />
-          ))}
-        </colgroup>
-        <thead>
-          <tr>
-            <th colSpan={2} className="sheet-title hand-caps">
-              {sheetTitle(game)}
-            </th>
-            {game.players.map((p, i) => (
-              <th key={i} className="player-cell past-name">
-                {p.name}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {categories.map((c, row) => {
-            const starts = row === 0 || categories[row - 1].group !== c.group;
-            const icon = CATEGORY_ICONS[c.id];
-            return (
-              <tr key={c.id} className={starts ? "group-start" : ""}>
-                {starts && (
-                  <th
-                    rowSpan={categories.filter(x => x.group === c.group).length}
-                    className="group-label hand-caps"
-                  >
-                    <span>{GROUP_LABELS[c.group]}</span>
-                  </th>
-                )}
-                <th scope="row" className="row-label hand-caps">
-                  {icon && <ScoreIcon name={icon} />}
-                  <span>{c.label}</span>
-                </th>
-                {game.players.map((p, i) => (
-                  <td key={i} className="past-cell">
-                    {p.breakdown[c.id] ?? 0}
-                  </td>
-                ))}
-              </tr>
-            );
-          })}
-          <tr className="total-row">
-            <th colSpan={2} scope="row" className="hand-caps">
-              Total
-            </th>
+    <>
+      <div className="sheet-scroll">
+        <table
+          id="sum-table"
+          className="past-sheet"
+          style={{ "--players": game.players.length } as React.CSSProperties}
+        >
+          <colgroup>
+            <col className="group-col" />
+            <col className="label-col" />
             {game.players.map((_, i) => (
-              <td key={i}>
-                <Total game={game} col={i} />
-              </td>
+              <col key={i} />
             ))}
-          </tr>
-          {tiebreak && (
-            <tr className="tiebreak-row">
-              <th colSpan={2} scope="row" className="row-label hand-caps">
-                <ScoreIcon name="food" />
-                <span>Unused food</span>
+          </colgroup>
+          <thead>
+            <tr>
+              <th colSpan={2} className="sheet-title hand-caps">
+                {sheetTitle(game)}
               </th>
-              {game.players.map((p, i) => (
-                <td key={i} className="past-cell">
-                  {p.unusedFood ?? "–"}
+              {codes.map((code, i) => (
+                <th key={i} className="player-cell past-name">
+                  {code}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {categories.map((c, row) => {
+              const starts = row === 0 || categories[row - 1].group !== c.group;
+              const icon = CATEGORY_ICONS[c.id];
+              return (
+                <tr key={c.id} className={starts ? "group-start" : ""}>
+                  {starts && (
+                    <th
+                      rowSpan={
+                        categories.filter(x => x.group === c.group).length
+                      }
+                      className="group-label hand-caps"
+                    >
+                      <span>{GROUP_LABELS[c.group]}</span>
+                    </th>
+                  )}
+                  <th scope="row" className="row-label hand-caps">
+                    {icon && <ScoreIcon name={icon} />}
+                    <span>{c.label}</span>
+                  </th>
+                  {game.players.map((p, i) => (
+                    <td key={i} className="past-cell">
+                      {p.breakdown[c.id] ?? 0}
+                    </td>
+                  ))}
+                </tr>
+              );
+            })}
+            <tr className="total-row">
+              <th colSpan={2} scope="row" className="hand-caps">
+                Total
+              </th>
+              {game.players.map((_, i) => (
+                <td key={i}>
+                  <Total game={game} col={i} />
                 </td>
               ))}
             </tr>
-          )}
-        </tbody>
-      </table>
-    </div>
+            {tiebreak && (
+              <tr className="tiebreak-row">
+                <th colSpan={2} scope="row" className="row-label hand-caps">
+                  <ScoreIcon name="food" />
+                  <span>Unused food</span>
+                </th>
+                {game.players.map((p, i) => (
+                  <td key={i} className="past-cell">
+                    {p.unusedFood ?? "–"}
+                  </td>
+                ))}
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+      {legend.length > 0 && (
+        <p className="name-key">
+          {legend.map(({ code, name }) => (
+            <span key={code}>
+              <b>{code}</b> {name}
+            </span>
+          ))}
+        </p>
+      )}
+    </>
   );
 };
 
@@ -242,9 +273,9 @@ export const PastGames = ({
                 <span className="past-muted">{describeConfig(g.config)}</span>
               </header>
               <div className="past-scores">
-                {g.players.map((p, col) => (
+                {codesFor(g).map((code, col) => (
                   <div key={col}>
-                    <span className="hand-caps">{p.name}</span>
+                    <span className="hand-caps">{code}</span>
                     <span className="past-total">
                       <Total game={g} col={col} />
                     </span>

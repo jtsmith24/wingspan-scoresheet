@@ -1,9 +1,10 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
 import "./styles/sum-table-styles.css";
 import { ScoreIcon, ScoreIconName } from "../ScoreIcon";
 import { CurrentGame, playerHasData } from "@/lib/game";
 import { Move, nextCell } from "@/lib/gridNavigation";
+import { MAX_NAME_LENGTH, shortCodes } from "@/lib/names";
 import {
   categoriesFor,
   CategoryId,
@@ -88,6 +89,14 @@ const SumTable = ({
   const { config, players } = game;
   const { totals, outcome } = scoreGame(config, players);
   const names = players.map(displayName);
+  const codes = shortCodes(players.map(p => p.name));
+  // The name being typed shows in full; every other header shows its code.
+  const [editing, setEditing] = useState<number | null>(null);
+  const legend = players.flatMap((p, i) =>
+    codes[i] && p.name.trim().toUpperCase() !== codes[i]
+      ? [{ code: codes[i], name: p.name.trim() }]
+      : []
+  );
 
   const rows: InputRow[] = categoriesFor(config)
     .filter(c => c.id !== "nectar")
@@ -217,9 +226,8 @@ const SumTable = ({
       <div className="sheet-scroll">
         <table
           id="sum-table"
-          style={{
-            minWidth: `calc(${onAddPlayer ? 11.5 : 9}rem + ${players.length * 3}rem)`,
-          }}
+          className={onAddPlayer ? "has-add" : undefined}
+          style={{ "--players": players.length } as React.CSSProperties}
         >
           <colgroup>
             <col className="group-col" />
@@ -237,21 +245,33 @@ const SumTable = ({
               {players.map((player, col) => (
                 <th key={player.id} className="player-cell">
                   <input
-                    className="player-input"
-                    placeholder={`P${col + 1}`}
+                    className={`player-input${editing === col ? " is-editing" : ""}${
+                      col === players.length - 1 && !onAddPlayer
+                        ? " edit-from-end"
+                        : ""
+                    }`}
+                    placeholder={editing === col ? "Name" : `P${col + 1}`}
                     type="text"
-                    value={player.name}
+                    value={editing === col ? player.name : codes[col]}
                     onChange={e =>
                       setPlayer(col, {
                         ...player,
-                        name: e.target.value.toUpperCase(),
+                        name: e.target.value.slice(0, MAX_NAME_LENGTH),
                       })
                     }
+                    onFocus={e => {
+                      setEditing(col);
+                      // Select the full name once it has replaced the code.
+                      const input = e.target;
+                      requestAnimationFrame(() => input.select());
+                    }}
+                    onBlur={() => setEditing(null)}
                     onKeyDown={e => handleNameKeyDown(e, col)}
                     id={`name-${col}`}
                     list="remembered-names"
-                    maxLength={3}
+                    maxLength={MAX_NAME_LENGTH}
                     autoComplete="off"
+                    autoCapitalize="words"
                     aria-label={`Player ${col + 1} name`}
                   />
                   {onRemovePlayer && (
@@ -361,6 +381,15 @@ const SumTable = ({
           </tbody>
         </table>
       </div>
+      {legend.length > 0 && (
+        <p className="name-key">
+          {legend.map(({ code, name }) => (
+            <span key={code}>
+              <b>{code}</b> {name}
+            </span>
+          ))}
+        </p>
+      )}
       {outcome.decision !== "none" && (
         <p className="sheet-result" aria-live="polite">
           {result}
