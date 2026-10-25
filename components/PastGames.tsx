@@ -39,11 +39,8 @@ const Total = ({ game, col }: { game: SavedGame; col: number }) =>
 const FullSheet = ({ game }: { game: SavedGame }) => {
   const categories = categoriesFor(game.config);
   const codes = codesFor(game);
-  const legend = game.players.flatMap((p, i) =>
-    !isPlaceholder(p.name) && p.name.toUpperCase() !== codes[i]
-      ? [{ code: codes[i], name: p.name }]
-      : []
-  );
+  // Tapping a code shows that player's full name in its place.
+  const [peek, setPeek] = useState<number | null>(null);
   const tiebreak = game.decision === "food" || game.decision === "shared";
   return (
     <>
@@ -65,11 +62,28 @@ const FullSheet = ({ game }: { game: SavedGame }) => {
               <th colSpan={2} className="sheet-title hand-caps">
                 {sheetTitle(game)}
               </th>
-              {codes.map((code, i) => (
-                <th key={i} className="player-cell past-name">
-                  {code}
-                </th>
-              ))}
+              {codes.map((code, i) => {
+                const { name } = game.players[i];
+                return (
+                  <th key={i} className="player-cell past-name">
+                    {isPlaceholder(name) || name === code ? (
+                      code
+                    ) : (
+                      <button
+                        type="button"
+                        className={`name-peek${peek === i ? " is-open" : ""}${
+                          i === codes.length - 1 ? " edit-from-end" : ""
+                        }`}
+                        onClick={() => setPeek(p => (p === i ? null : i))}
+                        onBlur={() => setPeek(null)}
+                        aria-label={name}
+                      >
+                        {peek === i ? name : code}
+                      </button>
+                    )}
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>
@@ -126,15 +140,6 @@ const FullSheet = ({ game }: { game: SavedGame }) => {
           </tbody>
         </table>
       </div>
-      {legend.length > 0 && (
-        <p className="name-key">
-          {legend.map(({ code, name }) => (
-            <span key={code}>
-              <b>{code}</b> {name}
-            </span>
-          ))}
-        </p>
-      )}
     </>
   );
 };

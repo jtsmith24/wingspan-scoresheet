@@ -92,11 +92,6 @@ const SumTable = ({
   const codes = shortCodes(players.map(p => p.name));
   // The name being typed shows in full; every other header shows its code.
   const [editing, setEditing] = useState<number | null>(null);
-  const legend = players.flatMap((p, i) =>
-    codes[i] && p.name.trim().toUpperCase() !== codes[i]
-      ? [{ code: codes[i], name: p.name.trim() }]
-      : []
-  );
 
   const rows: InputRow[] = categoriesFor(config)
     .filter(c => c.id !== "nectar")
@@ -182,8 +177,15 @@ const SumTable = ({
       focus(`name-${col}`);
   };
 
-  const handleNameKeyDown = (e: React.KeyboardEvent, col: number) => {
-    if (e.key === "Enter" || e.key === "ArrowDown") {
+  // Enter closes the name box; Down moves into that player's scores.
+  const handleNameKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    col: number
+  ) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      e.currentTarget.blur();
+    } else if (e.key === "ArrowDown") {
       e.preventDefault();
       focus(`cell-0-${col}`);
     }
@@ -272,6 +274,7 @@ const SumTable = ({
                     maxLength={MAX_NAME_LENGTH}
                     autoComplete="off"
                     autoCapitalize="words"
+                    enterKeyHint="done"
                     aria-label={`Player ${col + 1} name`}
                   />
                   {onRemovePlayer && (
@@ -381,15 +384,6 @@ const SumTable = ({
           </tbody>
         </table>
       </div>
-      {legend.length > 0 && (
-        <p className="name-key">
-          {legend.map(({ code, name }) => (
-            <span key={code}>
-              <b>{code}</b> {name}
-            </span>
-          ))}
-        </p>
-      )}
       {outcome.decision !== "none" && (
         <p className="sheet-result" aria-live="polite">
           {result}
