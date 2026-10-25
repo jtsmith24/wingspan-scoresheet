@@ -13,11 +13,14 @@ export interface DialogOptions {
   cancel?: string;
   /** Destructive: Cancel gets focus, so a stray Enter does nothing harmful. */
   danger?: boolean;
-  checkbox?: { label: string; checked: boolean };
+  checkboxes?: { id: string; label: string; checked: boolean }[];
 }
 
-/** The action picked and the checkbox's state, or null when cancelled. */
-export type Choice = { action: string; checked: boolean } | null;
+/** The action picked and each checkbox's state, or null when cancelled. */
+export type Choice = {
+  action: string;
+  checked: Record<string, boolean>;
+} | null;
 export type Choose = (options: DialogOptions) => Promise<Choice>;
 
 export interface ConfirmOptions {
@@ -29,7 +32,7 @@ export type Ask = (options: ConfirmOptions) => Promise<boolean>;
 
 /**
  * Themed stand-in for window.confirm. Render `dialog` once. `choose` offers
- * several actions (and optionally a checkbox); `ask` is the yes/no form.
+ * several actions (and optionally checkboxes); `ask` is the yes/no form.
  * Cancel, Escape and a tap outside all count as cancelling.
  */
 export function useDialog(): [React.ReactNode, Choose, Ask] {
@@ -66,11 +69,13 @@ const AppDialog = ({
   actions,
   cancel = "Cancel",
   danger = false,
-  checkbox,
+  checkboxes = [],
   onDone,
 }: DialogOptions & { onDone: (choice: Choice) => void }) => {
   const ref = useRef<HTMLDialogElement>(null);
-  const [checked, setChecked] = useState(checkbox?.checked ?? false);
+  const [checked, setChecked] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(checkboxes.map(c => [c.id, c.checked]))
+  );
 
   // showModal puts it above everything, traps focus and handles Escape. It
   // focuses the first control itself, so pick the intended button after.
@@ -107,16 +112,19 @@ const AppDialog = ({
         <p id="app-dialog-message" className="app-dialog-message">
           {message}
         </p>
-        {checkbox && (
-          <label className="app-dialog-check">
+        {checkboxes.map(c => (
+          <label key={c.id} className="app-dialog-check">
             <input
               type="checkbox"
-              checked={checked}
-              onChange={e => setChecked(e.target.checked)}
+              data-check={c.id}
+              checked={checked[c.id]}
+              onChange={e =>
+                setChecked(now => ({ ...now, [c.id]: e.target.checked }))
+              }
             />
-            {checkbox.label}
+            {c.label}
           </label>
-        )}
+        ))}
         <div className="app-dialog-actions hand-caps">
           <button
             type="button"

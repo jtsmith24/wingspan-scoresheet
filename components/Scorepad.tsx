@@ -198,11 +198,12 @@ const LoadedScorepad = () => {
   const sheetIsBlank =
     !hasAnyScore(game) && game.players.every(p => !p.name.trim());
 
-  // Unsaved scores: offer to save them before the sheet is replaced.
-  const saveChoice = (keepGoing: string) => [
-    { id: "discard", label: "Don't save" },
-    { id: "save", label: `Save & ${keepGoing}`, primary: true },
-  ];
+  // Unsaved scores: a ticked "save first" box, so skipping it is deliberate.
+  const saveFirst = {
+    id: "save",
+    label: "Save this game first",
+    checked: true,
+  };
 
   const startNewGame = async () => {
     const unsaved = hasUnsavedScores(game);
@@ -211,17 +212,18 @@ const LoadedScorepad = () => {
       message: unsaved
         ? "Start a new game? This one hasn't been saved yet."
         : "Start a new game?",
-      actions: unsaved
-        ? saveChoice("start new")
-        : [{ id: "start", label: "Start new game", primary: true }],
+      actions: [{ id: "start", label: "Start new game", primary: true }],
       // A sheet with only names has nobody worth keeping: it just clears.
-      checkbox: scored
-        ? { label: "Keep the same players", checked: true }
-        : undefined,
+      checkboxes: [
+        ...(unsaved ? [saveFirst] : []),
+        ...(scored
+          ? [{ id: "keep", label: "Keep the same players", checked: true }]
+          : []),
+      ],
     });
     if (!choice) return;
-    if (choice.action === "save") saveGame();
-    const keep = scored && choice.checked;
+    if (choice.checked.save) saveGame();
+    const keep = !!choice.checked.keep;
     const codes = withCodes(game.players);
     setGame(
       newGame(
@@ -246,10 +248,11 @@ const LoadedScorepad = () => {
     if (hasUnsavedScores(game)) {
       const choice = await choose({
         message: "Play again? The game on the sheet hasn't been saved yet.",
-        actions: saveChoice("play again"),
+        actions: [{ id: "play", label: "Play again", primary: true }],
+        checkboxes: [saveFirst],
       });
       if (!choice) return;
-      if (choice.action === "save") saveGame();
+      if (choice.checked.save) saveGame();
     }
     // Unnamed players were saved as "Player 2" and so on; start those blank.
     const playerNames = saved.players.map(p =>
