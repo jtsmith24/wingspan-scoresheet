@@ -8,7 +8,7 @@ import React, {
 import SumTable from "./sum-table/SumTable";
 import { Expansion, ExpansionTabs } from "./GameSetup";
 import { PastGames } from "./PastGames";
-import { useConfirm } from "./ConfirmDialog";
+import { useDialog } from "./ConfirmDialog";
 import {
   addToHistory,
   CurrentGame,
@@ -66,7 +66,7 @@ const LoadedScorepad = () => {
   // The expansion picked most recently; the palette follows it while it's on.
   const [preferred, setPreferred] = useState(readPreferred);
   const [pastOpen, setPastOpen] = useState(false);
-  const [dialog, ask] = useConfirm();
+  const [dialog, choose, ask] = useDialog();
 
   const theme = themeFor(game.config, preferred);
   useEffect(() => {
@@ -195,51 +195,42 @@ const LoadedScorepad = () => {
     setGame({ ...game, savedAs: saved.id, dirty: false });
   };
 
-  // The players carry over with their names and header codes.
-  const startNewGame = async (
-    config = game.config,
-    playerNames = game.players.map(p => p.name),
-    playerCodes: (string | undefined)[] = withCodes(game.players)
-  ) => {
-    if (
-      hasUnsavedScores(game) &&
-      !(await ask({
-        message: "Start a new game? These scores haven't been saved.",
-        confirm: "Start new game",
-        danger: true,
-      }))
-    )
-      return false;
-    setGame(
-      newGame(
-        config,
-        playerNames,
-        playerCodes.map(c => c || undefined)
-      )
-    );
-    return true;
-  };
+  const sheetIsBlank =
+    !hasAnyScore(game) && game.players.every(p => !p.name.trim());
 
-  // For a different group: blank names and scores, same setup and seats.
-  const clearSheet = async () => {
-    if (
-      hasUnsavedScores(game) &&
-      !(await ask({
-        message: "Clear the sheet? These scores haven't been saved.",
-        confirm: "Clear",
-        danger: true,
-      }))
-    )
-      return;
+  // Unsaved scores: offer to save them before the sheet is replaced.
+  const saveChoice = (keepGoing: string) => [
+    { id: "discard", label: "Don't save" },
+    { id: "save", label: `Save & ${keepGoing}`, primary: true },
+  ];
+
+  const startNewGame = async () => {
+    const unsaved = hasUnsavedScores(game);
+    const scored = hasAnyScore(game);
+    const choice = await choose({
+      message: unsaved
+        ? "Start a new game? This one hasn't been saved yet."
+        : "Start a new game?",
+      actions: unsaved
+        ? saveChoice("start new")
+        : [{ id: "start", label: "Start new game", primary: true }],
+      // A sheet with only names has nobody worth keeping: it just clears.
+      checkbox: scored
+        ? { label: "Keep the same players", checked: true }
+        : undefined,
+    });
+    if (!choice) return;
+    if (choice.action === "save") saveGame();
+    const keep = scored && choice.checked;
+    const codes = withCodes(game.players);
     setGame(
       newGame(
         game.config,
-        game.players.map(() => "")
+        game.players.map(p => (keep ? p.name : "")),
+        keep ? codes.map(c => c || undefined) : []
       )
     );
   };
-  const sheetIsBlank =
-    !hasAnyScore(game) && game.players.every(p => !p.name.trim());
 
   const closePast = useCallback(() => setPastOpen(false), []);
 
@@ -252,6 +243,14 @@ const LoadedScorepad = () => {
   };
 
   const playAgain = async (saved: SavedGame) => {
+    if (hasUnsavedScores(game)) {
+      const choice = await choose({
+        message: "Play again? The game on the sheet hasn't been saved yet.",
+        actions: saveChoice("play again"),
+      });
+      if (!choice) return;
+      if (choice.action === "save") saveGame();
+    }
     // Unnamed players were saved as "Player 2" and so on; start those blank.
     const playerNames = saved.players.map(p =>
       /^Player \d+$/.test(p.name) ? "" : p.name
@@ -259,8 +258,8 @@ const LoadedScorepad = () => {
     const playerCodes = saved.players.map((p, i) =>
       playerNames[i] ? p.code : undefined
     );
-    if (await startNewGame(saved.config, playerNames, playerCodes))
-      setPastOpen(false);
+    setGame(newGame(saved.config, playerNames, playerCodes));
+    setPastOpen(false);
   };
 
   const { config, players } = game;
@@ -306,17 +305,10 @@ const LoadedScorepad = () => {
         <button
           type="button"
           className="ink-button"
-          onClick={() => startNewGame()}
-        >
-          New game
-        </button>
-        <button
-          type="button"
-          className="text-link clear-link"
-          onClick={clearSheet}
+          onClick={startNewGame}
           disabled={sheetIsBlank}
         >
-          Clear
+          New game
         </button>
         {history.length > 0 && (
           <button
