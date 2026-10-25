@@ -31,11 +31,14 @@ import {
   saveHistory,
   saveNames,
 } from "@/lib/persistence";
+import { STORAGE_KEYS } from "@/lib/storage";
 import { GameConfig, playerLimits } from "@/lib/rules";
 import { PlayerSheet } from "@/lib/scoring";
 import { Edition, themeFor } from "@/lib/theme";
 
 const THEME_KEY = "wingspan-edition";
+/** The palette on screen, read by an inline script in the layout before first paint. */
+export const PALETTE_KEY = "wingspan-palette";
 
 const subscribeNever = () => () => {};
 
@@ -69,7 +72,20 @@ const LoadedScorepad = () => {
   const theme = themeFor(game.config, preferred);
   useEffect(() => {
     document.documentElement.dataset.edition = theme;
+    try {
+      localStorage.setItem(PALETTE_KEY, theme);
+    } catch {}
   }, [theme]);
+
+  // Another tab saved or deleted a game: pick up its history and names.
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === STORAGE_KEYS.history) setHistory(loadHistory());
+      if (e.key === STORAGE_KEYS.names) setNames(loadNames());
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
 
   const prefer = (edition: Edition) => {
     setPreferred(edition);
@@ -90,7 +106,7 @@ const LoadedScorepad = () => {
   const setConfig = (config: GameConfig) => {
     const dropped = game.players.slice(playerLimits(config).max);
     if (
-      dropped.some(playerHasData) &&
+      dropped.some(p => playerHasData(p, game.config)) &&
       !window.confirm("This mode has fewer players. Remove the extra columns?")
     )
       return;
@@ -100,7 +116,7 @@ const LoadedScorepad = () => {
   const setPlayerCount = (count: number) => {
     const removed = game.players.slice(count);
     if (
-      removed.some(playerHasData) &&
+      removed.some(p => playerHasData(p, game.config)) &&
       !window.confirm("Remove this player and their scores?")
     )
       return;
@@ -111,7 +127,7 @@ const LoadedScorepad = () => {
 
   const removePlayer = (col: number) => {
     if (
-      playerHasData(game.players[col]) &&
+      playerHasData(game.players[col], game.config) &&
       !window.confirm("Remove this player and their scores?")
     )
       return;
@@ -147,17 +163,21 @@ const LoadedScorepad = () => {
     });
   };
 
+  // History is re-read before every change so a second open tab can't
+  // overwrite games saved in the first.
   const saveGame = () => {
     const saved = toSavedGame(game);
-    const nextHistory = addToHistory(history, saved);
+    const nextHistory = addToHistory(loadHistory(), saved);
+    // If storage is full the game is still kept for this visit, and the
+    // storage note below explains it won't last.
+    if (!saveHistory(nextHistory)) setCanPersist(false);
     const nextNames = rememberNames(
-      names,
+      loadNames(),
       game.players.map(p => p.name)
     );
+    saveNames(nextNames);
     setHistory(nextHistory);
     setNames(nextNames);
-    saveHistory(nextHistory);
-    saveNames(nextNames);
     setGame({ ...game, savedAs: saved.id, dirty: false });
   };
 
@@ -177,7 +197,7 @@ const LoadedScorepad = () => {
   const closePast = useCallback(() => setPastOpen(false), []);
 
   const deleteGame = (id: string) => {
-    const next = removeFromHistory(history, id);
+    const next = removeFromHistory(loadHistory(), id);
     setHistory(next);
     saveHistory(next);
     // The sheet on screen was that game: saving it again makes a new entry.

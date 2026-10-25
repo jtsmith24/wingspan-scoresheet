@@ -3,6 +3,7 @@ import {
   addToHistory,
   fitPlayers,
   hasUnsavedScores,
+  playerHasData,
   isCurrentGame,
   isHistory,
   MAX_HISTORY,
@@ -84,6 +85,16 @@ describe("games and history", () => {
     expect(saved.players[1].name).toBe("Player 2");
   });
 
+  it("ignores scores in rows the current setup hides", () => {
+    const game = newGame({ ...DEFAULT_CONFIG, oceania: true }, ["Jordan", "Sam"]);
+    game.players[0].scores.birds = "40";
+    game.players[1].nectarSpent.forest = "2";
+    expect(playerHasData(game.players[1], game.config)).toBe(true);
+    const base = { ...game, config: DEFAULT_CONFIG };
+    expect(playerHasData(base.players[1], base.config)).toBe(false);
+    expect(toSavedGame(base).players.map((p) => p.name)).toEqual(["Jordan"]);
+  });
+
   it("leaves empty columns out of a saved game", () => {
     const game = newGame(DEFAULT_CONFIG, ["Jordan", "Sam", ""]);
     game.players[0].scores.birds = "40";
@@ -161,6 +172,13 @@ describe("storage wrapper", () => {
     expect(store.persistent).toBe(true);
     store.write("k", { a: 1 });
     expect(store.read("k", null)).toEqual({ a: 1 });
+  });
+
+  it("sees what another tab wrote", () => {
+    const store = createStore(localStorage);
+    store.write("k", [1]);
+    localStorage.setItem("k", JSON.stringify([2, 1]));
+    expect(store.read("k", null)).toEqual([2, 1]);
   });
 
   it("falls back to memory when storage is unavailable", () => {

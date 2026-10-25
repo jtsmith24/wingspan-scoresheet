@@ -61,7 +61,10 @@ const KEY_MOVES: Record<string, Move> = {
   ArrowRight: "right",
 };
 
-const sheetTitle = ({ config, players }: CurrentGame) => {
+export const sheetTitle = ({
+  config,
+  players,
+}: Pick<CurrentGame, "config"> & { players: unknown[] }) => {
   if (config.asia === "duet") return "Duet";
   if (config.asia === "flock") return "Flock";
   return players.length === 1 ? "Solo" : "Multiplayer";
@@ -321,7 +324,7 @@ const SumTable = ({
               </th>
               {totals.map((total, col) => (
                 <td key={players[col].id}>
-                  {playerHasData(players[col]) && (
+                  {playerHasData(players[col], config) && (
                     <span className={circled.includes(col) ? "leader" : ""}>
                       {total}
                     </span>

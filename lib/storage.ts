@@ -35,14 +35,17 @@ export function createStore(storage: Storage | null = resolveStorage()): KeyValu
       return persistent;
     },
     read(key, fallback, isValid) {
-      let raw: string | null | undefined = memory.get(key);
-      if (raw === undefined && storage) {
+      // Storage first, so changes made in another tab are seen. Memory takes
+      // over once storage has failed, since it then holds the newest copy.
+      let raw: string | null | undefined;
+      if (storage && persistent) {
         try {
           raw = storage.getItem(key);
         } catch {
           raw = undefined;
         }
       }
+      raw ??= memory.get(key);
       if (raw == null) return fallback;
       try {
         const parsed: unknown = JSON.parse(raw);

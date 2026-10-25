@@ -593,6 +593,13 @@ button.past-slip:hover {
   cursor: pointer;
 }
 
+/* iPhones zoom the page when a select under 16px is focused. */
+@media (pointer: coarse) {
+  .mode-select select {
+    font-size: 16px;
+  }
+}
+
 .mode-select::after {
   content: "▾";
   position: absolute;

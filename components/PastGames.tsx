@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { ScoreIcon } from "./ScoreIcon";
-import { CATEGORY_ICONS } from "./sum-table/SumTable";
+import { CATEGORY_ICONS, sheetTitle } from "./sum-table/SumTable";
 import { SavedGame } from "@/lib/game";
 import { categoriesFor, describeConfig, GROUP_LABELS } from "@/lib/rules";
 
@@ -15,8 +15,9 @@ const formatDay = (iso: string) =>
 // A slight, stable tilt per slip so the stack looks hand-torn.
 const TILTS = [-0.6, 0.5, -0.3, 0.7, -0.45, 0.35];
 
+// A tie still waiting on unused food has no winner to circle yet.
 const Total = ({ game, col }: { game: SavedGame; col: number }) =>
-  game.winners.includes(col) ? (
+  game.decision !== "needs-food" && game.winners.includes(col) ? (
     <span className="leader">{game.players[col].total}</span>
   ) : (
     <>{game.players[col].total}</>
@@ -43,7 +44,7 @@ const FullSheet = ({ game }: { game: SavedGame }) => {
         <thead>
           <tr>
             <th colSpan={2} className="sheet-title hand-caps">
-              {game.players.length === 1 ? "Solo" : "Multiplayer"}
+              {sheetTitle(game)}
             </th>
             {game.players.map((p, i) => (
               <th key={i} className="player-cell past-name">
@@ -126,7 +127,13 @@ export const PastGames = ({
       if (e.key === "Escape") onClose();
     };
     document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+    // Keep the sheet behind the drawer from scrolling with it.
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = overflow;
+    };
   }, [onClose]);
 
   return (

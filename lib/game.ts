@@ -1,4 +1,4 @@
-import { DEFAULT_CONFIG, playerLimits, type GameConfig } from "./rules";
+import { categoriesFor, DEFAULT_CONFIG, playerLimits, type GameConfig } from "./rules";
 import { describeTiebreak, displayName, scoreGame, summarize, type Breakdown, type Decision, type PlayerSheet } from "./scoring";
 
 export interface CurrentGame {
@@ -65,14 +65,20 @@ export function fitPlayers(players: PlayerSheet[], config: GameConfig): PlayerSh
 }
 
 /** Anything typed for this player that would be lost if their column went away. */
-export function playerHasData(p: PlayerSheet): boolean {
+/**
+ * Anything typed for this player in the rows `config` shows. Scores kept from
+ * an expansion that has since been switched off don't count until it's back on.
+ */
+export function playerHasData(p: PlayerSheet, config: GameConfig): boolean {
   return (
-    Object.values(p.scores).some(Boolean) || Object.values(p.nectarSpent).some(Boolean) || p.unusedFood !== ""
+    categoriesFor(config).some((c) => c.id !== "nectar" && !!p.scores[c.id]) ||
+    (config.oceania && Object.values(p.nectarSpent).some(Boolean)) ||
+    p.unusedFood !== ""
   );
 }
 
 export function hasAnyScore(game: CurrentGame): boolean {
-  return game.players.some(playerHasData);
+  return game.players.some((p) => playerHasData(p, game.config));
 }
 
 /** Whether starting over would throw away scores that aren't in history. */
@@ -82,7 +88,7 @@ export function hasUnsavedScores(game: CurrentGame): boolean {
 
 export function toSavedGame(game: CurrentGame, finishedAt = new Date()): SavedGame {
   // Columns nobody wrote in (an extra "Player 4") aren't part of the game.
-  const scored = game.players.filter(playerHasData);
+  const scored = game.players.filter((p) => playerHasData(p, game.config));
   const players = scored.length ? scored : game.players;
   const { breakdowns, totals, outcome } = scoreGame(game.config, players);
   const names = players.map(displayName);
