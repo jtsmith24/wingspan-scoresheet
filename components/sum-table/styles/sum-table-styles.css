@@ -618,28 +618,6 @@ button.past-slip:hover {
   color: var(--pen);
 }
 
-.app-dialog-check {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  min-height: 2.75rem;
-  margin-top: 0.2rem;
-  font-family: var(--font-label);
-  font-size: 1.05rem;
-  cursor: pointer;
-}
-
-.app-dialog-check input {
-  width: 1.1rem;
-  height: 1.1rem;
-  accent-color: var(--ink);
-}
-
-.app-dialog-check input:focus-visible {
-  outline: 2px solid var(--ink);
-  outline-offset: 2px;
-}
-
 /* All the choices sit on one line, scaling down a little on small phones. */
 .app-dialog-actions {
   display: flex;
@@ -655,6 +633,38 @@ button.past-slip:hover {
   white-space: nowrap;
   font-size: clamp(0.9rem, 3.9vw, 1.1rem);
   padding: 0.25rem 1.1rem;
+}
+
+/* A pair of answers: equal halves, Cancel as a quiet link beneath. */
+.app-dialog-actions.is-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.app-dialog-actions.is-pair .ink-button {
+  padding: 0.25rem 0.5rem;
+}
+
+.app-dialog-under {
+  display: flex;
+  justify-content: center;
+  margin-top: 0.4rem;
+}
+
+.app-dialog-under .text-link {
+  min-height: 2.75rem;
+  margin: 0;
+  border-bottom: none;
+  font-size: 1.05rem;
+  opacity: 0.7;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.app-dialog-step {
+  margin-bottom: 0.3rem;
+  font-size: 0.9rem;
+  opacity: 0.55;
 }
 
 .app-dialog .ink-button:focus-visible {

@@ -198,32 +198,52 @@ const LoadedScorepad = () => {
   const sheetIsBlank =
     !hasAnyScore(game) && game.players.every(p => !p.name.trim());
 
-  // Unsaved scores: a ticked "save first" box, so skipping it is deliberate.
-  const saveFirst = {
-    id: "save",
-    label: "Save this game first",
-    checked: true,
-  };
+  // Unsaved scores: keep them or toss them? One tap, Save as the default.
+  const keepOrToss = (message: string, step?: string) =>
+    choose({
+      step,
+      message,
+      actions: [
+        { id: "toss", label: "Toss it" },
+        { id: "save", label: "Save it", primary: true },
+      ],
+    });
 
+  // Up to two quick questions; nothing changes until the last is answered.
   const startNewGame = async () => {
     const unsaved = hasUnsavedScores(game);
     const scored = hasAnyScore(game);
-    const choice = await choose({
-      message: unsaved
-        ? "Start a new game? This one hasn't been saved yet."
-        : "Start a new game?",
-      actions: [{ id: "start", label: "Start new game", primary: true }],
-      // A sheet with only names has nobody worth keeping: it just clears.
-      checkboxes: [
-        ...(unsaved ? [saveFirst] : []),
-        ...(scored
-          ? [{ id: "keep", label: "Keep the same players", checked: true }]
-          : []),
-      ],
-    });
-    if (!choice) return;
-    if (choice.checked.save) saveGame();
-    const keep = !!choice.checked.keep;
+    let save = false;
+    let keep = false;
+    if (!scored) {
+      // Only names on the sheet: nothing to save, nobody worth keeping.
+      const ok = await ask({
+        message: "Start a new game? The names will be cleared.",
+        confirm: "Start new game",
+      });
+      if (!ok) return;
+    } else {
+      const steps = unsaved ? 2 : 1;
+      if (unsaved) {
+        const kept = await keepOrToss(
+          "This game hasn't been saved. Keep it?",
+          "1 of 2"
+        );
+        if (!kept) return;
+        save = kept === "save";
+      }
+      const who = await choose({
+        step: steps > 1 ? "2 of 2" : undefined,
+        message: unsaved ? "Who's playing next?" : "New game. Who's playing?",
+        actions: [
+          { id: "new", label: "New players" },
+          { id: "same", label: "Same players", primary: true },
+        ],
+      });
+      if (!who) return;
+      keep = who === "same";
+    }
+    if (save) saveGame();
     const codes = withCodes(game.players);
     setGame(
       newGame(
@@ -246,13 +266,11 @@ const LoadedScorepad = () => {
 
   const playAgain = async (saved: SavedGame) => {
     if (hasUnsavedScores(game)) {
-      const choice = await choose({
-        message: "Play again? The game on the sheet hasn't been saved yet.",
-        actions: [{ id: "play", label: "Play again", primary: true }],
-        checkboxes: [saveFirst],
-      });
-      if (!choice) return;
-      if (choice.checked.save) saveGame();
+      const kept = await keepOrToss(
+        "Play again? The game on the sheet hasn't been saved. Keep it?"
+      );
+      if (!kept) return;
+      if (kept === "save") saveGame();
     }
     // Unnamed players were saved as "Player 2" and so on; start those blank.
     const playerNames = saved.players.map(p =>

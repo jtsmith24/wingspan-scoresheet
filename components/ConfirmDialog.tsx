@@ -10,18 +10,14 @@ export interface DialogAction {
 export interface DialogOptions {
   message: string;
   actions: DialogAction[];
-  cancel?: string;
+  /** e.g. "1 of 2" when a choice takes more than one step. */
+  step?: string;
   /** Destructive: Cancel gets focus, so a stray Enter does nothing harmful. */
   danger?: boolean;
-  checkboxes?: { id: string; label: string; checked: boolean }[];
 }
 
-/** The action picked and each checkbox's state, or null when cancelled. */
-export type Choice = {
-  action: string;
-  checked: Record<string, boolean>;
-} | null;
-export type Choose = (options: DialogOptions) => Promise<Choice>;
+/** The id of the action picked, or null when cancelled. */
+export type Choose = (options: DialogOptions) => Promise<string | null>;
 
 export interface ConfirmOptions {
   message: string;
@@ -32,15 +28,20 @@ export type Ask = (options: ConfirmOptions) => Promise<boolean>;
 
 /**
  * Themed stand-in for window.confirm. Render `dialog` once. `choose` offers
- * several actions (and optionally checkboxes); `ask` is the yes/no form.
+ * a pair of answers with Cancel underneath; `ask` is the yes/no form.
  * Cancel, Escape and a tap outside all count as cancelling.
  */
 export function useDialog(): [React.ReactNode, Choose, Ask] {
   const [request, setRequest] = useState<
-    (DialogOptions & { resolve: (choice: Choice) => void }) | null
+    | (DialogOptions & { resolve: (choice: string | null) => void; id: number })
+    | null
   >(null);
+  const asked = useRef(0);
   const choose = useCallback<Choose>(
-    options => new Promise(resolve => setRequest({ ...options, resolve })),
+    options =>
+      new Promise(resolve =>
+        setRequest({ ...options, resolve, id: ++asked.current })
+      ),
     []
   );
   const ask = useCallback<Ask>(
@@ -53,7 +54,10 @@ export function useDialog(): [React.ReactNode, Choose, Ask] {
     [choose]
   );
   const dialog = request && (
+    // Keyed per request: a follow-up question gets a fresh, open dialog
+    // rather than reusing the one that just closed.
     <AppDialog
+      key={request.id}
       {...request}
       onDone={choice => {
         request.resolve(choice);
@@ -67,15 +71,14 @@ export function useDialog(): [React.ReactNode, Choose, Ask] {
 const AppDialog = ({
   message,
   actions,
-  cancel = "Cancel",
+  step,
   danger = false,
-  checkboxes = [],
   onDone,
-}: DialogOptions & { onDone: (choice: Choice) => void }) => {
+}: DialogOptions & { onDone: (choice: string | null) => void }) => {
   const ref = useRef<HTMLDialogElement>(null);
-  const [checked, setChecked] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(checkboxes.map(c => [c.id, c.checked]))
-  );
+  // A pair of answers sits side by side with Cancel as a link below;
+  // a single confirmation keeps Cancel as its partner button.
+  const pair = actions.length > 1;
 
   // showModal puts it above everything, traps focus and handles Escape. It
   // focuses the first control itself, so pick the intended button after.
@@ -90,10 +93,22 @@ const AppDialog = ({
   }, [danger]);
 
   // close() hands focus back to whatever was focused before.
-  const finish = (action: string | null) => {
+  const finish = (choice: string | null) => {
     ref.current?.close();
-    onDone(action === null ? null : { action, checked });
+    onDone(choice);
   };
+
+  const cancel = (
+    <button
+      type="button"
+      className={
+        pair ? "text-link app-dialog-cancel" : "ink-button app-dialog-cancel"
+      }
+      onClick={() => finish(null)}
+    >
+      Cancel
+    </button>
+  );
 
   return (
     <dialog
@@ -109,30 +124,14 @@ const AppDialog = ({
       }}
     >
       <div className="app-dialog-card">
+        {step && <p className="app-dialog-step hand-caps">{step}</p>}
         <p id="app-dialog-message" className="app-dialog-message">
           {message}
         </p>
-        {checkboxes.map(c => (
-          <label key={c.id} className="app-dialog-check">
-            <input
-              type="checkbox"
-              data-check={c.id}
-              checked={checked[c.id]}
-              onChange={e =>
-                setChecked(now => ({ ...now, [c.id]: e.target.checked }))
-              }
-            />
-            {c.label}
-          </label>
-        ))}
-        <div className="app-dialog-actions hand-caps">
-          <button
-            type="button"
-            className="ink-button app-dialog-cancel"
-            onClick={() => finish(null)}
-          >
-            {cancel}
-          </button>
+        <div
+          className={`app-dialog-actions hand-caps${pair ? " is-pair" : ""}`}
+        >
+          {!pair && cancel}
           {actions.map(a => (
             <button
               key={a.id}
@@ -147,6 +146,7 @@ const AppDialog = ({
             </button>
           ))}
         </div>
+        {pair && <div className="app-dialog-under hand-caps">{cancel}</div>}
       </div>
     </dialog>
   );
