@@ -2,7 +2,7 @@
 import React, { useRef, useState } from "react";
 import "./styles/sum-table-styles.css";
 import { ScoreIcon, ScoreIconName } from "../ScoreIcon";
-import { CurrentGame, playerHasData } from "@/lib/game";
+import { CurrentGame, missingScores, playerHasData } from "@/lib/game";
 import { Move, nextCell } from "@/lib/gridNavigation";
 import { codeFor, MAX_NAME_LENGTH, withCodes } from "@/lib/names";
 import {
@@ -143,8 +143,11 @@ const SumTable = ({
     }
   }
 
+  // Nobody wins, and no tie needs breaking, until every box is filled in.
+  const missing = missingScores(game);
+  const finished = missing === 0;
   // Unused food only matters when players are tied for the most points.
-  const showTiebreak = outcome.leaders.length > 1;
+  const showTiebreak = finished && outcome.leaders.length > 1;
   const tiebreakRow = rows.length;
   const rowCount = showTiebreak ? rows.length + 1 : rows.length;
   const isEnabled = (row: number, col: number) =>
@@ -235,7 +238,9 @@ const SumTable = ({
     players.map(p => p.unusedFood)
   );
   const circled =
-    outcome.decision === "needs-food" || outcome.decision === "none"
+    !finished ||
+    outcome.decision === "needs-food" ||
+    outcome.decision === "none"
       ? []
       : outcome.winners;
 
@@ -401,7 +406,12 @@ const SumTable = ({
           </tbody>
         </table>
       </div>
-      {outcome.decision !== "none" && (
+      {outcome.decision !== "none" && !finished && (
+        <p className="sheet-result sheet-pending" aria-live="polite">
+          {missing} {missing === 1 ? "box" : "boxes"} left to fill
+        </p>
+      )}
+      {outcome.decision !== "none" && finished && (
         <p className="sheet-result" aria-live="polite">
           {result}
           {outcome.decision === "needs-food" && (

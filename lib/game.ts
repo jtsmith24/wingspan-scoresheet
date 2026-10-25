@@ -96,7 +96,6 @@ export function fitPlayers(
   return fitted;
 }
 
-/** Anything typed for this player that would be lost if their column went away. */
 /**
  * Anything typed for this player in the rows `config` shows. Scores kept from
  * an expansion that has since been switched off don't count until it's back on.
@@ -107,6 +106,29 @@ export function playerHasData(p: PlayerSheet, config: GameConfig): boolean {
     categoriesFor(config).some(c => c.id !== "nectar" && !!p.scores[c.id]) ||
     (config.oceania && Object.values(p.nectarSpent).some(Boolean))
   );
+}
+
+/** Players taking part: anyone with a name or a score. */
+const inGame = (p: PlayerSheet, config: GameConfig) =>
+  !!p.name.trim() || playerHasData(p, config);
+
+/**
+ * Score boxes still blank for players in the game; a winner is only called
+ * at 0. Nectar rows don't count, since blank there means none was spent.
+ */
+export function missingScores(game: CurrentGame): number {
+  const rows = categoriesFor(game.config).filter(c => c.id !== "nectar");
+  return game.players
+    .filter(p => inGame(p, game.config))
+    .reduce(
+      (n, p) =>
+        n +
+        rows.filter(c => {
+          const v = p.scores[c.id]?.trim() ?? "";
+          return v === "" || v === "-";
+        }).length,
+      0
+    );
 }
 
 export function hasAnyScore(game: CurrentGame): boolean {
@@ -128,6 +150,8 @@ export function toSavedGame(
   const { breakdowns, totals, outcome } = scoreGame(game.config, players);
   const names = players.map(displayName);
   const codes = withCodes(players);
+  // Saved part-way through: keep the scores but call no winner.
+  const unfinished = missingScores(game) > 0;
   return {
     id: game.savedAs ?? newId(),
     finishedAt: finishedAt.toISOString(),
@@ -140,16 +164,18 @@ export function toSavedGame(
       // Food typed during an earlier tie is stale for anyone not tied now.
       unusedFood:
         p.unusedFood === "" ||
+        unfinished ||
         !outcome.leaders.includes(i) ||
         outcome.leaders.length < 2
           ? null
           : Number.parseInt(p.unusedFood, 10),
     })),
-    winners: outcome.winners,
-    decision: outcome.decision,
-    summary: summarize(outcome, names),
-    detail:
-      describeTiebreak(
+    winners: unfinished ? [] : outcome.winners,
+    decision: unfinished ? "unfinished" : outcome.decision,
+    summary: unfinished ? "Unfinished game" : summarize(outcome, names),
+    detail: unfinished
+      ? undefined
+      : describeTiebreak(
         outcome,
         names,
         players.map(p => p.unusedFood)
@@ -223,6 +249,7 @@ const DECISIONS: readonly Decision[] = [
   "food",
   "shared",
   "needs-food",
+  "unfinished",
 ];
 
 function isPlayerSheet(v: unknown): v is PlayerSheet {

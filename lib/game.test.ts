@@ -3,6 +3,7 @@ import {
   addToHistory,
   fitPlayers,
   hasUnsavedScores,
+  missingScores,
   playerHasData,
   isCurrentGame,
   isHistory,
@@ -15,6 +16,13 @@ import {
 import { categoriesFor, DEFAULT_CONFIG, playerLimits } from "./rules";
 import { createStore } from "./storage";
 import { nextCell } from "./gridNavigation";
+import type { PlayerSheet } from "./scoring";
+
+/** Every score row filled in: 0 except birds. */
+const fill = (p: PlayerSheet, birds: string) => {
+  for (const c of categoriesFor(DEFAULT_CONFIG)) p.scores[c.id] = "0";
+  p.scores.birds = birds;
+};
 
 describe("scoresheet rows", () => {
   it("matches the base scorepad", () => {
@@ -71,10 +79,29 @@ describe("games and history", () => {
     expect(fitPlayers(five, { ...DEFAULT_CONFIG, asia: "flock" })).toHaveLength(6);
   });
 
+  it("calls no winner until every box is filled in", () => {
+    const game = newGame(DEFAULT_CONFIG, ["Jordan", "Sam", ""]);
+    expect(missingScores(game)).toBe(12);
+    fill(game.players[0], "40");
+    game.players[1].scores.birds = "30";
+    expect(missingScores(game)).toBe(5);
+    const saved = toSavedGame(game);
+    expect(saved).toMatchObject({ decision: "unfinished", winners: [], summary: "Unfinished game" });
+    fill(game.players[1], "30");
+    expect(missingScores(game)).toBe(0);
+    expect(toSavedGame(game).winners).toEqual([0]);
+  });
+
+  it("doesn't wait on nectar rows or unused columns", () => {
+    const game = newGame({ ...DEFAULT_CONFIG, oceania: true }, ["Jordan", "", ""]);
+    fill(game.players[0], "40");
+    expect(missingScores(game)).toBe(0);
+  });
+
   it("snapshots a finished game", () => {
     const game = newGame(DEFAULT_CONFIG, ["Jordan", ""]);
-    game.players[0].scores.birds = "94";
-    game.players[1].scores.birds = "50";
+    fill(game.players[0], "94");
+    fill(game.players[1], "50");
     const saved = toSavedGame(game, new Date("2026-10-01T20:00:00Z"));
     expect(saved).toMatchObject({
       finishedAt: "2026-10-01T20:00:00.000Z",
@@ -97,9 +124,9 @@ describe("games and history", () => {
 
   it("drops unused food left over from an earlier tie", () => {
     const game = newGame(DEFAULT_CONFIG, ["A", "B", "C"]);
-    game.players[0].scores.birds = "50";
-    game.players[1].scores.birds = "40";
-    game.players[2].scores.birds = "40";
+    fill(game.players[0], "50");
+    fill(game.players[1], "40");
+    fill(game.players[2], "40");
     game.players.forEach((p) => (p.unusedFood = "2"));
     expect(toSavedGame(game).players.map((p) => p.unusedFood)).toEqual([null, null, null]);
     game.players[0].scores.birds = "40";
@@ -119,8 +146,8 @@ describe("games and history", () => {
 
   it("leaves empty columns out of a saved game", () => {
     const game = newGame(DEFAULT_CONFIG, ["Jordan", "Sam", ""]);
-    game.players[0].scores.birds = "40";
-    game.players[1].scores.birds = "30";
+    fill(game.players[0], "40");
+    fill(game.players[1], "30");
     const saved = toSavedGame(game);
     expect(saved.players.map((p) => p.name)).toEqual(["Jordan", "Sam"]);
     expect(saved.winners).toEqual([0]);

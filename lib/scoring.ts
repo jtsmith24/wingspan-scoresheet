@@ -115,7 +115,9 @@ export type Decision =
   /** Still tied after food: tied players share the victory. */
   | "shared"
   /** Tied on points, waiting for unused food counts. */
-  | "needs-food";
+  | "needs-food"
+  /** Saved before every score box was filled in: no winner. */
+  | "unfinished";
 
 export interface Outcome {
   totals: number[];
@@ -208,5 +210,7 @@ export function summarize(outcome: Outcome, names: string[]): string {
       return `${who} shared the win with ${score}`;
     case "needs-food":
       return `${who} tied with ${score}`;
+    case "unfinished":
+      return "Unfinished game";
   }
 }

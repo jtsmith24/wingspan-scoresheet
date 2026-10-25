@@ -365,6 +365,11 @@ tr.group-start:not(:first-child) > * {
   text-align: center;
 }
 
+.sheet-pending {
+  font-size: 1.05rem;
+  opacity: 0.6;
+}
+
 .sheet-result-detail {
   display: block;
   font-size: 1rem;
