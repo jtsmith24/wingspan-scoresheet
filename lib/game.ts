@@ -1,5 +1,19 @@
-import { categoriesFor, DEFAULT_CONFIG, playerLimits, type GameConfig } from "./rules";
-import { describeTiebreak, displayName, scoreGame, summarize, type Breakdown, type Decision, type PlayerSheet } from "./scoring";
+import { withCodes } from "./names";
+import {
+  categoriesFor,
+  DEFAULT_CONFIG,
+  playerLimits,
+  type GameConfig,
+} from "./rules";
+import {
+  describeTiebreak,
+  displayName,
+  scoreGame,
+  summarize,
+  type Breakdown,
+  type Decision,
+  type PlayerSheet,
+} from "./scoring";
 
 export interface CurrentGame {
   config: GameConfig;
@@ -12,6 +26,7 @@ export interface CurrentGame {
 
 export interface SavedPlayer {
   name: string;
+  code?: string;
   breakdown: Breakdown;
   total: number;
   unusedFood: number | null;
@@ -35,29 +50,46 @@ export const MAX_REMEMBERED_NAMES = 20;
 
 export function newId(): string {
   try {
-    if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+    if (typeof crypto !== "undefined" && "randomUUID" in crypto)
+      return crypto.randomUUID();
   } catch {
     // Not a secure context; fall through.
   }
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-export function emptyPlayer(name = ""): PlayerSheet {
-  return { id: newId(), name, scores: {}, nectarSpent: {}, unusedFood: "" };
+export function emptyPlayer(name = "", code?: string): PlayerSheet {
+  return {
+    id: newId(),
+    name,
+    code,
+    scores: {},
+    nectarSpent: {},
+    unusedFood: "",
+  };
 }
 
 /** A fresh sheet that keeps the previous players' names and the chosen expansions. */
-export function newGame(config: GameConfig = DEFAULT_CONFIG, names: string[] = []): CurrentGame {
+export function newGame(
+  config: GameConfig = DEFAULT_CONFIG,
+  names: string[] = [],
+  codes: (string | undefined)[] = []
+): CurrentGame {
   const { min, max } = playerLimits(config);
   const count = Math.min(max, Math.max(min, names.length || Math.max(min, 2)));
   return {
     config,
-    players: Array.from({ length: count }, (_, i) => emptyPlayer(names[i] ?? "")),
+    players: Array.from({ length: count }, (_, i) =>
+      emptyPlayer(names[i] ?? "", codes[i])
+    ),
   };
 }
 
 /** Pads or trims the player list to fit a mode's player count. */
-export function fitPlayers(players: PlayerSheet[], config: GameConfig): PlayerSheet[] {
+export function fitPlayers(
+  players: PlayerSheet[],
+  config: GameConfig
+): PlayerSheet[] {
   const { min, max } = playerLimits(config);
   const fitted = players.slice(0, max);
   while (fitted.length < min) fitted.push(emptyPlayer());
@@ -72,13 +104,13 @@ export function fitPlayers(players: PlayerSheet[], config: GameConfig): PlayerSh
  */
 export function playerHasData(p: PlayerSheet, config: GameConfig): boolean {
   return (
-    categoriesFor(config).some((c) => c.id !== "nectar" && !!p.scores[c.id]) ||
+    categoriesFor(config).some(c => c.id !== "nectar" && !!p.scores[c.id]) ||
     (config.oceania && Object.values(p.nectarSpent).some(Boolean))
   );
 }
 
 export function hasAnyScore(game: CurrentGame): boolean {
-  return game.players.some((p) => playerHasData(p, game.config));
+  return game.players.some(p => playerHasData(p, game.config));
 }
 
 /** Whether starting over would throw away scores that aren't in history. */
@@ -86,23 +118,30 @@ export function hasUnsavedScores(game: CurrentGame): boolean {
   return hasAnyScore(game) && (!game.savedAs || game.dirty === true);
 }
 
-export function toSavedGame(game: CurrentGame, finishedAt = new Date()): SavedGame {
+export function toSavedGame(
+  game: CurrentGame,
+  finishedAt = new Date()
+): SavedGame {
   // Columns nobody wrote in (an extra "Player 4") aren't part of the game.
-  const scored = game.players.filter((p) => playerHasData(p, game.config));
+  const scored = game.players.filter(p => playerHasData(p, game.config));
   const players = scored.length ? scored : game.players;
   const { breakdowns, totals, outcome } = scoreGame(game.config, players);
   const names = players.map(displayName);
+  const codes = withCodes(players);
   return {
     id: game.savedAs ?? newId(),
     finishedAt: finishedAt.toISOString(),
     config: game.config,
     players: players.map((p, i) => ({
       name: names[i],
+      code: codes[i] || undefined,
       breakdown: breakdowns[i],
       total: totals[i],
       // Food typed during an earlier tie is stale for anyone not tied now.
       unusedFood:
-        p.unusedFood === "" || !outcome.leaders.includes(i) || outcome.leaders.length < 2
+        p.unusedFood === "" ||
+        !outcome.leaders.includes(i) ||
+        outcome.leaders.length < 2
           ? null
           : Number.parseInt(p.unusedFood, 10),
     })),
@@ -113,7 +152,7 @@ export function toSavedGame(game: CurrentGame, finishedAt = new Date()): SavedGa
       describeTiebreak(
         outcome,
         names,
-        players.map((p) => p.unusedFood),
+        players.map(p => p.unusedFood)
       ) ?? undefined,
   };
 }
@@ -122,16 +161,22 @@ export function toSavedGame(game: CurrentGame, finishedAt = new Date()): SavedGa
  * Newest first, capped so storage can't grow forever. Re-saving a game
  * updates its entry in place and keeps the day it was first saved.
  */
-export function addToHistory(history: SavedGame[], game: SavedGame): SavedGame[] {
-  const at = history.findIndex((g) => g.id === game.id);
+export function addToHistory(
+  history: SavedGame[],
+  game: SavedGame
+): SavedGame[] {
+  const at = history.findIndex(g => g.id === game.id);
   if (at === -1) return [game, ...history].slice(0, MAX_HISTORY);
   const next = [...history];
   next[at] = { ...game, finishedAt: history[at].finishedAt };
   return next;
 }
 
-export function removeFromHistory(history: SavedGame[], id: string): SavedGame[] {
-  return history.filter((g) => g.id !== id);
+export function removeFromHistory(
+  history: SavedGame[],
+  id: string
+): SavedGame[] {
+  return history.filter(g => g.id !== id);
 }
 
 /** Most-recent-first list of distinct names (case-insensitive). */
@@ -164,18 +209,28 @@ function isConfig(v: unknown): v is GameConfig {
   );
 }
 
-const isRecordOf = (v: unknown, check: (x: unknown) => boolean) => isObject(v) && Object.values(v).every(check);
+const isRecordOf = (v: unknown, check: (x: unknown) => boolean) =>
+  isObject(v) && Object.values(v).every(check);
 const isString = (x: unknown) => typeof x === "string";
-const isCount = (x: unknown) => typeof x === "number" && Number.isInteger(x) && x >= 0;
+const isCount = (x: unknown) =>
+  typeof x === "number" && Number.isInteger(x) && x >= 0;
 // Hummingbird points can be negative, so totals can be too.
 const isPoints = (x: unknown) => typeof x === "number" && Number.isInteger(x);
-const DECISIONS: readonly Decision[] = ["none", "solo", "points", "food", "shared", "needs-food"];
+const DECISIONS: readonly Decision[] = [
+  "none",
+  "solo",
+  "points",
+  "food",
+  "shared",
+  "needs-food",
+];
 
 function isPlayerSheet(v: unknown): v is PlayerSheet {
   return (
     isObject(v) &&
     typeof v.id === "string" &&
     typeof v.name === "string" &&
+    (v.code === undefined || typeof v.code === "string") &&
     isRecordOf(v.scores, isString) &&
     isRecordOf(v.nectarSpent, isString) &&
     typeof v.unusedFood === "string"
@@ -203,6 +258,7 @@ function isSavedPlayer(v: unknown): v is SavedPlayer {
   return (
     isObject(v) &&
     typeof v.name === "string" &&
+    (v.code === undefined || typeof v.code === "string") &&
     isPoints(v.total) &&
     isRecordOf(v.breakdown, isPoints) &&
     (v.unusedFood === null || isCount(v.unusedFood))
@@ -222,7 +278,9 @@ function isSavedGame(v: unknown): v is SavedGame {
     Array.isArray(v.players) &&
     v.players.every(isSavedPlayer) &&
     Array.isArray(v.winners) &&
-    v.winners.every((i) => isCount(i) && (i as number) < (v.players as unknown[]).length)
+    v.winners.every(
+      i => isCount(i) && (i as number) < (v.players as unknown[]).length
+    )
   );
 }
 
@@ -231,6 +289,5 @@ export function isHistory(v: unknown): v is SavedGame[] {
 }
 
 export function isNameList(v: unknown): v is string[] {
-  return Array.isArray(v) && v.every((n) => typeof n === "string");
+  return Array.isArray(v) && v.every(n => typeof n === "string");
 }
-

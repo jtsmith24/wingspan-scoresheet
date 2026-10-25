@@ -28,7 +28,8 @@ export function loadCurrentGame(): CurrentGame {
     null,
     (v): v is CurrentGame | null => isCurrentGame(v),
   );
-  return saved ?? newGame(undefined, loadNames());
+  // Remembered names are offered as suggestions, not used to fill a new sheet.
+  return saved ?? newGame();
 }
 
 export const saveNames = (names: string[]) => getStore().write(STORAGE_KEYS.names, names);

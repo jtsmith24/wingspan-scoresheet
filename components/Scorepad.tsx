@@ -32,6 +32,7 @@ import {
   saveNames,
 } from "@/lib/persistence";
 import { STORAGE_KEYS } from "@/lib/storage";
+import { withCodes } from "@/lib/names";
 import { GameConfig, playerLimits } from "@/lib/rules";
 import { PlayerSheet } from "@/lib/scoring";
 import { Edition, themeFor } from "@/lib/theme";
@@ -190,18 +191,43 @@ const LoadedScorepad = () => {
     setGame({ ...game, savedAs: saved.id, dirty: false });
   };
 
+  // The players carry over with their names and header codes.
   const startNewGame = (
     config = game.config,
-    playerNames = game.players.map(p => p.name)
+    playerNames = game.players.map(p => p.name),
+    playerCodes: (string | undefined)[] = withCodes(game.players)
   ) => {
     if (
       hasUnsavedScores(game) &&
       !window.confirm("Start a new game? These scores haven't been saved.")
     )
       return false;
-    setGame(newGame(config, playerNames));
+    setGame(
+      newGame(
+        config,
+        playerNames,
+        playerCodes.map(c => c || undefined)
+      )
+    );
     return true;
   };
+
+  // For a different group: blank names and scores, same setup and seats.
+  const clearSheet = () => {
+    if (
+      hasUnsavedScores(game) &&
+      !window.confirm("Clear the sheet? These scores haven't been saved.")
+    )
+      return;
+    setGame(
+      newGame(
+        game.config,
+        game.players.map(() => "")
+      )
+    );
+  };
+  const sheetIsBlank =
+    !hasAnyScore(game) && game.players.every(p => !p.name.trim());
 
   const closePast = useCallback(() => setPastOpen(false), []);
 
@@ -218,7 +244,11 @@ const LoadedScorepad = () => {
     const playerNames = saved.players.map(p =>
       /^Player \d+$/.test(p.name) ? "" : p.name
     );
-    if (startNewGame(saved.config, playerNames)) setPastOpen(false);
+    const playerCodes = saved.players.map((p, i) =>
+      playerNames[i] ? p.code : undefined
+    );
+    if (startNewGame(saved.config, playerNames, playerCodes))
+      setPastOpen(false);
   };
 
   const { config, players } = game;
@@ -268,6 +298,14 @@ const LoadedScorepad = () => {
           onClick={() => startNewGame()}
         >
           New game
+        </button>
+        <button
+          type="button"
+          className="text-link clear-link"
+          onClick={clearSheet}
+          disabled={sheetIsBlank}
+        >
+          Clear
         </button>
         {history.length > 0 && (
           <button

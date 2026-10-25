@@ -33,7 +33,9 @@ const paths: Record<ScoreIconName, React.ReactNode> = {
       <path d="M8 12.5l2.7 2.7L16 9.5" />
     </>
   ),
-  egg: <path d="M12 3c3.5 0 6.5 5.5 6.5 10a6.5 6.5 0 01-13 0C5.5 8.5 8.5 3 12 3z" />,
+  egg: (
+    <path d="M12 3c3.5 0 6.5 5.5 6.5 10a6.5 6.5 0 01-13 0C5.5 8.5 8.5 3 12 3z" />
+  ),
   food: (
     <>
       <path d="M12 21V9" />

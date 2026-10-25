@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { ScoreIcon } from "./ScoreIcon";
 import { CATEGORY_ICONS, sheetTitle } from "./sum-table/SumTable";
 import { SavedGame } from "@/lib/game";
-import { shortCodes } from "@/lib/names";
+import { withCodes } from "@/lib/names";
 import { categoriesFor, describeConfig, GROUP_LABELS } from "@/lib/rules";
 
 const formatDay = (iso: string) =>
@@ -18,8 +18,11 @@ const isPlaceholder = (name: string) => /^Player \d+$/.test(name);
 
 /** Header codes for a saved game, with P1, P2… for unnamed players. */
 const codesFor = (game: SavedGame) => {
-  const codes = shortCodes(
-    game.players.map(p => (isPlaceholder(p.name) ? "" : p.name))
+  const codes = withCodes(
+    game.players.map(p => ({
+      name: isPlaceholder(p.name) ? "" : p.name,
+      code: p.code,
+    }))
   );
   return codes.map((c, i) => c || `P${i + 1}`);
 };

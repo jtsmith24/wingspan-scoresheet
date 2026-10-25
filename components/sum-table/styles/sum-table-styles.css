@@ -6,7 +6,8 @@
   padding: 0.75rem;
   border-radius: 0.6rem;
   background-color: var(--paper);
-  background-image: radial-gradient(
+  background-image:
+    radial-gradient(
       ellipse at 0% 0%,
       color-mix(in srgb, var(--wash-2) 55%, transparent) 0%,
       transparent 60%
@@ -16,7 +17,8 @@
       color-mix(in srgb, var(--wash-1) 40%, transparent) 0%,
       transparent 55%
     );
-  box-shadow: 0 1px 2px rgba(60, 45, 30, 0.15),
+  box-shadow:
+    0 1px 2px rgba(60, 45, 30, 0.15),
     0 12px 32px -8px rgba(60, 45, 30, 0.35);
   transition: background-image 0.4s;
 }
@@ -59,8 +61,8 @@
 
 /* Header */
 .sheet-title {
-  text-align: left !important;
-  padding-left: 0.6rem !important;
+  text-align: center !important;
+  vertical-align: middle;
   font-size: 1.15rem;
   letter-spacing: 0.04em;
   border-bottom: 1.5px solid var(--ink) !important;
@@ -280,7 +282,7 @@ tr.group-start:not(:first-child) > * {
   }
   .sheet-title {
     font-size: 0.95rem;
-    padding-left: 0.3rem !important;
+    padding: 0 0.3rem !important;
   }
   .score-input {
     font-size: 1.35rem;
@@ -384,7 +386,9 @@ tr.group-start:not(:first-child) > * {
   font-size: 1.1rem;
   color: var(--ink);
   background: color-mix(in srgb, var(--paper) 70%, transparent);
-  transition: background-color 0.15s, opacity 0.15s;
+  transition:
+    background-color 0.15s,
+    opacity 0.15s;
 }
 
 .ink-button:hover:not(:disabled) {
@@ -405,9 +409,15 @@ tr.group-start:not(:first-child) > * {
   cursor: default;
 }
 
-.history-link {
+.history-link,
+.clear-link {
   margin-left: 0.25rem;
   font-size: 1.05rem;
+}
+
+.clear-link:disabled {
+  opacity: 0.35;
+  cursor: default;
 }
 
 /* Past games: torn-off slips in a drawer */
@@ -619,7 +629,10 @@ button.past-slip:hover {
   background: color-mix(in srgb, var(--tone) 35%, var(--paper));
   opacity: 0.75;
   transform: translateY(0.45rem);
-  transition: transform 0.15s, background-color 0.15s, opacity 0.15s;
+  transition:
+    transform 0.15s,
+    background-color 0.15s,
+    opacity 0.15s;
 }
 
 .expansion-tab:hover {
@@ -633,13 +646,25 @@ button.past-slip:hover {
   box-shadow: 0 -2px 6px -2px rgba(60, 45, 30, 0.3);
 }
 
-.tab-european { --tone: #a49ad3; }
-.tab-oceania { --tone: #f0cf72; }
-.tab-asia { --tone: #eaa7b8; }
-.tab-americas { --tone: #97c79a; }
+.tab-european {
+  --tone: #a49ad3;
+}
+.tab-oceania {
+  --tone: #f0cf72;
+}
+.tab-asia {
+  --tone: #eaa7b8;
+}
+.tab-americas {
+  --tone: #97c79a;
+}
 
-.tab-base { --tone: #a9cfe6; }
-.tab-mix { --tone: #d8cbb8; }
+.tab-base {
+  --tone: #a9cfe6;
+}
+.tab-mix {
+  --tone: #d8cbb8;
+}
 
 .expansion-tab {
   position: relative;

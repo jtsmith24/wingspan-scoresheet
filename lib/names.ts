@@ -35,37 +35,49 @@ function candidates(name: string): string[] {
   return [...new Set(out)];
 }
 
+/** A player as far as codes are concerned. */
+export interface Named {
+  name: string;
+  /** Kept once given, so a player's code never shifts under them. */
+  code?: string;
+}
+
 /**
- * A short code per player for the sheet header: the first three letters, or
- * initials for a full name. Codes never repeat; identical names are numbered
- * (SAM, SA2, SA3). Empty names get "" so the header can show a placeholder.
+ * The code for a name, avoiding the codes `others` already have. Only the
+ * newcomer adapts: Samantha keeps SAM and a later Sam gets SM. Identical
+ * names are numbered (SAM, SA2, SA3).
  */
-export function shortCodes(names: string[]): string[] {
-  const keys = names.map(clean);
-  // Names that already fit (Sam, Al) pick first, so Sam keeps SAM even when
-  // Samantha sits to the left of them.
-  const fits = (k: string) => !k.includes(" ") && k.length <= 3;
-  const order = keys
-    .map((_, i) => i)
-    .sort((a, b) => Number(fits(keys[b])) - Number(fits(keys[a])));
-  const codes: string[] = names.map(() => "");
-  const taken = new Set<string>();
-  const seen = new Set<string>();
-  for (const i of order) {
-    const key = keys[i];
-    if (!key) continue;
-    const options = seen.has(key) ? [] : candidates(names[i]);
-    seen.add(key);
-    let code = options.find(c => !taken.has(c));
-    if (!code) {
-      const base = key.replace(/ /g, "").slice(0, 2);
-      for (let n = 2; !code; n++) {
-        const next = `${base}${n}`;
-        if (!taken.has(next)) code = next;
-      }
+export function codeFor(name: string, others: Named[]): string {
+  const key = clean(name);
+  if (!key) return "";
+  const taken = new Set(others.map(o => o.code).filter(Boolean));
+  const twin = others.some(o => clean(o.name) === key);
+  const code = (twin ? [] : candidates(name)).find(c => !taken.has(c));
+  if (code) return code;
+  const base = key.replace(/ /g, "").slice(0, 2);
+  for (let n = 2; ; n++) if (!taken.has(`${base}${n}`)) return `${base}${n}`;
+}
+
+/**
+ * Header codes for a list of players. Codes players already have are kept;
+ * anyone without one (older saves, a name still being typed) gets one in
+ * column order. Empty names get "" so the header can show a placeholder.
+ */
+export function withCodes(players: Named[]): string[] {
+  const codes = players.map(() => "");
+  const claimed = new Set<string>();
+  players.forEach((p, i) => {
+    if (clean(p.name) && p.code && !claimed.has(p.code)) {
+      codes[i] = p.code;
+      claimed.add(p.code);
     }
-    taken.add(code);
-    codes[i] = code;
-  }
+  });
+  players.forEach((p, i) => {
+    if (codes[i] || !clean(p.name)) return;
+    const others = players
+      .map((o, j) => ({ name: o.name, code: codes[j] }))
+      .filter((o, j) => j !== i && (o.code || j < i));
+    codes[i] = codeFor(p.name, others);
+  });
   return codes;
 }

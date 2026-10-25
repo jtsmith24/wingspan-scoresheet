@@ -11,6 +11,8 @@ import {
 export interface PlayerSheet {
   id: string;
   name: string;
+  /** Short header code, fixed once the name is entered (see lib/names). */
+  code?: string;
   scores: Partial<Record<CategoryId, string>>;
   /** Oceania: nectar tokens on each habitat's "spent nectar" space. */
   nectarSpent: Partial<Record<Habitat, string>>;

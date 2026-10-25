@@ -1,10 +1,10 @@
 "use client";
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import "./styles/sum-table-styles.css";
 import { ScoreIcon, ScoreIconName } from "../ScoreIcon";
 import { CurrentGame, playerHasData } from "@/lib/game";
 import { Move, nextCell } from "@/lib/gridNavigation";
-import { MAX_NAME_LENGTH, shortCodes } from "@/lib/names";
+import { codeFor, MAX_NAME_LENGTH, withCodes } from "@/lib/names";
 import {
   categoriesFor,
   CategoryId,
@@ -89,9 +89,25 @@ const SumTable = ({
   const { config, players } = game;
   const { totals, outcome } = scoreGame(config, players);
   const names = players.map(displayName);
-  const codes = shortCodes(players.map(p => p.name));
+  const codes = withCodes(players);
   // The name being typed shows in full; every other header shows its code.
   const [editing, setEditing] = useState<number | null>(null);
+  const nameAtFocus = useRef("");
+
+  // A player's code is set once, when they finish entering a new name, and
+  // only theirs: nobody else's code shifts while someone types.
+  const finishName = (col: number) => {
+    setEditing(null);
+    const player = players[col];
+    if (player.name === nameAtFocus.current) return;
+    const others = players
+      .map((p, i) => ({ name: p.name, code: codes[i] }))
+      .filter((_, i) => i !== col);
+    setPlayer(col, {
+      ...player,
+      code: codeFor(player.name, others) || undefined,
+    });
+  };
 
   const rows: InputRow[] = categoriesFor(config)
     .filter(c => c.id !== "nectar")
@@ -263,11 +279,12 @@ const SumTable = ({
                     }
                     onFocus={e => {
                       setEditing(col);
+                      nameAtFocus.current = player.name;
                       // Select the full name once it has replaced the code.
                       const input = e.target;
                       requestAnimationFrame(() => input.select());
                     }}
-                    onBlur={() => setEditing(null)}
+                    onBlur={() => finishName(col)}
                     onKeyDown={e => handleNameKeyDown(e, col)}
                     id={`name-${col}`}
                     list="remembered-names"
