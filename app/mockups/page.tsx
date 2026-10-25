@@ -1,4 +1,4 @@
-// Temporary: three takes on the "New game with unsaved scores" dialog.
+// Temporary: takes on the "New game with unsaved scores" flow.
 import "./mockups.css";
 import "../../components/sum-table/styles/sum-table-styles.css";
 
@@ -7,6 +7,20 @@ const Phone = ({ children }: { children: React.ReactNode }) => (
     <div className="mk-sheet" aria-hidden="true" />
     <div className="mk-dim" />
     <div className="mk-center">{children}</div>
+  </div>
+);
+
+// A phone with the sheet still in view (no dim), for the non-modal options.
+const Bare = ({
+  children,
+  room = "short",
+}: {
+  children: React.ReactNode;
+  room?: "short" | "shorter";
+}) => (
+  <div className="mk-phone">
+    <div className={`mk-sheet mk-sheet-${room}`} aria-hidden="true" />
+    {children}
   </div>
 );
 
@@ -22,7 +36,8 @@ export default function Mockups() {
     <main className="mk">
       <p className="mk-intro">
         Starting a new game when the sheet has scores that aren&apos;t saved.
-        All three avoid checkboxes and keep every tap target thumb-sized.
+        None use checkboxes, and every tap target is thumb-sized. C is what&apos;s
+        live on the sheet now.
       </p>
 
       <section className="mk-option">
@@ -128,6 +143,81 @@ export default function Mockups() {
             </div>
           </Phone>
         </div>
+      </section>
+
+      <section className="mk-option">
+        <h2 className="hand-caps">D · Bottom sheet</h2>
+        <p className="mk-note">
+          Slides up from the bottom, where your thumb already is. Big
+          full-width choices; swipe down or tap outside to cancel.
+        </p>
+        <Phone>
+          <div className="mk-bottom">
+            <div className="mk-grabber" />
+            <p className="app-dialog-message">Start a new game?</p>
+            <p className="mk-sub">This one hasn&apos;t been saved yet.</p>
+            <Toggle left="Same players" right="New players" />
+            <button className="mk-row-btn is-primary hand-caps">
+              Save it, then start new
+            </button>
+            <button className="mk-row-btn hand-caps">
+              Start new without saving
+            </button>
+          </div>
+        </Phone>
+      </section>
+
+      <section className="mk-option">
+        <h2 className="hand-caps">E · No popup, inline</h2>
+        <p className="mk-note">
+          New game unfolds a small panel right under the sheet. Nothing covers
+          the scores while you decide; tap New game again to fold it away.
+        </p>
+        <Bare room="shorter">
+          <div className="mk-inline">
+            <div className="mk-inline-actions hand-caps">
+              <button className="ink-button">Save game</button>
+              <button className="ink-button is-open">New game ▴</button>
+            </div>
+            <div className="mk-panel">
+              <div className="mk-panel-row">
+                <span className="hand-caps">This game</span>
+                <div className="mk-toggle hand-caps">
+                  <span className="is-on">Save it</span>
+                  <span>Toss it</span>
+                </div>
+              </div>
+              <div className="mk-panel-row">
+                <span className="hand-caps">Players</span>
+                <div className="mk-toggle hand-caps">
+                  <span className="is-on">Same</span>
+                  <span>New</span>
+                </div>
+              </div>
+              <button className="ink-button ink-button-primary mk-go hand-caps">
+                Start new game
+              </button>
+            </div>
+          </div>
+        </Bare>
+      </section>
+
+      <section className="mk-option">
+        <h2 className="hand-caps">F · No questions, just undo</h2>
+        <p className="mk-note">
+          New game happens straight away: the old game is saved to Past games
+          and the same players carry over. A note at the bottom lets you undo
+          or switch to new players for a few seconds.
+        </p>
+        <Bare>
+          <div className="mk-toast">
+            <span>Saved to Past games.</span>
+            <span className="mk-toast-actions hand-caps">
+              <button>Undo</button>
+              <button>New players</button>
+            </span>
+          </div>
+        </Bare>
       </section>
     </main>
   );
