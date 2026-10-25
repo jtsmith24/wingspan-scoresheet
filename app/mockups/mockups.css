@@ -1,0 +1,165 @@
+.mk {
+  justify-content: flex-start !important;
+  gap: 2.5rem !important;
+}
+.mk-intro,
+.mk-note {
+  max-width: 34rem;
+  font-family: var(--font-label);
+  opacity: 0.75;
+}
+.mk-option h2 {
+  font-size: 1.5rem;
+}
+.mk-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+}
+.mk-pair {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
+}
+
+/* A phone-sized frame with a dimmed sheet behind the dialog. */
+.mk-phone {
+  position: relative;
+  width: min(360px, calc(100vw - 2rem));
+  height: 540px;
+  overflow: hidden;
+  border-radius: 1.4rem;
+  border: 6px solid #2b2420;
+  background: var(--paper);
+}
+.mk-sheet {
+  position: absolute;
+  inset: 1rem 0.75rem;
+  border: 1.5px solid var(--ink);
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0 2.4rem,
+    var(--rule) 2.4rem calc(2.4rem + 1px)
+  );
+  opacity: 0.5;
+}
+.mk-dim {
+  position: absolute;
+  inset: 0;
+  background: rgba(60, 45, 30, 0.35);
+}
+.mk-center {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 0 0.75rem;
+}
+.mk-card {
+  width: 100%;
+  border-radius: 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+.mk-muted {
+  opacity: 0.6;
+}
+
+/* Two-way toggle */
+.mk-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 0.2rem;
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  font-size: 1rem;
+}
+.mk-toggle span {
+  display: grid;
+  place-items: center;
+  min-height: 2.5rem;
+  border-radius: 999px;
+}
+.mk-toggle .is-on {
+  color: var(--paper);
+  background: var(--ink);
+}
+
+/* A: stacked */
+.mk-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+.mk-stack .ink-button {
+  min-height: 2.9rem;
+  font-size: 1.1rem;
+}
+.mk-cancel {
+  align-self: center;
+  margin: 0.2rem 0 0;
+  min-height: 2.4rem;
+  font-size: 1.05rem;
+}
+
+/* B and C: two side by side */
+.mk-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+.mk-row .ink-button {
+  min-height: 2.9rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 1.05rem;
+}
+.mk-cancel-center {
+  opacity: 0.7;
+}
+
+/* B: the slip being torn off */
+.mk-slip {
+  padding: 0.6rem 0.8rem;
+  rotate: -1.2deg;
+  background: #fbf8f1;
+  border-top: 2px dashed color-mix(in srgb, var(--rule) 70%, transparent);
+  box-shadow: 0 6px 14px -8px rgba(60, 45, 30, 0.5);
+}
+.mk-slip-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.95rem;
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 0.25rem;
+  margin-bottom: 0.4rem;
+}
+.mk-slip-scores {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  text-align: center;
+}
+.mk-slip-scores span {
+  display: flex;
+  flex-direction: column;
+}
+.mk-slip-scores b {
+  font-weight: normal;
+}
+.mk-slip-scores i {
+  font-style: normal;
+  font-family: var(--font-hand);
+  font-size: 1.4rem;
+  color: var(--pen);
+}
+.mk-slip-scores .leader {
+  justify-self: center;
+}
+
+/* C: step marker */
+.mk-step {
+  font-size: 0.9rem;
+  opacity: 0.55;
+}
