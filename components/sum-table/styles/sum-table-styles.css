@@ -134,7 +134,8 @@ tr.group-start:not(:first-child) > * {
   transition: background-color 0.15s;
 }
 
-.score-cell:focus-within {
+.score-cell:focus-within,
+.player-cell:focus-within {
   background-color: color-mix(in srgb, var(--wash-1) 30%, transparent);
 }
 
@@ -646,6 +647,11 @@ button.past-slip:hover {
   accent-color: var(--ink);
 }
 
+.mix-option input:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
 .mix-clear {
   align-self: flex-end;
   margin-top: 0.2rem;
@@ -737,5 +743,23 @@ button.past-slip:hover {
   }
   .expansion-tab:not(.is-on) .tab-short {
     display: inline;
+  }
+  /* Several boxes mixed: every tab is raised, so all use short names. */
+  .expansion-tabs.is-mixed .tab-long {
+    display: none;
+  }
+  .expansion-tabs.is-mixed .tab-short {
+    display: inline;
+  }
+}
+
+@media (max-width: 380px) {
+  .expansion-tabs {
+    gap: 0.12rem;
+    padding-left: 0.25rem;
+  }
+  .expansion-tab {
+    padding: 0.25rem 0.35rem 0.9rem;
+    font-size: 0.8rem;
   }
 }

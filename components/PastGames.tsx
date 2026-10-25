@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { ScoreIcon } from "./ScoreIcon";
 import { CATEGORY_ICONS, sheetTitle } from "./sum-table/SumTable";
 import { SavedGame } from "@/lib/game";
@@ -121,6 +121,39 @@ export const PastGames = ({
 }) => {
   const [openId, setOpenId] = useState<string>();
   const open = history.find(g => g.id === openId);
+  const drawerRef = useRef<HTMLElement>(null);
+
+  // Move focus into the drawer, keep Tab inside it, and hand focus back to
+  // whatever opened it on close.
+  useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null;
+    drawerRef.current?.querySelector<HTMLElement>("button")?.focus();
+    const trap = (e: KeyboardEvent) => {
+      if (e.key !== "Tab" || !drawerRef.current) return;
+      const items = [
+        ...drawerRef.current.querySelectorAll<HTMLElement>("button"),
+      ];
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", trap);
+    return () => {
+      document.removeEventListener("keydown", trap);
+      opener?.focus();
+    };
+  }, []);
+
+  // Opening or leaving a slip swaps the drawer's contents; keep focus in it.
+  useEffect(() => {
+    drawerRef.current?.querySelector<HTMLElement>("button")?.focus();
+  }, [openId]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -140,6 +173,7 @@ export const PastGames = ({
     <div className="past-games">
       <div className="past-dim" onClick={onClose} />
       <aside
+        ref={drawerRef}
         className={`past-drawer${open ? " is-open" : ""}`}
         role="dialog"
         aria-modal="true"

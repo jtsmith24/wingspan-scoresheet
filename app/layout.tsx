@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Josefin_Sans, Patrick_Hand, Patrick_Hand_SC } from "next/font/google";
 import "./globals.css";
 
@@ -17,6 +17,11 @@ const hand = Patrick_Hand({
   weight: "400",
   variable: "--font-hand",
 });
+
+// Tints the phone browser's toolbar to the paper colour.
+export const viewport: Viewport = {
+  themeColor: "#f5f0e5",
+};
 
 export const metadata: Metadata = {
   title: "Wingspan Scoresheet",

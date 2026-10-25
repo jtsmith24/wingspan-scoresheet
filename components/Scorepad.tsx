@@ -104,6 +104,15 @@ const LoadedScorepad = () => {
     setGame({ ...game, ...changes, dirty: true });
 
   const setConfig = (config: GameConfig) => {
+    // Re-picking the tab that's already open isn't a change.
+    const now = game.config;
+    if (
+      config.european === now.european &&
+      config.oceania === now.oceania &&
+      config.asia === now.asia &&
+      config.americas === now.americas
+    )
+      return;
     const dropped = game.players.slice(playerLimits(config).max);
     if (
       dropped.some(p => playerHasData(p, game.config)) &&

@@ -108,7 +108,11 @@ export const ExpansionTabs = ({
   // which would trap it underneath the sheet.
   return (
     <div className="expansion-tabs-wrap hand-caps">
-      <div className="expansion-tabs" role="group" aria-label="Game">
+      <div
+        className={`expansion-tabs${mixed ? " is-mixed" : ""}`}
+        role="group"
+        aria-label="Game"
+      >
         <div
           className={`expansion-tab tab-base${active.length === 0 ? " is-on" : ""}`}
         >

@@ -242,7 +242,10 @@ const SumTable = ({
                     type="text"
                     value={player.name}
                     onChange={e =>
-                      setPlayer(col, { ...player, name: e.target.value })
+                      setPlayer(col, {
+                        ...player,
+                        name: e.target.value.toUpperCase(),
+                      })
                     }
                     onKeyDown={e => handleNameKeyDown(e, col)}
                     id={`name-${col}`}
@@ -343,7 +346,9 @@ const SumTable = ({
                 {players.map((player, col) => (
                   <td key={player.id} className="score-cell">
                     {renderInput(
-                      player.unusedFood,
+                      // Food from an earlier tie stays stored, but only the
+                      // players tied now see it.
+                      isEnabled(tiebreakRow, col) ? player.unusedFood : "",
                       tiebreakRow,
                       col,
                       "Unused food"

@@ -68,12 +68,12 @@ export function fitPlayers(players: PlayerSheet[], config: GameConfig): PlayerSh
 /**
  * Anything typed for this player in the rows `config` shows. Scores kept from
  * an expansion that has since been switched off don't count until it's back on.
+ * Unused food is left out: it only matters between players who already scored.
  */
 export function playerHasData(p: PlayerSheet, config: GameConfig): boolean {
   return (
     categoriesFor(config).some((c) => c.id !== "nectar" && !!p.scores[c.id]) ||
-    (config.oceania && Object.values(p.nectarSpent).some(Boolean)) ||
-    p.unusedFood !== ""
+    (config.oceania && Object.values(p.nectarSpent).some(Boolean))
   );
 }
 
@@ -100,7 +100,11 @@ export function toSavedGame(game: CurrentGame, finishedAt = new Date()): SavedGa
       name: names[i],
       breakdown: breakdowns[i],
       total: totals[i],
-      unusedFood: p.unusedFood === "" ? null : Number.parseInt(p.unusedFood, 10),
+      // Food typed during an earlier tie is stale for anyone not tied now.
+      unusedFood:
+        p.unusedFood === "" || !outcome.leaders.includes(i) || outcome.leaders.length < 2
+          ? null
+          : Number.parseInt(p.unusedFood, 10),
     })),
     winners: outcome.winners,
     decision: outcome.decision,
@@ -114,9 +118,16 @@ export function toSavedGame(game: CurrentGame, finishedAt = new Date()): SavedGa
   };
 }
 
-/** Newest first, capped so storage can't grow forever. Re-saving a game replaces its entry. */
+/**
+ * Newest first, capped so storage can't grow forever. Re-saving a game
+ * updates its entry in place and keeps the day it was first saved.
+ */
 export function addToHistory(history: SavedGame[], game: SavedGame): SavedGame[] {
-  return [game, ...history.filter((g) => g.id !== game.id)].slice(0, MAX_HISTORY);
+  const at = history.findIndex((g) => g.id === game.id);
+  if (at === -1) return [game, ...history].slice(0, MAX_HISTORY);
+  const next = [...history];
+  next[at] = { ...game, finishedAt: history[at].finishedAt };
+  return next;
 }
 
 export function removeFromHistory(history: SavedGame[], id: string): SavedGame[] {

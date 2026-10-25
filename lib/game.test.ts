@@ -95,6 +95,28 @@ describe("games and history", () => {
     expect(toSavedGame(base).players.map((p) => p.name)).toEqual(["Jordan"]);
   });
 
+  it("drops unused food left over from an earlier tie", () => {
+    const game = newGame(DEFAULT_CONFIG, ["A", "B", "C"]);
+    game.players[0].scores.birds = "50";
+    game.players[1].scores.birds = "40";
+    game.players[2].scores.birds = "40";
+    game.players.forEach((p) => (p.unusedFood = "2"));
+    expect(toSavedGame(game).players.map((p) => p.unusedFood)).toEqual([null, null, null]);
+    game.players[0].scores.birds = "40";
+    game.players[0].unusedFood = "3";
+    expect(toSavedGame(game).players.map((p) => p.unusedFood)).toEqual([3, 2, 2]);
+  });
+
+  it("updates a re-saved game in place, keeping its date", () => {
+    const a = toSavedGame(newGame(), new Date("2026-10-01T20:00:00Z"));
+    const b = toSavedGame(newGame(), new Date("2026-10-02T20:00:00Z"));
+    const history = addToHistory(addToHistory([], a), b);
+    const edited = { ...a, summary: "changed", finishedAt: "2026-10-03T09:00:00.000Z" };
+    const next = addToHistory(history, edited);
+    expect(next.map((g) => g.id)).toEqual([b.id, a.id]);
+    expect(next[1]).toMatchObject({ summary: "changed", finishedAt: "2026-10-01T20:00:00.000Z" });
+  });
+
   it("leaves empty columns out of a saved game", () => {
     const game = newGame(DEFAULT_CONFIG, ["Jordan", "Sam", ""]);
     game.players[0].scores.birds = "40";
