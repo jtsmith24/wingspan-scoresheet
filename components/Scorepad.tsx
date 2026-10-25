@@ -8,6 +8,7 @@ import React, {
 import SumTable from "./sum-table/SumTable";
 import { Expansion, ExpansionTabs } from "./GameSetup";
 import { PastGames } from "./PastGames";
+import { useConfirm } from "./ConfirmDialog";
 import {
   addToHistory,
   CurrentGame,
@@ -34,7 +35,7 @@ import {
 import { STORAGE_KEYS } from "@/lib/storage";
 import { withCodes } from "@/lib/names";
 import { GameConfig, playerLimits } from "@/lib/rules";
-import { PlayerSheet } from "@/lib/scoring";
+import { displayName, PlayerSheet } from "@/lib/scoring";
 import { Edition, themeFor } from "@/lib/theme";
 
 const THEME_KEY = "wingspan-edition";
@@ -69,6 +70,7 @@ const LoadedScorepad = () => {
   // The expansion picked most recently; the palette follows it while it's on.
   const [preferred, setPreferred] = useState(readPreferred);
   const [pastOpen, setPastOpen] = useState(false);
+  const [dialog, ask] = useConfirm();
 
   const theme = themeFor(game.config, preferred);
   useEffect(() => {
@@ -104,7 +106,7 @@ const LoadedScorepad = () => {
   const edit = (changes: Partial<CurrentGame>) =>
     setGame({ ...game, ...changes, dirty: true });
 
-  const setConfig = (config: GameConfig) => {
+  const setConfig = async (config: GameConfig) => {
     // Re-picking the tab that's already open isn't a change.
     const now = game.config;
     if (
@@ -114,20 +116,29 @@ const LoadedScorepad = () => {
       config.americas === now.americas
     )
       return;
-    const dropped = game.players.slice(playerLimits(config).max);
+    const { max } = playerLimits(config);
+    const dropped = game.players.slice(max);
     if (
       dropped.some(p => playerHasData(p, game.config)) &&
-      !window.confirm("This mode has fewer players. Remove the extra columns?")
+      !(await ask({
+        message: `This mode is for up to ${max} players. Remove the extra columns and their scores?`,
+        confirm: "Remove columns",
+        danger: true,
+      }))
     )
       return;
     edit({ config, players: fitPlayers(game.players, config) });
   };
 
-  const setPlayerCount = (count: number) => {
+  const setPlayerCount = async (count: number) => {
     const removed = game.players.slice(count);
     if (
       removed.some(p => playerHasData(p, game.config)) &&
-      !window.confirm("Remove this player and their scores?")
+      !(await ask({
+        message: "Remove these players and their scores?",
+        confirm: "Remove",
+        danger: true,
+      }))
     )
       return;
     const players: PlayerSheet[] = game.players.slice(0, count);
@@ -135,10 +146,14 @@ const LoadedScorepad = () => {
     edit({ players });
   };
 
-  const removePlayer = (col: number) => {
+  const removePlayer = async (col: number) => {
     if (
       playerHasData(game.players[col], game.config) &&
-      !window.confirm("Remove this player and their scores?")
+      !(await ask({
+        message: `Remove ${displayName(game.players[col], col)} and their scores?`,
+        confirm: "Remove",
+        danger: true,
+      }))
     )
       return;
     edit({ players: game.players.filter((_, i) => i !== col) });
@@ -192,14 +207,18 @@ const LoadedScorepad = () => {
   };
 
   // The players carry over with their names and header codes.
-  const startNewGame = (
+  const startNewGame = async (
     config = game.config,
     playerNames = game.players.map(p => p.name),
     playerCodes: (string | undefined)[] = withCodes(game.players)
   ) => {
     if (
       hasUnsavedScores(game) &&
-      !window.confirm("Start a new game? These scores haven't been saved.")
+      !(await ask({
+        message: "Start a new game? These scores haven't been saved.",
+        confirm: "Start new game",
+        danger: true,
+      }))
     )
       return false;
     setGame(
@@ -213,10 +232,14 @@ const LoadedScorepad = () => {
   };
 
   // For a different group: blank names and scores, same setup and seats.
-  const clearSheet = () => {
+  const clearSheet = async () => {
     if (
       hasUnsavedScores(game) &&
-      !window.confirm("Clear the sheet? These scores haven't been saved.")
+      !(await ask({
+        message: "Clear the sheet? These scores haven't been saved.",
+        confirm: "Clear",
+        danger: true,
+      }))
     )
       return;
     setGame(
@@ -239,7 +262,7 @@ const LoadedScorepad = () => {
     if (game.savedAs === id) setGame({ ...game, savedAs: undefined });
   };
 
-  const playAgain = (saved: SavedGame) => {
+  const playAgain = async (saved: SavedGame) => {
     // Unnamed players were saved as "Player 2" and so on; start those blank.
     const playerNames = saved.players.map(p =>
       /^Player \d+$/.test(p.name) ? "" : p.name
@@ -247,7 +270,7 @@ const LoadedScorepad = () => {
     const playerCodes = saved.players.map((p, i) =>
       playerNames[i] ? p.code : undefined
     );
-    if (startNewGame(saved.config, playerNames, playerCodes))
+    if (await startNewGame(saved.config, playerNames, playerCodes))
       setPastOpen(false);
   };
 
@@ -323,8 +346,10 @@ const LoadedScorepad = () => {
           onClose={closePast}
           onDelete={deleteGame}
           onPlayAgain={playAgain}
+          ask={ask}
         />
       )}
+      {dialog}
       {!canPersist && (
         <p className="storage-note">
           This browser isn&apos;t letting the app store anything, so scores will

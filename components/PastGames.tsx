@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
+import { Ask } from "./ConfirmDialog";
 import { ScoreIcon } from "./ScoreIcon";
 import { CATEGORY_ICONS, sheetTitle } from "./sum-table/SumTable";
 import { SavedGame } from "@/lib/game";
@@ -26,6 +27,9 @@ const codesFor = (game: SavedGame) => {
   );
   return codes.map((c, i) => c || `P${i + 1}`);
 };
+
+// A confirmation on top owns the keyboard: Escape and Tab are its, not ours.
+const dialogOpen = () => !!document.querySelector("dialog[open]");
 
 // A slight, stable tilt per slip so the stack looks hand-torn.
 const TILTS = [-0.6, 0.5, -0.3, 0.7, -0.45, 0.35];
@@ -152,11 +156,13 @@ export const PastGames = ({
   onClose,
   onDelete,
   onPlayAgain,
+  ask,
 }: {
   history: SavedGame[];
   onClose: () => void;
   onDelete: (id: string) => void;
   onPlayAgain: (game: SavedGame) => void;
+  ask: Ask;
 }) => {
   const [openId, setOpenId] = useState<string>();
   const open = history.find(g => g.id === openId);
@@ -168,7 +174,7 @@ export const PastGames = ({
     const opener = document.activeElement as HTMLElement | null;
     drawerRef.current?.querySelector<HTMLElement>("button")?.focus();
     const trap = (e: KeyboardEvent) => {
-      if (e.key !== "Tab" || !drawerRef.current) return;
+      if (e.key !== "Tab" || !drawerRef.current || dialogOpen()) return;
       const items = [
         ...drawerRef.current.querySelectorAll<HTMLElement>("button"),
       ];
@@ -196,7 +202,7 @@ export const PastGames = ({
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape" && !dialogOpen()) onClose();
     };
     document.addEventListener("keydown", onKey);
     // Keep the sheet behind the drawer from scrolling with it.
@@ -251,8 +257,13 @@ export const PastGames = ({
               <button
                 type="button"
                 className="past-muted"
-                onClick={() => {
-                  if (window.confirm("Delete this game from your history?")) {
+                onClick={async () => {
+                  const ok = await ask({
+                    message: "Delete this game from Past games?",
+                    confirm: "Delete",
+                    danger: true,
+                  });
+                  if (ok) {
                     setOpenId(undefined);
                     onDelete(open.id);
                   }

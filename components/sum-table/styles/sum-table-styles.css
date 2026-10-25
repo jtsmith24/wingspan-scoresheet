@@ -580,6 +580,61 @@ button.past-slip:hover {
   border-bottom: 1.5px solid var(--ink);
 }
 
+/* In-app confirmations: a paper card instead of the browser's dialog. */
+.app-dialog {
+  width: min(22rem, calc(100vw - 2rem));
+  margin: auto;
+  padding: 0;
+  border: none;
+  border-radius: 0.6rem;
+  color: var(--ink);
+  background: transparent;
+  overflow: visible;
+}
+
+.app-dialog::backdrop {
+  background: rgba(60, 45, 30, 0.35);
+}
+
+.app-dialog-card {
+  position: relative;
+  padding: 1.25rem 1.25rem 1rem;
+  border-radius: inherit;
+  background-color: var(--paper);
+  background-image: radial-gradient(
+    ellipse at 0% 0%,
+    color-mix(in srgb, var(--wash-2) 50%, transparent) 0%,
+    transparent 65%
+  );
+  box-shadow: 0 1px 2px rgba(60, 45, 30, 0.15),
+    0 18px 40px -12px rgba(60, 45, 30, 0.5);
+}
+
+.app-dialog-message {
+  font-family: var(--font-hand);
+  font-size: 1.3rem;
+  line-height: 1.3;
+  color: var(--pen);
+}
+
+.app-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 1.1rem;
+}
+
+.app-dialog-actions .ink-button {
+  font-size: 1.05rem;
+  padding: 0.25rem 1rem;
+}
+
+.app-dialog .ink-button:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
 .storage-note {
   max-width: 28rem;
   font-family: var(--font-label);
