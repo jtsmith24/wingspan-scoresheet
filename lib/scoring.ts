@@ -84,6 +84,18 @@ export function scoreNectar(players: PlayerSheet[], friendlyTies = false): numbe
   return totals;
 }
 
+/**
+ * Anything typed for this player in the rows `config` shows. Scores kept from
+ * an expansion that has since been switched off don't count until it's back on.
+ * Unused food is left out: it only matters between players who already scored.
+ */
+export function playerHasData(p: PlayerSheet, config: GameConfig): boolean {
+  return (
+    categoriesFor(config).some((c) => c.id !== "nectar" && !!p.scores[c.id]) ||
+    (config.oceania && Object.values(p.nectarSpent).some(Boolean))
+  );
+}
+
 export type Breakdown = Partial<Record<CategoryId, number>>;
 
 /** Per-category points for every player. Nectar is computed, everything else is typed in. */
@@ -133,8 +145,13 @@ export interface Outcome {
  * wins. In the case of a tie, the player with the most unused food tokens
  * wins. If players are still tied, they share the victory."
  */
-export function decideOutcome(totals: number[], unusedFood: string[]): Outcome {
-  if (totals.length === 0 || totals.every((t) => t === 0)) {
+export function decideOutcome(
+  totals: number[],
+  unusedFood: string[],
+  /** Whether anything was typed in. Everyone on 0 is still a tie once scored. */
+  scored = totals.some((t) => t !== 0),
+): Outcome {
+  if (totals.length === 0 || !scored) {
     return { totals, leaders: [], winners: [], decision: "none" };
   }
   const best = Math.max(...totals);
@@ -158,6 +175,7 @@ export function scoreGame(config: GameConfig, players: PlayerSheet[]) {
   const outcome = decideOutcome(
     totals,
     players.map((p) => p.unusedFood),
+    players.some((p) => playerHasData(p, config)),
   );
   return { breakdowns, totals, outcome };
 }

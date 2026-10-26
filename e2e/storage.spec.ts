@@ -132,6 +132,23 @@ test.describe("two tabs open", () => {
     await expect(b.pastButton()).toHaveText("Past games · 1");
   });
 
+  test("the sheet follows along in the other tab", async ({ page, context }) => {
+    const a = await openApp(page);
+    const other = await context.newPage();
+    await other.goto("/");
+    const b = new Sheet(other);
+    await a.setName(0, "Jordan");
+    await a.cell(0, 0).fill("42");
+    await expect(b.cell(0, 0)).toHaveValue("42");
+    expect(await b.codes()).toEqual(["JOR", ""]);
+    await a.expansions(["Oceania"]);
+    await expect(b.expansionsTab()).toContainText("Oceania");
+    // Typing in the old tab now builds on the newest sheet.
+    await b.cell(1, 0).fill("5");
+    await expect(a.cell(1, 0)).toHaveValue("5");
+    await expect(a.cell(0, 0)).toHaveValue("42");
+  });
+
   test("saving in both keeps both games", async ({ page, context }) => {
     const a = await openApp(page);
     const other = await context.newPage();

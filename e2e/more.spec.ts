@@ -51,6 +51,24 @@ test.describe("on a touch screen", () => {
 });
 
 test.describe("trickier ties", () => {
+  test("everyone on 0 is a tie, not a blank sheet", async ({ page }) => {
+    const sheet = await openApp(page);
+    await sheet.setName(0, "Jordan");
+    await sheet.setName(1, "Sam");
+    await sheet.cell(0, 0).fill("0");
+    await expect(sheet.result()).toHaveText("11 boxes left to fill");
+    await sheet.fillEvery(0, 0);
+    await sheet.fillEvery(1, 0);
+    await expect(sheet.result()).toContainText("Jordan and Sam tied with 0");
+    const food = page.locator(".tiebreak-row input");
+    await food.nth(0).fill("1");
+    await food.nth(1).fill("0");
+    await expect(sheet.result()).toContainText("Jordan won with 0");
+    await sheet.saveButton().click();
+    const [saved] = await readStorage(page, KEYS.history);
+    expect(saved.summary).toBe("Jordan won with 0");
+  });
+
   test("a third player joining the tie gets an empty food box", async ({ page }) => {
     const sheet = await openApp(page);
     await sheet.addPlayer().click();

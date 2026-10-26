@@ -122,6 +122,10 @@ describe("winner and tie-break", () => {
     expect(decideOutcome([0, 0], ["", ""]).decision).toBe("none");
   });
 
+  it("treats everyone scoring 0 as a tie once something is typed in", () => {
+    expect(decideOutcome([0, 0], ["", ""], true)).toMatchObject({ leaders: [0, 1], decision: "needs-food" });
+  });
+
   it("picks the outright highest score", () => {
     expect(decideOutcome([80, 94, 70], ["", "", ""])).toMatchObject({ winners: [1], decision: "points" });
   });

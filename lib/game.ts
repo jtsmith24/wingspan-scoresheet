@@ -8,6 +8,7 @@ import {
 import {
   describeTiebreak,
   displayName,
+  playerHasData,
   scoreGame,
   summarize,
   type Breakdown,
@@ -95,17 +96,7 @@ export function fitPlayers(
   return fitted;
 }
 
-/**
- * Anything typed for this player in the rows `config` shows. Scores kept from
- * an expansion that has since been switched off don't count until it's back on.
- * Unused food is left out: it only matters between players who already scored.
- */
-export function playerHasData(p: PlayerSheet, config: GameConfig): boolean {
-  return (
-    categoriesFor(config).some(c => c.id !== "nectar" && !!p.scores[c.id]) ||
-    (config.oceania && Object.values(p.nectarSpent).some(Boolean))
-  );
-}
+export { playerHasData };
 
 /** Players taking part: anyone with a name or a score. */
 const inGame = (p: PlayerSheet, config: GameConfig) =>

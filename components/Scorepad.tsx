@@ -76,10 +76,12 @@ const LoadedScorepad = () => {
     } catch {}
   }, [theme]);
 
-  // Another tab saved or deleted a game: pick up its history.
+  // Another tab changed the sheet or saved games: show its version, so a
+  // stale copy here can't overwrite newer work there.
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
       if (e.key === STORAGE_KEYS.history) setHistory(loadHistory());
+      if (e.key === STORAGE_KEYS.current) setGameState(loadCurrentGame());
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
