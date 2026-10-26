@@ -93,9 +93,12 @@ const LoadedScorepad = () => {
   };
 
   // Every change is saved straight away so a closed tab loses nothing.
+  // Once any write has failed (say, history no longer fits), the store stays
+  // non-persistent, so the note below doesn't vanish on the next good write.
   const setGame = (next: CurrentGame) => {
     setGameState(next);
-    setCanPersist(saveCurrentGame(next));
+    saveCurrentGame(next);
+    setCanPersist(getStore().persistent);
   };
 
   const edit = (changes: Partial<CurrentGame>) =>
@@ -181,7 +184,7 @@ const LoadedScorepad = () => {
     const nextHistory = addToHistory(loadHistory(), saved);
     // If storage is full the game is still kept for this visit, and the
     // storage note below explains it won't last.
-    if (!saveHistory(nextHistory)) setCanPersist(false);
+    saveHistory(nextHistory);
     setHistory(nextHistory);
     setGame({ ...game, savedAs: saved.id, dirty: false });
   };

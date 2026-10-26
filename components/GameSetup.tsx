@@ -30,6 +30,9 @@ function useDismiss(
   useEffect(() => {
     if (!open) return;
     const handle = (e: PointerEvent | KeyboardEvent) => {
+      // A question it raised (say, trimming players) answers in a dialog
+      // on top; answering it shouldn't close the popover underneath.
+      if (document.querySelector("dialog[open]")) return;
       if (
         e instanceof KeyboardEvent
           ? e.key === "Escape"
