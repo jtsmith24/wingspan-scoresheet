@@ -708,6 +708,19 @@ button.past-slip:hover {
   display: none;
 }
 
+/* The names in play don't fit: use the short forms. */
+.expansion-tabs[data-tight] .tab-long {
+  display: none;
+}
+.expansion-tabs[data-tight] .tab-short {
+  display: inline;
+}
+
+.tab-caret {
+  margin-left: 0.3rem;
+  font-size: 0.75em;
+}
+
 .expansion-tab {
   --tone: #ccc;
   display: flex;
@@ -839,15 +852,16 @@ button.past-slip:hover {
   outline-offset: 2px;
 }
 
-.mix-clear {
+.mix-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.mix-done {
   align-self: flex-end;
   margin-top: 0.2rem;
   font-size: 1rem;
-}
-
-.mix-clear:disabled {
-  opacity: 0.35;
-  cursor: default;
 }
 
 .mix-swatch {
@@ -924,19 +938,6 @@ button.past-slip:hover {
   }
   .past-sheet .label-col {
     width: 5.9rem !important;
-  }
-  .expansion-tab:not(.is-on) .tab-long {
-    display: none;
-  }
-  .expansion-tab:not(.is-on) .tab-short {
-    display: inline;
-  }
-  /* Several boxes mixed: every tab is raised, so all use short names. */
-  .expansion-tabs.is-mixed .tab-long {
-    display: none;
-  }
-  .expansion-tabs.is-mixed .tab-short {
-    display: inline;
   }
 }
 

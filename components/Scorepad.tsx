@@ -166,22 +166,13 @@ const LoadedScorepad = () => {
     );
   };
 
-  // Tabs pick one box at a time: the base game plus at most one expansion.
-  const selectOnly = (edition: Edition) => {
-    const { config } = game;
-    if (edition !== "base") prefer(edition);
+  const baseOnly = () =>
     setConfig({
-      european: edition === "european",
-      oceania: edition === "oceania",
-      americas: edition === "americas",
-      asia:
-        edition !== "asia"
-          ? "off"
-          : config.asia === "off"
-            ? "standard"
-            : config.asia,
+      european: false,
+      oceania: false,
+      americas: false,
+      asia: "off",
     });
-  };
 
   // History is re-read before every change so a second open tab can't
   // overwrite games saved in the first.
@@ -296,9 +287,10 @@ const LoadedScorepad = () => {
       <div className="sheet-with-tabs">
         <ExpansionTabs
           config={config}
+          theme={theme}
           onToggle={toggleExpansion}
           onAsiaMode={asia => setConfig({ ...config, asia })}
-          onSelectOnly={selectOnly}
+          onBase={baseOnly}
         />
         <SumTable
           game={game}
