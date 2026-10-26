@@ -244,6 +244,125 @@ export default function Mockups() {
           mode.
         </p>
       </section>
+
+      <h2 className="hand-caps mk-round">Round 2 · fresh ideas</h2>
+
+      <section className="mk-option">
+        <h2 className="hand-caps">E · Box spines</h2>
+        <p className="mk-note">
+          The expansions stand like game boxes on a shelf. Tap a spine to pull
+          it out; pulled-out boxes are in play. Names run up the spine, so
+          they&apos;re always full, at any width.
+        </p>
+        <div className="mk-pair">
+          <Phone
+            tabs={
+              <div className="mk-shelf">
+                <span className="mk-spine tab-base is-on">Base</span>
+                {BOXES.map(b => (
+                  <span
+                    key={b.id}
+                    className={`mk-spine tab-${b.id}${picked.includes(b.id) ? " is-on" : ""}`}
+                  >
+                    {b.label}
+                  </span>
+                ))}
+              </div>
+            }
+          />
+          <Phone
+            tabs={
+              <div className="mk-shelf">
+                <span className="mk-spine tab-base is-on">Base</span>
+                {BOXES.map(b => (
+                  <span
+                    key={b.id}
+                    className={`mk-spine tab-${b.id}${b.id === "asia" ? " is-on" : ""}`}
+                  >
+                    {b.label}
+                    {b.id === "asia" && <small>Duet ▾</small>}
+                  </span>
+                ))}
+              </div>
+            }
+          />
+        </div>
+      </section>
+
+      <section className="mk-option">
+        <h2 className="hand-caps">F · Written on the sheet</h2>
+        <p className="mk-note">
+          No tabs at all. The game is written across the top of the sheet,
+          like you&apos;d jot it on a paper pad. Tap the line to change it.
+        </p>
+        <div className="mk-pair">
+          <Phone
+            tabs={
+              <p className="mk-title-line">
+                <span className="hand-caps">Playing</span>
+                <span className="mk-written">
+                  Base + European + Oceania
+                </span>
+                <span className="mk-pen">✎</span>
+              </p>
+            }
+          />
+          <Phone
+            tabs={
+              <p className="mk-title-line">
+                <span className="hand-caps">Playing</span>
+                <span className="mk-written">Base + European + Oceania</span>
+                <span className="mk-pen">▴</span>
+              </p>
+            }
+          >
+            <Checklist on={picked} />
+          </Phone>
+        </div>
+      </section>
+
+      <section className="mk-option">
+        <h2 className="hand-caps">G · Ink stamps</h2>
+        <p className="mk-note">
+          Each expansion is a round stamp in its colour along the sheet&apos;s
+          top edge. Tap to stamp it on (solid, slightly crooked, like real
+          ink); tap again to lift it. Faint outlines show what you could add.
+        </p>
+        <div className="mk-pair">
+          <Phone
+            tabs={
+              <div className="mk-stamps">
+                {BOXES.map(b => (
+                  <span
+                    key={b.id}
+                    className={`mk-stamp hand-caps tab-${b.id}${picked.includes(b.id) ? " is-on" : ""}`}
+                  >
+                    {b.label}
+                  </span>
+                ))}
+              </div>
+            }
+          />
+          <Phone
+            tabs={
+              <div className="mk-stamps">
+                {BOXES.map(b => (
+                  <span
+                    key={b.id}
+                    className={`mk-stamp hand-caps tab-${b.id}${b.id === "asia" ? " is-on" : ""}`}
+                  >
+                    {b.label}
+                    {b.id === "asia" && <small>Duet ▾</small>}
+                  </span>
+                ))}
+              </div>
+            }
+          />
+        </div>
+        <p className="mk-note mk-muted">
+          Left: European and Oceania. Right: Asia alone, in Duet mode.
+        </p>
+      </section>
     </main>
   );
 }
