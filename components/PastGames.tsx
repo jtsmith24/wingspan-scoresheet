@@ -31,6 +31,19 @@ const codesFor = (game: SavedGame) => {
 // A confirmation on top owns the keyboard: Escape and Tab are its, not ours.
 const dialogOpen = () => !!document.querySelector("dialog[open]");
 
+/** Date and edition across the top of a slip, with ▾/▴ for open or not. */
+const SlipHead = ({ game, open }: { game: SavedGame; open: boolean }) => (
+  <>
+    <span>{formatDay(game.finishedAt)}</span>
+    <span className="past-head-end">
+      <span className="past-muted">{describeConfig(game.config)}</span>
+      <span className="past-chevron" aria-hidden="true">
+        {open ? "▴" : "▾"}
+      </span>
+    </span>
+  </>
+);
+
 // A slight, stable tilt per slip so the stack looks hand-torn.
 const TILTS = [-0.6, 0.5, -0.3, 0.7, -0.45, 0.35];
 
@@ -167,6 +180,7 @@ export const PastGames = ({
   const [openId, setOpenId] = useState<string>();
   const open = history.find(g => g.id === openId);
   const drawerRef = useRef<HTMLElement>(null);
+  const lastOpened = useRef<string>(undefined);
 
   // Move focus into the drawer, keep Tab inside it, and hand focus back to
   // whatever opened it on close.
@@ -195,9 +209,19 @@ export const PastGames = ({
     };
   }, []);
 
-  // Opening or leaving a slip swaps the drawer's contents; keep focus in it.
+  // Opening or leaving a slip swaps the drawer's contents: focus the open
+  // slip's header, or on the way back, the slip that was open.
   useEffect(() => {
-    drawerRef.current?.querySelector<HTMLElement>("button")?.focus();
+    const drawer = drawerRef.current;
+    if (openId) lastOpened.current = openId;
+    else if (!lastOpened.current) return;
+    (
+      drawer?.querySelector<HTMLElement>(
+        openId
+          ? ".past-slip-toggle"
+          : `[data-id="${CSS.escape(lastOpened.current ?? "")}"]`
+      ) ?? drawer?.querySelector<HTMLElement>("button")
+    )?.focus();
   }, [openId]);
 
   useEffect(() => {
@@ -225,24 +249,29 @@ export const PastGames = ({
         aria-label="Past games"
       >
         <div className="past-head hand-caps">
-          {open ? (
-            <button type="button" onClick={() => setOpenId(undefined)}>
-              ← Past games
-            </button>
-          ) : (
-            <h2>Past games</h2>
-          )}
+          <h2>Past games</h2>
           <button type="button" className="past-close" onClick={onClose}>
             Close ✕
           </button>
         </div>
 
         {open ? (
-          <article className="past-slip past-slip-full">
-            <header className="hand-caps">
-              <span>{formatDay(open.finishedAt)}</span>
-              <span className="past-muted">{describeConfig(open.config)}</span>
-            </header>
+          // Tapping the open sheet anywhere but its buttons folds it back up.
+          <article
+            className="past-slip past-slip-full"
+            onClick={e => {
+              if (!(e.target as Element).closest("button")) setOpenId(undefined);
+            }}
+          >
+            <button
+              type="button"
+              className="past-slip-toggle hand-caps"
+              aria-expanded="true"
+              aria-label={`${formatDay(open.finishedAt)}. Close full sheet`}
+              onClick={() => setOpenId(undefined)}
+            >
+              <SlipHead game={open} open />
+            </button>
             <FullSheet game={open} />
             <p className="sheet-result">
               {open.summary}
@@ -273,14 +302,11 @@ export const PastGames = ({
               </button>
             </div>
           </article>
-        ) : history.length === 0 ? (
-          <p className="past-empty">
-            Saved games will be torn off and kept here.
-          </p>
         ) : (
           history.map((g, i) => (
             <button
               key={g.id}
+              data-id={g.id}
               type="button"
               className="past-slip"
               style={{ rotate: `${TILTS[i % TILTS.length]}deg` }}
@@ -288,8 +314,7 @@ export const PastGames = ({
               aria-label={`${formatDay(g.finishedAt)}: ${g.summary}. Open full sheet`}
             >
               <header className="hand-caps">
-                <span>{formatDay(g.finishedAt)}</span>
-                <span className="past-muted">{describeConfig(g.config)}</span>
+                <SlipHead game={g} open={false} />
               </header>
               <div className="past-scores">
                 {codesFor(g).map((code, col) => (

@@ -502,10 +502,35 @@ button.past-slip:hover {
 
 .past-slip-full {
   padding: 0.8rem;
+  cursor: pointer;
 }
 
-.past-slip-full header {
-  border-bottom: none;
+.past-slip header,
+.past-slip-toggle {
+  align-items: baseline;
+}
+
+.past-slip-toggle {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  padding-bottom: 0.3rem;
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+  text-align: left;
+  color: inherit;
+}
+
+.past-head-end {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+.past-chevron {
+  font-size: 0.8em;
+  opacity: 0.6;
 }
 
 .past-scores {
@@ -534,13 +559,6 @@ button.past-slip:hover {
 }
 
 .past-note,
-.past-empty {
-  margin-top: 0.4rem;
-  font-family: var(--font-hand);
-  color: var(--pen);
-  opacity: 0.75;
-}
-
 .past-sheet th,
 .past-sheet td {
   height: 2.5rem !important;
