@@ -121,7 +121,7 @@ test.describe("saved games, more", () => {
     await playQuickGame(sheet);
     await sheet.saveButton().click();
     await sheet.setName(0, "Jordan Smith");
-    await expect(sheet.saveButton()).toHaveText("Update saved game");
+    await expect(sheet.saveButton()).toHaveText("Update");
     const before = await readStorage(page, KEYS.history);
     await sheet.saveButton().click();
     const after = await readStorage(page, KEYS.history);
@@ -142,9 +142,9 @@ test.describe("saved games, more", () => {
     await sheet.fillEvery(1, 2);
     await sheet.saveButton().click();
     await sheet.baseTab().locator("button").click();
-    await sheet.newGameButton().click();
-    await respond(page, /Keep it\?/, "Toss it");
-    await respond(page, "Who's playing next?", "New players");
+    await respond(page, /This game is saved/, "New game");
+    await respond(page, "New game. Who's playing?", "New players");
+    await expect(sheet.title()).not.toHaveText("Duet");
     await sheet.pastButton().click();
     await expect(page.locator("button.past-slip")).toContainText("Asia (Duet)");
     await page.locator("button.past-slip").click();

@@ -72,7 +72,8 @@ const AsiaModeSelect = ({
 );
 
 /** "European + Oceania"; Asia names its mode unless it's Standard. */
-function expansionNames(config: GameConfig, short: boolean) {
+/** The ticked boxes, e.g. "European + Oceania"; empty for the base game. */
+export function expansionNames(config: GameConfig, short = false) {
   return EXPANSIONS.filter(e => isOn(config, e.id))
     .map(e => {
       const name = short ? e.short : e.label;

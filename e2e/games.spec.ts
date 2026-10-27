@@ -27,17 +27,28 @@ test.describe("saving", () => {
   test("Save, then Saved, then Update after an edit", async ({ page }) => {
     const sheet = await openApp(page);
     await playQuickGame(sheet);
-    await expect(sheet.saveButton()).toHaveText("Save game");
+    await expect(sheet.saveButton()).toHaveText("Save");
     await sheet.saveButton().click();
     await expect(sheet.saveButton()).toHaveText("Saved");
     await expect(sheet.saveButton()).toBeDisabled();
     await expect(sheet.pastButton()).toHaveText("Past games · 1");
     await sheet.cell(0, 1).fill("50");
-    await expect(sheet.saveButton()).toHaveText("Update saved game");
+    await expect(sheet.saveButton()).toHaveText("Update");
     await sheet.saveButton().click();
     const saved = await history(page);
     expect(saved).toHaveLength(1);
     expect(saved[0].summary).toBe("Sam won with 75");
+  });
+
+  test("once saved, New game takes the lead until there's an edit", async ({ page }) => {
+    const sheet = await openApp(page);
+    const lead = page.locator(".sheet-actions .ink-button-primary");
+    await playQuickGame(sheet);
+    await expect(lead).toHaveText("Save");
+    await sheet.saveButton().click();
+    await expect(lead).toHaveText("New game");
+    await sheet.cell(0, 0).fill("11");
+    await expect(lead).toHaveText("Update");
   });
 
   test("a part-filled game saves as unfinished, with no winner", async ({ page }) => {
@@ -125,7 +136,7 @@ test.describe("New game", () => {
     expect(await history(page)).toHaveLength(1);
     expect(await sheet.codes()).toEqual(["JOR", "SAM"]);
     await expect(sheet.cell(0, 0)).toHaveValue("");
-    await expect(sheet.saveButton()).toHaveText("Save game");
+    await expect(sheet.saveButton()).toHaveText("Save");
     await expect(sheet.saveButton()).toBeDisabled();
   });
 
@@ -150,7 +161,7 @@ test.describe("New game", () => {
     await respond(page, "Who's playing next?", "Cancel");
     expect(await history(page)).toHaveLength(0);
     await expect(sheet.cell(0, 0)).toHaveValue("10");
-    await expect(sheet.saveButton()).toHaveText("Save game");
+    await expect(sheet.saveButton()).toHaveText("Save");
   });
 
   test("Escape and a tap outside both cancel", async ({ page }) => {
@@ -311,7 +322,7 @@ test.describe("Past games", () => {
     // The game on the sheet was that one: it can be saved again.
     await page.keyboard.press("Escape");
     await expect(sheet.pastButton()).toHaveCount(0);
-    await expect(sheet.saveButton()).toHaveText("Save game");
+    await expect(sheet.saveButton()).toHaveText("Save");
     await expect(sheet.saveButton()).toBeEnabled();
   });
 
@@ -381,5 +392,66 @@ test.describe("Past games", () => {
     await expect(slips(page)).toContainText("won on unused food 4 to 1");
     await slips(page).click();
     await expect(page.locator(".past-sheet .tiebreak-row")).toContainText("4");
+  });
+});
+
+test.describe("changing boxes on a saved game", () => {
+  const tick = async (sheet: Sheet, box: string) => {
+    if (!(await sheet.checklist().isVisible()))
+      await sheet.expansionsTab().locator("button").click();
+    await sheet.checklist().locator(".mix-option", { hasText: box }).locator("input").click();
+  };
+
+  test("New game: a fresh sheet with that box, the saved game untouched", async ({ page }) => {
+    const sheet = await openApp(page);
+    await saveQuickGame(sheet);
+    await tick(sheet, "Oceania");
+    await respond(page, "This game is saved. Start a new game with Oceania, or change this one?", "New game");
+    await respond(page, "New game. Who's playing?", "Same players");
+    expect(await sheet.codes()).toEqual(["JOR", "SAM"]);
+    await expect(sheet.cell(0, 0)).toHaveValue("");
+    await expect(sheet.expansionsTab()).toContainText("Oceania");
+    const saved = await history(page);
+    expect(saved).toHaveLength(1);
+    expect(saved[0].config.oceania).toBe(false);
+  });
+
+  test("Change this game: asked once, then Update rewrites the same game", async ({ page }) => {
+    const sheet = await openApp(page);
+    await saveQuickGame(sheet);
+    const [before] = await history(page);
+    await tick(sheet, "European");
+    await respond(page, /This game is saved/, "Change this game");
+    await tick(sheet, "Oceania"); // already changed: no second question
+    await noDialog(page);
+    await sheet.checklist().getByRole("button", { name: "Done" }).click();
+    await expect(sheet.saveButton()).toHaveText("Update");
+    await sheet.saveButton().click();
+    const after = await history(page);
+    expect(after).toHaveLength(1);
+    expect(after[0].id).toBe(before.id);
+    expect(after[0].config).toMatchObject({ european: true, oceania: true });
+  });
+
+  test("Cancel leaves the box unticked and the game saved", async ({ page }) => {
+    const sheet = await openApp(page);
+    await saveQuickGame(sheet);
+    await tick(sheet, "Americas");
+    await respond(page, /This game is saved/, "Cancel");
+    await expect(sheet.checklist().locator(".mix-option", { hasText: "Americas" }).locator("input")).not.toBeChecked();
+    await expect(sheet.checklist()).toBeVisible();
+    await sheet.checklist().getByRole("button", { name: "Done" }).click();
+    await expect(sheet.saveButton()).toHaveText("Saved");
+  });
+
+  test("Base after a saved expansion game offers a new base game", async ({ page }) => {
+    const sheet = await openApp(page);
+    await sheet.expansions(["Oceania"]);
+    await saveQuickGame(sheet);
+    await sheet.baseTab().locator("button").click();
+    await respond(page, "This game is saved. Start a new base game, or change this one?", "New game");
+    await respond(page, "New game. Who's playing?", "New players");
+    await expect(sheet.baseTab()).toHaveClass(/is-on/);
+    expect(await sheet.codes()).toEqual(["", ""]);
   });
 });

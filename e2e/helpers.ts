@@ -61,8 +61,7 @@ export class Sheet {
   addPlayer = () => this.page.locator(".add-player");
   removeButtons = () => this.page.locator(".remove-player");
   title = () => this.page.locator("#sum-table .sheet-title");
-  saveButton = () =>
-    this.page.locator(".sheet-actions .ink-button-primary");
+  saveButton = () => this.page.locator(".sheet-actions .ink-button").first();
   newGameButton = () =>
     this.page.getByRole("button", { name: "New game", exact: true });
   pastButton = () => this.page.locator(".history-link");

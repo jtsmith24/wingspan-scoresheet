@@ -9,7 +9,7 @@ test.describe("keeping things between visits", () => {
     await page.reload();
     expect(await sheet.codes()).toEqual(["JS", "SAM", ""]);
     await expect(sheet.cell(2, 2)).toHaveValue("7");
-    await expect(sheet.saveButton()).toHaveText("Save game");
+    await expect(sheet.saveButton()).toHaveText("Save");
   });
 
   test("a saved game is still Saved after a reload", async ({ page }) => {

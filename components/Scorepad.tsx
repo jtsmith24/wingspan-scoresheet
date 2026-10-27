@@ -6,7 +6,7 @@ import React, {
   useSyncExternalStore,
 } from "react";
 import SumTable from "./sum-table/SumTable";
-import { Expansion, ExpansionTabs } from "./GameSetup";
+import { Expansion, ExpansionTabs, expansionNames } from "./GameSetup";
 import { PastGames } from "./PastGames";
 import { useDialog } from "./ConfirmDialog";
 import {
@@ -116,6 +116,19 @@ const LoadedScorepad = () => {
       config.americas === now.americas
     )
       return;
+    // A saved game: switching boxes usually means setting up the next game.
+    if (game.savedAs && !game.dirty) {
+      const names = expansionNames(config);
+      const answer = await choose({
+        message: `This game is saved. Start a new ${names ? `game with ${names}` : "base game"}, or change this one?`,
+        actions: [
+          { id: "change", label: "Change this game" },
+          { id: "new", label: "New game", primary: true },
+        ],
+      });
+      if (!answer) return;
+      if (answer === "new") return startNewGame(config);
+    }
     const { max } = playerLimits(config);
     const dropped = game.players.slice(max);
     if (
@@ -206,7 +219,7 @@ const LoadedScorepad = () => {
     });
 
   // Up to two quick questions; nothing changes until the last is answered.
-  const startNewGame = async () => {
+  const startNewGame = async (config = game.config) => {
     const unsaved = hasUnsavedScores(game);
     const scored = hasAnyScore(game);
     let save = false;
@@ -243,7 +256,7 @@ const LoadedScorepad = () => {
     const codes = withCodes(game.players);
     setGame(
       newGame(
-        game.config,
+        config,
         game.players.map(p => (keep ? p.name : "")),
         keep ? codes.map(c => c || undefined) : []
       )
@@ -281,11 +294,9 @@ const LoadedScorepad = () => {
 
   const { config, players } = game;
   const limits = playerLimits(config);
-  const saveLabel = !game.savedAs
-    ? "Save game"
-    : game.dirty
-      ? "Update saved game"
-      : "Saved";
+  // Once saved, the next step is a new game, so New game takes the lead.
+  const upToDate = !!game.savedAs && !game.dirty;
+  const saveLabel = !game.savedAs ? "Save" : upToDate ? "Saved" : "Update";
 
   return (
     <div className="scorepad">
@@ -314,16 +325,16 @@ const LoadedScorepad = () => {
       <div className="sheet-actions hand-caps">
         <button
           type="button"
-          className="ink-button ink-button-primary"
+          className={`ink-button${upToDate ? "" : " ink-button-primary"}`}
           onClick={saveGame}
-          disabled={!hasAnyScore(game) || (!!game.savedAs && !game.dirty)}
+          disabled={!hasAnyScore(game) || upToDate}
         >
           {saveLabel}
         </button>
         <button
           type="button"
-          className="ink-button"
-          onClick={startNewGame}
+          className={`ink-button${upToDate ? " ink-button-primary" : ""}`}
+          onClick={() => startNewGame()}
           disabled={sheetIsBlank}
         >
           New game
