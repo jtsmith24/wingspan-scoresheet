@@ -31,7 +31,7 @@ import {
 } from "@/lib/persistence";
 import { STORAGE_KEYS } from "@/lib/storage";
 import { withCodes } from "@/lib/names";
-import { GameConfig, playerLimits } from "@/lib/rules";
+import { GameConfig, playerLimits, sameConfig } from "@/lib/rules";
 import { displayName, PlayerSheet } from "@/lib/scoring";
 import { Edition, themeFor } from "@/lib/theme";
 
@@ -108,16 +108,11 @@ const LoadedScorepad = () => {
 
   const setConfig = async (config: GameConfig) => {
     // Re-picking the tab that's already open isn't a change.
-    const now = game.config;
-    if (
-      config.european === now.european &&
-      config.oceania === now.oceania &&
-      config.asia === now.asia &&
-      config.americas === now.americas
-    )
-      return;
-    // A saved game: switching boxes usually means setting up the next game.
-    if (game.savedAs && !game.dirty) {
+    if (sameConfig(config, game.config)) return;
+    // Moving a saved game off the boxes it was saved with usually means
+    // setting up the next game, so ask. Once it's been moved, don't again.
+    const saved = loadHistory().find(g => g.id === game.savedAs);
+    if (saved && sameConfig(saved.config, game.config)) {
       const names = expansionNames(config);
       const answer = await choose({
         message: `This game is saved. Start a new ${names ? `game with ${names}` : "base game"}, or change this one?`,
@@ -208,14 +203,24 @@ const LoadedScorepad = () => {
     !hasAnyScore(game) && game.players.every(p => !p.name.trim());
 
   // Unsaved scores: keep them or toss them? One tap, Save as the default.
+  // A saved game that's been edited since: only the edits are at stake.
+  const notSaved = (subject: string) =>
+    game.savedAs
+      ? `${subject} has changes that aren't saved. Keep them?`
+      : `${subject} hasn't been saved. Keep it?`;
   const keepOrToss = (message: string, step?: string) =>
     choose({
       step,
       message,
-      actions: [
-        { id: "toss", label: "Toss it" },
-        { id: "save", label: "Save it", primary: true },
-      ],
+      actions: game.savedAs
+        ? [
+            { id: "toss", label: "Toss changes" },
+            { id: "save", label: "Update", primary: true },
+          ]
+        : [
+            { id: "toss", label: "Toss it" },
+            { id: "save", label: "Save it", primary: true },
+          ],
     });
 
   // Up to two quick questions; nothing changes until the last is answered.
@@ -235,7 +240,7 @@ const LoadedScorepad = () => {
       const steps = unsaved ? 2 : 1;
       if (unsaved) {
         const kept = await keepOrToss(
-          "This game hasn't been saved. Keep it?",
+          notSaved("This game"),
           "1 of 2"
         );
         if (!kept) return;
@@ -276,7 +281,7 @@ const LoadedScorepad = () => {
   const playAgain = async (saved: SavedGame) => {
     if (hasUnsavedScores(game)) {
       const kept = await keepOrToss(
-        "Play again? The game on the sheet hasn't been saved. Keep it?"
+        `Play again? ${notSaved("The game on the sheet")}`
       );
       if (!kept) return;
       if (kept === "save") saveGame();

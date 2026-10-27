@@ -131,6 +131,15 @@ export function usesFriendlyNectarTies(config: GameConfig): boolean {
   return config.asia === "flock";
 }
 
+export function sameConfig(a: GameConfig, b: GameConfig): boolean {
+  return (
+    a.european === b.european &&
+    a.oceania === b.oceania &&
+    a.asia === b.asia &&
+    a.americas === b.americas
+  );
+}
+
 export function describeConfig(config: GameConfig): string {
   const parts = ["Base game"];
   if (config.european) parts.push("European");

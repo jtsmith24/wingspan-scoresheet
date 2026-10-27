@@ -187,12 +187,12 @@ test.describe("New game", () => {
     expect(await sheet.codes()).toEqual(["JOR", "SAM"]);
   });
 
-  test("edited after saving counts as unsaved again", async ({ page }) => {
+  test("edited after saving: Update keeps the changes in the same game", async ({ page }) => {
     const sheet = await openApp(page);
     await saveQuickGame(sheet);
     await sheet.cell(0, 0).fill("11");
     await sheet.newGameButton().click();
-    await respond(page, /Keep it\?/, "Save it");
+    await respond(page, /Keep them\?/, "Update");
     await respond(page, "Who's playing next?", "Same players");
     const saved = await history(page);
     expect(saved).toHaveLength(1);
