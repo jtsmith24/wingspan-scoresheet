@@ -105,30 +105,11 @@
   opacity: 0.6;
 }
 
-/* B: ink stamp */
-.mk-stamped {
-  position: relative;
-}
-.mk-stamp {
-  position: absolute;
-  right: -0.3rem;
-  bottom: -2.6rem;
-  padding: 0.15rem 0.7rem;
-  rotate: -9deg;
-  border: 3px double var(--pen);
-  border-radius: 0.4rem;
-  font-size: 1.25rem;
-  letter-spacing: 0.12em;
-  color: var(--pen);
-  opacity: 0.8;
-  background: color-mix(in srgb, var(--paper) 70%, transparent);
-}
-
-/* C: the Save button as a status */
-.mk-status {
+/* C: saved, beside Past games */
+.mk-saved-inline {
+  align-self: center;
+  font-size: 0.95rem;
   opacity: 0.6;
-  border-style: dashed;
-  cursor: default;
 }
 
 /* Dialogs over a dimmed sheet */
@@ -140,45 +121,4 @@
 }
 .mk-dialog {
   width: 100%;
-}
-
-/* Past games */
-.mk-drawer {
-  background: color-mix(in srgb, var(--wash-2) 45%, #e9e1d1);
-  gap: 1rem;
-}
-.mk-head-end {
-  display: flex;
-  align-items: baseline;
-  gap: 0.4rem;
-}
-.mk-tag {
-  padding: 0 0.4rem;
-  border: 1px dashed var(--ink);
-  border-radius: 0.3rem;
-  font-size: 0.85rem;
-  opacity: 0.75;
-}
-.mk-tilt-a {
-  rotate: -0.6deg;
-}
-.mk-tilt-b {
-  rotate: 0.5deg;
-}
-.mk-slip-actions {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0.6rem;
-  margin-top: 0.6rem;
-}
-.mk-slip-actions .ink-button {
-  min-height: 2.75rem;
-}
-.mk-slip-links {
-  display: flex;
-  justify-content: space-between;
-}
-.mk-slip-links .text-link {
-  margin: 0;
 }
