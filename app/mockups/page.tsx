@@ -72,7 +72,7 @@ const LABELS: Record<State, string> = {
 const Usual = ({ state }: { state: "playing" | "edited" }) => (
   <div className="sheet-actions hand-caps">
     <button className="ink-button ink-button-primary">
-      {state === "playing" ? "Save game" : "Update saved game"}
+      {state === "playing" ? "Save" : "Update"}
     </button>
     <button className="ink-button">New game</button>
     <Past state={state} />
@@ -109,11 +109,12 @@ export default function Mockups() {
         Saving keeps the sheet on screen so everyone can look at the result
         and fix a typo. Once it&apos;s saved, the next step is a new game, so
         New game becomes the main button. Edit anything and Save comes back
-        as &ldquo;Update saved game&rdquo;.
+        as &ldquo;Update&rdquo;, which changes the saved game rather than
+        adding another.
       </p>
 
       <Option
-        title="A · The buttons swap"
+        title="A · Save, Saved, Update"
         note="Both buttons stay put. After saving, Save greys out to “Saved” and New game turns dark."
         saved={
           <div className="sheet-actions hand-caps">
@@ -121,32 +122,6 @@ export default function Mockups() {
               Saved
             </button>
             <button className="ink-button ink-button-primary">New game</button>
-            <Past state="saved" />
-          </div>
-        }
-      />
-
-      <Option
-        title="B · Save steps aside"
-        note="After saving, the Save button goes away and a small line under the result says it's saved. New game is the only button."
-        saved={
-          <>
-            <p className="mk-saved hand-caps">✓ Saved to Past games</p>
-            <div className="sheet-actions hand-caps">
-              <button className="ink-button ink-button-primary">New game</button>
-              <Past state="saved" />
-            </div>
-          </>
-        }
-      />
-
-      <Option
-        title="C · Saved sits by Past games"
-        note="After saving, New game moves to the front and “✓ Saved” sits quietly beside Past games, where the game went."
-        saved={
-          <div className="sheet-actions hand-caps">
-            <button className="ink-button ink-button-primary">New game</button>
-            <span className="mk-saved-inline">✓ Saved</span>
             <Past state="saved" />
           </div>
         }

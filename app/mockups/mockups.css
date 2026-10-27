@@ -97,21 +97,6 @@
   text-align: center;
 }
 
-/* A: the saved line */
-.mk-saved {
-  margin-top: -0.6rem;
-  text-align: center;
-  font-size: 0.95rem;
-  opacity: 0.6;
-}
-
-/* C: saved, beside Past games */
-.mk-saved-inline {
-  align-self: center;
-  font-size: 0.95rem;
-  opacity: 0.6;
-}
-
 /* Dialogs over a dimmed sheet */
 .mk-dim {
   justify-content: center;
