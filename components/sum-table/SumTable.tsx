@@ -217,20 +217,50 @@ const SumTable = ({
     col: number,
     label: string,
     allowsNegative?: boolean
-  ) => (
-    <input
-      className="score-input"
-      type="text"
-      value={value}
-      onChange={e => handleCellChange(e.target.value, row, col, allowsNegative)}
-      onKeyDown={e => handleCellKeyDown(e, row, col)}
-      onFocus={e => e.target.select()}
-      inputMode={allowsNegative ? "text" : "numeric"}
-      id={`${idPrefix}cell-${row}-${col}`}
-      aria-label={`${label}, ${names[col]}`}
-      disabled={!isEnabled(row, col)}
-    />
-  );
+  ) => {
+    const id = `${idPrefix}cell-${row}-${col}`;
+    const input = (
+      <input
+        className="score-input"
+        type="text"
+        value={value}
+        onChange={e =>
+          handleCellChange(e.target.value, row, col, allowsNegative)
+        }
+        onKeyDown={e => handleCellKeyDown(e, row, col)}
+        onFocus={e => e.target.select()}
+        inputMode="numeric"
+        id={id}
+        aria-label={`${label}, ${names[col]}`}
+        disabled={!isEnabled(row, col)}
+      />
+    );
+    if (!allowsNegative) return input;
+    // Phone number pads have no minus key, so the box gets its own.
+    return (
+      <>
+        {input}
+        <button
+          type="button"
+          className="sign-toggle"
+          tabIndex={-1}
+          aria-label={`Plus or minus, ${label}, ${names[col]}`}
+          onMouseDown={e => e.preventDefault()}
+          onClick={() => {
+            handleCellChange(
+              value.startsWith("-") ? value.slice(1) : `-${value}`,
+              row,
+              col,
+              true
+            );
+            focus(`cell-${row}-${col}`);
+          }}
+        >
+          ±
+        </button>
+      </>
+    );
+  };
 
   const result = summarize(outcome, names);
   const detail = describeTiebreak(

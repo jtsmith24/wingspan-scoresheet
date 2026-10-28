@@ -108,7 +108,7 @@ test.describe("pointer and hover", () => {
   test("everything clickable shows the pointing hand", async ({ page }) => {
     const sheet = await openApp(page);
     await sheet.setName(0, "Jordan");
-    expect(await wrongCursors(page)).toEqual([]); // Clear names, + Player, tabs
+    expect(await wrongCursors(page)).toEqual([]); // Clear, + Player, tabs
     await sheet.expansions(["Asia"], { close: false });
     expect(await wrongCursors(page)).toEqual([]); // checklist, mode menu, Done
     await sheet.checklist().getByRole("button", { name: "Done" }).click();

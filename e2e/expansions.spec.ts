@@ -128,6 +128,38 @@ test.describe("Americas", () => {
     expect((await sheet.totals())[0]).toBe("6");
   });
 
+  test("± flips the sign without leaving the box; the pad is numbers", async ({ page }) => {
+    const sheet = await openApp(page);
+    await sheet.expansions(["Americas"]);
+    const row = (await sheet.rowLabels()).indexOf("hummingbirds");
+    const cell = sheet.cell(row, 0);
+    await expect(cell).toHaveAttribute("inputmode", "numeric");
+    const sign = page.locator(".score-cell").filter({ has: cell }).locator(".sign-toggle");
+    await expect(sign).toBeHidden();
+    await cell.click();
+    await cell.pressSequentially("4");
+    await sign.click();
+    await expect(cell).toHaveValue("-4");
+    await expect(cell).toBeFocused();
+    await sign.click();
+    await expect(cell).toHaveValue("4");
+    await sign.click();
+    await cell.press("Enter");
+    await expect(sign).toBeHidden();
+    expect((await sheet.totals())[0]).toBe("-4");
+  });
+
+  test("± on an empty box starts a negative number", async ({ page }) => {
+    const sheet = await openApp(page);
+    await sheet.expansions(["Americas"]);
+    const row = (await sheet.rowLabels()).indexOf("hummingbirds");
+    const cell = sheet.cell(row, 1);
+    await cell.click();
+    await page.locator(".score-cell").filter({ has: cell }).locator(".sign-toggle").click();
+    await cell.pressSequentially("3");
+    await expect(cell).toHaveValue("-3");
+  });
+
   test("a lone minus counts as blank", async ({ page }) => {
     const sheet = await openApp(page);
     await sheet.expansions(["Americas"]);

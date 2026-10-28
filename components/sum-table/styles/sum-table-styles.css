@@ -1120,3 +1120,30 @@ select:not(:disabled),
     animation: none;
   }
 }
+
+/* Hummingbirds: a minus for phone number pads, shown on the box in use.
+   It hides a moment late, so a tap that moves focus still lands on it. */
+.sign-toggle {
+  position: absolute;
+  top: 50%;
+  left: 0.15rem;
+  translate: 0 -50%;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 50%;
+  font-size: 1.2rem;
+  line-height: 1;
+  color: var(--pen);
+  border: 1.5px solid color-mix(in srgb, var(--pen) 50%, transparent);
+  background: var(--paper);
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.15s,
+    visibility 0s 0.3s;
+}
+.score-cell:focus-within .sign-toggle {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.15s;
+}

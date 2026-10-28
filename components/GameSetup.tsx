@@ -198,7 +198,7 @@ export const ExpansionTabs = ({
           <div className="mix-footer">
             {EXPANSIONS.some(e => isOn(config, e.id)) && (
               <button type="button" className="text-link" onClick={onBase}>
-                Clear all
+                Clear
               </button>
             )}
             <button

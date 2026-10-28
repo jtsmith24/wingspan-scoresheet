@@ -247,30 +247,20 @@ const LoadedScorepad = () => {
     setGame({ config: last.config, players: last.players });
   };
 
-  // A fresh start without keeping the game: names and boxes stay.
-  const clearScores = async () => {
+  // A blank table without keeping the game; the expansions stay.
+  const clearSheet = async () => {
     if (
+      hasAnyScore(game) &&
       !(await ask({
-        message: "Clear every score? This game won't be saved.",
-        confirm: "Clear scores",
+        message:
+          "Clear the sheet? Names and scores will be erased, and this game won't be saved.",
+        confirm: "Clear",
         danger: true,
       }))
     )
       return;
-    edit({
-      players: game.players.map(p => ({
-        ...p,
-        scores: {},
-        nectarSpent: {},
-        unusedFood: "",
-      })),
-    });
+    edit({ players: newGame(game.config).players });
   };
-
-  const clearNames = () =>
-    edit({
-      players: game.players.map(p => ({ ...p, name: "", code: undefined })),
-    });
 
   const closePast = useCallback(() => setPastOpen(false), []);
 
@@ -367,14 +357,9 @@ const LoadedScorepad = () => {
         >
           End game
         </button>
-        {scored && (
-          <button type="button" className="text-link" onClick={clearScores}>
-            Clear scores
-          </button>
-        )}
-        {!scored && players.some(p => p.name.trim()) && (
-          <button type="button" className="text-link" onClick={clearNames}>
-            Clear names
+        {(scored || players.some(p => p.name.trim())) && (
+          <button type="button" className="text-link" onClick={clearSheet}>
+            Clear
           </button>
         )}
         {history.length > 0 && (

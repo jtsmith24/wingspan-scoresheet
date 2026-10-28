@@ -65,7 +65,8 @@ export class Sheet {
     this.page.locator(".sheet-actions").getByRole("button", { name: "End game" });
   lastGame = () => this.page.locator(".last-game");
   undo = () => this.lastGame().getByRole("button", { name: "Undo" });
-  clearNames = () => this.page.getByRole("button", { name: "Clear names" });
+  clear = () =>
+    this.page.locator(".sheet-actions").getByRole("button", { name: "Clear", exact: true });
   pastButton = () => this.page.locator(".history-link");
   baseTab = () => this.page.locator(".expansion-tab.tab-base");
   expansionsTab = () => this.page.locator(".expansion-tab").nth(1);

@@ -228,58 +228,42 @@ test.describe("Undo and the last-game note", () => {
   });
 });
 
-test.describe("Clear scores", () => {
-  const clearScores = (page: Page) => page.getByRole("button", { name: "Clear scores" });
+test.describe("Clear", () => {
+  const question = "Clear the sheet? Names and scores will be erased, and this game won't be saved.";
 
-  test("asks, then empties every box but keeps the players; nothing is saved", async ({ page }) => {
+  test("asks, then blanks the whole table; the expansions stay and nothing is saved", async ({ page }) => {
     const sheet = await openApp(page);
-    await expect(clearScores(page)).toHaveCount(0);
+    await expect(sheet.clear()).toHaveCount(0);
     await sheet.expansions(["Oceania"]);
+    await sheet.addPlayer().click();
     await playQuickGame(sheet);
-    await clearScores(page).click();
-    await respond(page, "Clear every score? This game won't be saved.", "Cancel");
+    await sheet.clear().click();
+    await respond(page, question, "Cancel");
     await expect(sheet.cell(0, 0)).not.toHaveValue("");
-    await clearScores(page).click();
-    await respond(page, "Clear every score? This game won't be saved.", "Clear scores");
+    await sheet.clear().click();
+    await respond(page, question, "Clear");
     await expect(sheet.cell(0, 0)).toHaveValue("");
+    expect(await sheet.codes()).toEqual(["", ""]);
     await expect(sheet.endButton()).toBeDisabled();
-    await expect(clearScores(page)).toHaveCount(0);
-    expect(await sheet.codes()).toEqual(["JOR", "SAM"]);
+    await expect(sheet.clear()).toHaveCount(0);
     expect((await readStorage(page, KEYS.current)).config.oceania).toBe(true);
     expect(await history(page)).toHaveLength(0);
-    // Then the names can go too.
-    await sheet.clearNames().click();
-    expect(await sheet.codes()).toEqual(["", ""]);
   });
 
-  test("clearing the next sheet takes Undo for the last game away", async ({ page }) => {
+  test("names alone clear without a question", async ({ page }) => {
     const sheet = await openApp(page);
     await endQuickGame(sheet);
-    await sheet.cell(0, 0).fill("4");
-    await clearScores(page).click();
-    await respond(page, /Clear every score/, "Clear scores");
+    await sheet.clear().click();
+    await noDialog(page);
+    expect(await sheet.codes()).toEqual(["", ""]);
     await expect(sheet.lastGame()).toHaveCount(0);
     expect(await history(page)).toHaveLength(1);
-  });
-});
-
-test.describe("Clear names", () => {
-  test("only on a sheet with names and no scores", async ({ page }) => {
-    const sheet = await openApp(page);
-    await expect(sheet.clearNames()).toHaveCount(0);
-    await endQuickGame(sheet);
-    await sheet.clearNames().click();
-    expect(await sheet.codes()).toEqual(["", ""]);
-    await expect(sheet.clearNames()).toHaveCount(0);
-    await sheet.setName(0, "Alex");
-    await sheet.cell(0, 0).fill("3");
-    await expect(sheet.clearNames()).toHaveCount(0);
   });
 
   test("a cleared name gets a fresh code when it's typed again", async ({ page }) => {
     const sheet = await openApp(page);
     await endQuickGame(sheet, "Jordan", "Jo");
-    await sheet.clearNames().click();
+    await sheet.clear().click();
     await sheet.setName(0, "Jody");
     expect(await sheet.codes()).toEqual(["JOD", ""]);
   });
@@ -383,7 +367,7 @@ test.describe("Past games", () => {
     const sheet = await openApp(page);
     await sheet.expansions(["Oceania"]);
     await endQuickGame(sheet);
-    await sheet.clearNames().click();
+    await sheet.clear().click();
     await sheet.expansions([]);
     await openFirstSlip(sheet, page);
     await page.getByRole("button", { name: "Play again with these players" }).click();
@@ -423,7 +407,7 @@ test.describe("Past games", () => {
     await sheet.fillEvery(0, 3);
     await sheet.fillEvery(1, 1);
     await sheet.endButton().click();
-    await sheet.clearNames().click();
+    await sheet.clear().click();
     await openFirstSlip(sheet, page);
     await page.getByRole("button", { name: "Play again with these players" }).click();
     expect(await sheet.codes()).toEqual(["JOR", ""]);

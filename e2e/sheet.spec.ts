@@ -18,7 +18,7 @@ test.describe("a fresh sheet", () => {
     await expect(sheet.baseTab()).toHaveClass(/is-on/);
     await expect(sheet.expansionsTab()).not.toHaveClass(/is-on/);
     await expect(sheet.endButton()).toBeDisabled();
-    await expect(sheet.clearNames()).toHaveCount(0);
+    await expect(sheet.clear()).toHaveCount(0);
     await expect(sheet.pastButton()).toHaveCount(0);
     await expect(sheet.result()).toHaveCount(0);
     expect(await sheet.totals()).toEqual(["", ""]);
@@ -78,7 +78,7 @@ test.describe("names", () => {
     expect((await sheet.codes())[0]).toBe("ZOE");
     await sheet.setName(1, "   ");
     expect((await sheet.codes())[1]).toBe("");
-    await expect(sheet.clearNames()).toBeVisible(); // Zoë counts as a name to clear
+    await expect(sheet.clear()).toBeVisible(); // Zoë counts as a name to clear
     await sheet.name(1).click();
     await sheet.name(1).fill("A really very long name indeed");
     await expect(sheet.name(1)).toHaveValue("A really very long n");
