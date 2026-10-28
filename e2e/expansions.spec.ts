@@ -233,7 +233,7 @@ test.describe("switching boxes mid-game", () => {
     await sheet.cell(row, 0).fill("6");
     await sheet.expansions([]);
     expect(await sheet.totals()).toEqual(["", ""]);
-    await expect(sheet.newGameButton()).toBeDisabled();
+    await expect(sheet.endButton()).toBeDisabled();
     await sheet.expansions(["Americas"]);
     await expect(sheet.cell(row, 0)).toHaveValue("6");
     expect((await sheet.totals())[0]).toBe("6");
@@ -247,7 +247,7 @@ test.describe("switching boxes mid-game", () => {
     await sheet.expansions([]);
     await sheet.fillEvery(0, 1);
     await sheet.fillEvery(1, 2);
-    await sheet.saveButton().click();
+    await sheet.endButton().click();
     const [saved] = await readStorage(page, KEYS.history);
     expect(saved.players[0].total).toBe(6);
     expect(saved.players[0].breakdown.hummingbirds).toBeUndefined();

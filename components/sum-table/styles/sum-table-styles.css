@@ -595,8 +595,30 @@ button.past-slip:hover {
   font-size: 1rem;
 }
 
-.past-actions button:first-child {
+.past-actions button:not(.past-muted) {
   border-bottom: 1.5px solid var(--ink);
+}
+
+/* A past game being fixed: the live sheet, with its own buttons. */
+.past-slip-full.is-editing {
+  cursor: auto;
+}
+.past-edit-actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 0.8rem;
+}
+
+/* After End game: where the last game went, with a way back. */
+.last-game {
+  margin: 0 0 0.6rem;
+  text-align: center;
+  font-size: 0.95rem;
+  opacity: 0.8;
+}
+.last-game .text-link {
+  margin: 0;
 }
 
 /* In-app confirmations: a paper card instead of the browser's dialog. */

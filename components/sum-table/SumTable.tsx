@@ -76,13 +76,16 @@ const SumTable = ({
   onPlayersChange,
   onAddPlayer,
   onRemovePlayer,
+  idPrefix = "",
 }: {
-  game: CurrentGame;
+  game: Pick<CurrentGame, "config" | "players">;
   onPlayersChange: (players: PlayerSheet[]) => void;
   /** When set, the sheet gets a "+ Player" column. */
   onAddPlayer?: () => void;
   /** When set, each name gets a remove button. */
   onRemovePlayer?: (col: number) => void;
+  /** Keeps box ids apart when a second sheet is open, in Past games. */
+  idPrefix?: string;
 }) => {
   const { config, players } = game;
   const { totals, outcome } = scoreGame(config, players);
@@ -171,7 +174,7 @@ const SumTable = ({
   };
 
   const focus = (id: string) =>
-    (document.getElementById(id) as HTMLInputElement | null)?.focus();
+    (document.getElementById(idPrefix + id) as HTMLInputElement | null)?.focus();
 
   const handleCellKeyDown = (
     e: React.KeyboardEvent,
@@ -223,7 +226,7 @@ const SumTable = ({
       onKeyDown={e => handleCellKeyDown(e, row, col)}
       onFocus={e => e.target.select()}
       inputMode={allowsNegative ? "text" : "numeric"}
-      id={`cell-${row}-${col}`}
+      id={`${idPrefix}cell-${row}-${col}`}
       aria-label={`${label}, ${names[col]}`}
       disabled={!isEnabled(row, col)}
     />
@@ -289,7 +292,7 @@ const SumTable = ({
                     }}
                     onBlur={() => finishName(col)}
                     onKeyDown={e => handleNameKeyDown(e, col)}
-                    id={`name-${col}`}
+                    id={`${idPrefix}name-${col}`}
                     maxLength={MAX_NAME_LENGTH}
                     autoComplete="off"
                     autoCapitalize="words"

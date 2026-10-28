@@ -61,9 +61,11 @@ export class Sheet {
   addPlayer = () => this.page.locator(".add-player");
   removeButtons = () => this.page.locator(".remove-player");
   title = () => this.page.locator("#sum-table .sheet-title");
-  saveButton = () => this.page.locator(".sheet-actions .ink-button").first();
-  newGameButton = () =>
-    this.page.getByRole("button", { name: "New game", exact: true });
+  endButton = () =>
+    this.page.locator(".sheet-actions").getByRole("button", { name: "End game" });
+  lastGame = () => this.page.locator(".last-game");
+  undo = () => this.lastGame().getByRole("button", { name: "Undo" });
+  clearNames = () => this.page.getByRole("button", { name: "Clear names" });
   pastButton = () => this.page.locator(".history-link");
   baseTab = () => this.page.locator(".expansion-tab.tab-base");
   expansionsTab = () => this.page.locator(".expansion-tab").nth(1);

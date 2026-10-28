@@ -19,10 +19,15 @@ import {
 export interface CurrentGame {
   config: GameConfig;
   players: PlayerSheet[];
-  /** History id once this sheet has been saved; saving again updates that entry. */
-  savedAs?: string;
-  /** True when the sheet has changed since it was last saved. */
-  dirty?: boolean;
+  /** The game just ended, exactly as it was, until the new sheet is touched. */
+  lastGame?: EndedGame;
+}
+
+/** What Undo needs: where the game went, and the sheet to put back. */
+export interface EndedGame {
+  id: string;
+  config: GameConfig;
+  players: PlayerSheet[];
 }
 
 export interface SavedPlayer {
@@ -44,6 +49,8 @@ export interface SavedGame {
   summary: string;
   /** How a tie at the top was settled, if there was one. */
   detail?: string;
+  /** The sheet as it was typed, one per saved player, for editing later. */
+  sheet: PlayerSheet[];
 }
 
 export const MAX_HISTORY = 200;
@@ -125,14 +132,10 @@ export function hasAnyScore(game: CurrentGame): boolean {
   return game.players.some(p => playerHasData(p, game.config));
 }
 
-/** Whether starting over would throw away scores that aren't in history. */
-export function hasUnsavedScores(game: CurrentGame): boolean {
-  return hasAnyScore(game) && (!game.savedAs || game.dirty === true);
-}
-
 export function toSavedGame(
-  game: CurrentGame,
-  finishedAt = new Date()
+  game: Pick<CurrentGame, "config" | "players">,
+  finishedAt = new Date(),
+  id = newId()
 ): SavedGame {
   // Columns nobody wrote in (an extra "Player 4") aren't part of the game.
   const scored = game.players.filter(p => playerHasData(p, game.config));
@@ -143,7 +146,7 @@ export function toSavedGame(
   // Saved part-way through: keep the scores but call no winner.
   const unfinished = missingScores(game) > 0;
   return {
-    id: game.savedAs ?? newId(),
+    id,
     finishedAt: finishedAt.toISOString(),
     config: game.config,
     players: players.map((p, i) => ({
@@ -170,6 +173,7 @@ export function toSavedGame(
         names,
         players.map(p => p.unusedFood)
       ) ?? undefined,
+    sheet: players,
   };
 }
 
@@ -252,8 +256,17 @@ export function isCurrentGame(v: unknown): v is CurrentGame {
     Array.isArray(v.players) &&
     fitsMode(v.players, v.config) &&
     v.players.every(isPlayerSheet) &&
-    (v.savedAs === undefined || typeof v.savedAs === "string") &&
-    (v.dirty === undefined || typeof v.dirty === "boolean")
+    (v.lastGame === undefined || isEndedGame(v.lastGame))
+  );
+}
+
+function isEndedGame(v: unknown): v is EndedGame {
+  return (
+    isObject(v) &&
+    typeof v.id === "string" &&
+    isConfig(v.config) &&
+    Array.isArray(v.players) &&
+    v.players.every(isPlayerSheet)
   );
 }
 
@@ -280,6 +293,9 @@ function isSavedGame(v: unknown): v is SavedGame {
     isConfig(v.config) &&
     Array.isArray(v.players) &&
     v.players.every(isSavedPlayer) &&
+    Array.isArray(v.sheet) &&
+    v.sheet.length === v.players.length &&
+    v.sheet.every(isPlayerSheet) &&
     Array.isArray(v.winners) &&
     v.winners.every(
       i => isCount(i) && (i as number) < (v.players as unknown[]).length

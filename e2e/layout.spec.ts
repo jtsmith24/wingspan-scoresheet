@@ -63,9 +63,10 @@ test.describe("fits the screen", () => {
   test("dialogs fit, buttons side by side and thumb-sized", async ({ page }, info) => {
     const sheet = await openApp(page);
     await playQuickGame(sheet);
+    await sheet.cell(0, 0).fill("");
     for (const width of widths(info.project.name)) {
       await page.setViewportSize({ width, height: 800 });
-      await sheet.newGameButton().click();
+      await sheet.endButton().click();
       const card = page.locator("dialog[open] .app-dialog-card");
       await expect(card).toBeVisible();
       const buttons = await page
@@ -74,7 +75,7 @@ test.describe("fits the screen", () => {
       expect(new Set(buttons.map(b => b.top)).size, `one row at ${width}px`).toBe(1);
       expect(Math.min(...buttons.map(b => b.h)), `44px at ${width}px`).toBeGreaterThanOrEqual(44);
       expect(await insideViewport(page, "dialog[open] .app-dialog-card"), `${width}px`).toBe(true);
-      await respond(page, /Keep it\?/, "Cancel");
+      await respond(page, /Save as unfinished\?/, "Keep playing");
     }
   });
 
@@ -82,7 +83,7 @@ test.describe("fits the screen", () => {
     const sheet = await openApp(page);
     for (let i = 0; i < 3; i++) await sheet.addPlayer().click();
     for (let c = 0; c < 5; c++) await sheet.fillEvery(c, c + 1);
-    await sheet.saveButton().click();
+    await sheet.endButton().click();
     await sheet.pastButton().click();
     await page.locator("button.past-slip").click();
     for (const width of widths(info.project.name)) {

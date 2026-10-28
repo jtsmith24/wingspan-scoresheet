@@ -9,16 +9,19 @@ test.describe("keeping things between visits", () => {
     await page.reload();
     expect(await sheet.codes()).toEqual(["JS", "SAM", ""]);
     await expect(sheet.cell(2, 2)).toHaveValue("7");
-    await expect(sheet.saveButton()).toHaveText("Save");
+    await expect(sheet.lastGame()).toHaveCount(0);
   });
 
-  test("a saved game is still Saved after a reload", async ({ page }) => {
+  test("an ended game's note and Undo are still there after a reload", async ({ page }) => {
     const sheet = await openApp(page);
     await playQuickGame(sheet);
-    await sheet.saveButton().click();
+    await sheet.endButton().click();
     await page.reload();
-    await expect(sheet.saveButton()).toHaveText("Saved");
+    await expect(sheet.lastGame()).toContainText("Jordan won with 60");
     await expect(sheet.pastButton()).toHaveText("Past games · 1");
+    await sheet.undo().click();
+    await expect(sheet.cell(0, 0)).toHaveValue("10");
+    await expect(sheet.pastButton()).toHaveCount(0);
   });
 
   test("a name being typed survives a reload", async ({ page }) => {
@@ -62,7 +65,7 @@ test.describe("bad or missing storage", () => {
   test("one bad game in history doesn't break the drawer", async ({ page }) => {
     const sheet = await openApp(page);
     await playQuickGame(sheet);
-    await sheet.saveButton().click();
+    await sheet.endButton().click();
     const history = await readStorage(page, KEYS.history);
     await page.evaluate(
       ([k, v]) => localStorage.setItem(k, v),
@@ -97,10 +100,8 @@ test.describe("bad or missing storage", () => {
     const sheet = new Sheet(page);
     await expect(page.locator(".storage-note")).toBeVisible();
     await playQuickGame(sheet);
-    await sheet.saveButton().click();
+    await sheet.endButton().click();
     await expect(sheet.pastButton()).toHaveText("Past games · 1");
-    await sheet.newGameButton().click();
-    await respond(page, "New game. Who's playing?", "Same players");
     expect(await sheet.codes()).toEqual(["JOR", "SAM"]);
   });
 
@@ -114,7 +115,7 @@ test.describe("bad or missing storage", () => {
         return real.call(this, k, v);
       };
     });
-    await sheet.saveButton().click();
+    await sheet.endButton().click();
     await expect(sheet.pastButton()).toHaveText("Past games · 1");
     await expect(page.locator(".storage-note")).toBeVisible();
   });
@@ -128,7 +129,7 @@ test.describe("two tabs open", () => {
     const b = new Sheet(other);
     await expect(b.pastButton()).toHaveCount(0);
     await playQuickGame(a);
-    await a.saveButton().click();
+    await a.endButton().click();
     await expect(b.pastButton()).toHaveText("Past games · 1");
   });
 
@@ -149,20 +150,16 @@ test.describe("two tabs open", () => {
     await expect(a.cell(0, 0)).toHaveValue("42");
   });
 
-  test("saving in both keeps both games", async ({ page, context }) => {
+  test("ending games in both keeps both games", async ({ page, context }) => {
     const a = await openApp(page);
     const other = await context.newPage();
     await other.goto("/");
     const b = new Sheet(other);
     await playQuickGame(a, "Alex", "Blake");
-    await a.saveButton().click();
-    // Tab B's own sheet is the same stored game until it reloads; give it
-    // a different game to save.
-    await other.reload();
-    await b.newGameButton().click();
-    await respond(other, "New game. Who's playing?", "New players");
+    await a.endButton().click();
+    await expect(b.endButton()).toBeDisabled();
     await playQuickGame(b, "Casey", "Drew");
-    await b.saveButton().click();
+    await b.endButton().click();
     const history = await readStorage(page, KEYS.history);
     expect(history).toHaveLength(2);
     await expect(a.pastButton()).toHaveText("Past games · 2");
@@ -171,7 +168,7 @@ test.describe("two tabs open", () => {
   test("deleting in one tab removes it from the other", async ({ page, context }) => {
     const a = await openApp(page);
     await playQuickGame(a);
-    await a.saveButton().click();
+    await a.endButton().click();
     const other = await context.newPage();
     await other.goto("/");
     const b = new Sheet(other);

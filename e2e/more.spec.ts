@@ -1,4 +1,4 @@
-import { expect, KEYS, openApp, playQuickGame, readStorage, respond, test } from "./helpers";
+import { expect, KEYS, openApp, playQuickGame, readStorage, test } from "./helpers";
 
 test.describe("on a touch screen", () => {
   test.beforeEach(({}, info) => test.skip(info.project.name !== "phone", "touch only"));
@@ -22,11 +22,10 @@ test.describe("on a touch screen", () => {
       }
     }
     await expect(sheet.result()).toHaveText("Sam won with 35");
-    await sheet.saveButton().tap();
-    await expect(sheet.saveButton()).toHaveText("Saved");
-    await sheet.newGameButton().tap();
-    await page.locator("dialog[open]").getByRole("button", { name: "Same players" }).tap();
+    await sheet.endButton().tap();
+    await expect(sheet.lastGame()).toContainText("Sam won with 35");
     expect(await sheet.codes()).toEqual(["JOR", "SAM"]);
+    await expect(sheet.cell(0, 0)).toHaveValue("");
     await sheet.pastButton().tap();
     await page.locator("button.past-slip").tap();
     await page.locator(".past-sheet td").first().tap();
@@ -64,7 +63,7 @@ test.describe("trickier ties", () => {
     await food.nth(0).fill("1");
     await food.nth(1).fill("0");
     await expect(sheet.result()).toContainText("Jordan won with 0");
-    await sheet.saveButton().click();
+    await sheet.endButton().click();
     const [saved] = await readStorage(page, KEYS.history);
     expect(saved.summary).toBe("Jordan won with 0");
   });
@@ -104,7 +103,7 @@ test.describe("trickier ties", () => {
     await sheet.fillEvery(1, 2);
     await page.locator(".tiebreak-row input").nth(1).fill("5");
     await sheet.cell(0, 0).fill("9");
-    await sheet.saveButton().click();
+    await sheet.endButton().click();
     const [saved] = await readStorage(page, KEYS.history);
     expect(saved.players.map((p: { unusedFood: number | null }) => p.unusedFood)).toEqual([null, null]);
     expect(saved.detail).toBeUndefined();
@@ -112,25 +111,6 @@ test.describe("trickier ties", () => {
 });
 
 test.describe("saved games, more", () => {
-  test("renaming after saving needs an update, which keeps its place", async ({ page }) => {
-    const sheet = await openApp(page);
-    await playQuickGame(sheet, "Alex", "Blake");
-    await sheet.saveButton().click();
-    await sheet.newGameButton().click();
-    await respond(page, "New game. Who's playing?", "New players");
-    await playQuickGame(sheet);
-    await sheet.saveButton().click();
-    await sheet.setName(0, "Jordan Smith");
-    await expect(sheet.saveButton()).toHaveText("Update");
-    const before = await readStorage(page, KEYS.history);
-    await sheet.saveButton().click();
-    const after = await readStorage(page, KEYS.history);
-    expect(after).toHaveLength(2);
-    expect(after[0].id).toBe(before[0].id);
-    expect(after[0].finishedAt).toBe(before[0].finishedAt);
-    expect(after[0].players[0].name).toBe("Jordan Smith");
-  });
-
   test("Play again from a Duet game sets up Duet", async ({ page }) => {
     const sheet = await openApp(page);
     await sheet.expansions(["Asia"], { close: false });
@@ -140,10 +120,9 @@ test.describe("saved games, more", () => {
     await sheet.setName(1, "Sam");
     await sheet.fillEvery(0, 1);
     await sheet.fillEvery(1, 2);
-    await sheet.saveButton().click();
+    await sheet.endButton().click();
+    await expect(sheet.title()).toHaveText("Duet");
     await sheet.baseTab().locator("button").click();
-    await respond(page, /This game is saved/, "New game");
-    await respond(page, "New game. Who's playing?", "New players");
     await expect(sheet.title()).not.toHaveText("Duet");
     await sheet.pastButton().click();
     await expect(page.locator("button.past-slip")).toContainText("Asia (Duet)");
@@ -159,9 +138,7 @@ test.describe("saved games, more", () => {
     const sheet = await openApp(page);
     for (let g = 0; g < 8; g++) {
       await playQuickGame(sheet, `Player${g}`, "Sam");
-      await sheet.saveButton().click();
-      await sheet.newGameButton().click();
-      await respond(page, "New game. Who's playing?", "New players");
+      await sheet.endButton().click();
     }
     await expect(sheet.pastButton()).toHaveText("Past games · 8");
     await sheet.pastButton().click();

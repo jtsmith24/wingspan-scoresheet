@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   addToHistory,
   fitPlayers,
-  hasUnsavedScores,
   missingScores,
   playerHasData,
   isCurrentGame,
@@ -164,13 +163,15 @@ describe("games and history", () => {
     expect(big).toHaveLength(MAX_HISTORY);
   });
 
-  it("knows when scores would be lost", () => {
-    const game = newGame();
-    expect(hasUnsavedScores(game)).toBe(false);
+  it("keeps the sheet as typed, so it can be edited later", () => {
+    const game = newGame({ ...newGame().config, oceania: true });
+    game.players[0].nectarSpent.forest = "2";
     game.players[0].scores.birds = "5";
-    expect(hasUnsavedScores(game)).toBe(true);
-    expect(hasUnsavedScores({ ...game, savedAs: "x", dirty: false })).toBe(false);
-    expect(hasUnsavedScores({ ...game, savedAs: "x", dirty: true })).toBe(true);
+    const saved = toSavedGame(game, new Date(), "game-1");
+    expect(saved.id).toBe("game-1");
+    expect(saved.sheet).toHaveLength(saved.players.length);
+    expect(saved.sheet[0].nectarSpent.forest).toBe("2");
+    expect(isHistory([{ ...saved, sheet: [] }])).toBe(false);
   });
 
   it("rejects malformed stored data", () => {

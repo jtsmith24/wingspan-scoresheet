@@ -6,7 +6,7 @@ import React, {
   useSyncExternalStore,
 } from "react";
 import SumTable from "./sum-table/SumTable";
-import { Expansion, ExpansionTabs, expansionNames } from "./GameSetup";
+import { Expansion, ExpansionTabs } from "./GameSetup";
 import { PastGames } from "./PastGames";
 import { useDialog } from "./ConfirmDialog";
 import {
@@ -15,7 +15,7 @@ import {
   emptyPlayer,
   fitPlayers,
   hasAnyScore,
-  hasUnsavedScores,
+  missingScores,
   newGame,
   playerHasData,
   removeFromHistory,
@@ -32,7 +32,7 @@ import {
 import { STORAGE_KEYS } from "@/lib/storage";
 import { withCodes } from "@/lib/names";
 import { GameConfig, playerLimits, sameConfig } from "@/lib/rules";
-import { displayName, PlayerSheet } from "@/lib/scoring";
+import { displayName, PlayerSheet, scoreGame } from "@/lib/scoring";
 import { Edition, themeFor } from "@/lib/theme";
 
 const THEME_KEY = "wingspan-edition";
@@ -65,7 +65,8 @@ const LoadedScorepad = () => {
   const [canPersist, setCanPersist] = useState(() => getStore().persistent);
   // The expansion picked most recently; the palette follows it while it's on.
   const [preferred, setPreferred] = useState(readPreferred);
-  const [pastOpen, setPastOpen] = useState(false);
+  // Open, and optionally on one game.
+  const [pastOpen, setPastOpen] = useState<boolean | string>(false);
   const [dialog, choose, ask] = useDialog();
 
   const theme = themeFor(game.config, preferred);
@@ -103,27 +104,13 @@ const LoadedScorepad = () => {
     setCanPersist(getStore().persistent);
   };
 
+  // Touching the new sheet means it's in use: Undo for the last game goes.
   const edit = (changes: Partial<CurrentGame>) =>
-    setGame({ ...game, ...changes, dirty: true });
+    setGame({ ...game, ...changes, lastGame: undefined });
 
   const setConfig = async (config: GameConfig) => {
     // Re-picking the tab that's already open isn't a change.
     if (sameConfig(config, game.config)) return;
-    // Moving a saved game off the boxes it was saved with usually means
-    // setting up the next game, so ask. Once it's been moved, don't again.
-    const saved = loadHistory().find(g => g.id === game.savedAs);
-    if (saved && sameConfig(saved.config, game.config)) {
-      const names = expansionNames(config);
-      const answer = await choose({
-        message: `This game is saved. Start a new ${names ? `game with ${names}` : "base game"}, or change this one?`,
-        actions: [
-          { id: "change", label: "Change this game" },
-          { id: "new", label: "New game", primary: true },
-        ],
-      });
-      if (!answer) return;
-      if (answer === "new") return startNewGame(config);
-    }
     const { max } = playerLimits(config);
     const dropped = game.players.slice(max);
     if (
@@ -188,104 +175,97 @@ const LoadedScorepad = () => {
     });
 
   // History is re-read before every change so a second open tab can't
-  // overwrite games saved in the first.
-  const saveGame = () => {
-    const saved = toSavedGame(game);
-    const nextHistory = addToHistory(loadHistory(), saved);
-    // If storage is full the game is still kept for this visit, and the
-    // storage note below explains it won't last.
-    saveHistory(nextHistory);
-    setHistory(nextHistory);
-    setGame({ ...game, savedAs: saved.id, dirty: false });
+  // overwrite games saved in the first. If storage is full the game is still
+  // kept for this visit, and the storage note below explains it won't last.
+  const writeHistory = (change: (h: SavedGame[]) => SavedGame[]) => {
+    const next = change(loadHistory());
+    saveHistory(next);
+    setHistory(next);
   };
 
-  const sheetIsBlank =
-    !hasAnyScore(game) && game.players.every(p => !p.name.trim());
-
-  // Unsaved scores: keep them or toss them? One tap, Save as the default.
-  // A saved game that's been edited since: only the edits are at stake.
-  const notSaved = (subject: string) =>
-    game.savedAs
-      ? `${subject} has changes that aren't saved. Keep them?`
-      : `${subject} hasn't been saved. Keep it?`;
-  const keepOrToss = (message: string, step?: string) =>
-    choose({
-      step,
-      message,
-      actions: game.savedAs
-        ? [
-            { id: "toss", label: "Toss changes" },
-            { id: "save", label: "Update", primary: true },
-          ]
-        : [
-            { id: "toss", label: "Toss it" },
-            { id: "save", label: "Save it", primary: true },
-          ],
-    });
-
-  // Up to two quick questions; nothing changes until the last is answered.
-  const startNewGame = async (config = game.config) => {
-    const unsaved = hasUnsavedScores(game);
-    const scored = hasAnyScore(game);
-    let save = false;
-    let keep = false;
-    if (!scored) {
-      // Only names on the sheet: nothing to save, nobody worth keeping.
-      const ok = await ask({
-        message: "Start a new game? The names will be cleared.",
-        confirm: "Start new game",
-      });
-      if (!ok) return;
-    } else {
-      const steps = unsaved ? 2 : 1;
-      if (unsaved) {
-        const kept = await keepOrToss(
-          notSaved("This game"),
-          "1 of 2"
-        );
-        if (!kept) return;
-        save = kept === "save";
-      }
-      const who = await choose({
-        step: steps > 1 ? "2 of 2" : undefined,
-        message: unsaved ? "Who's playing next?" : "New game. Who's playing?",
+  // Ends the game on the sheet: into Past games, and a fresh sheet with the
+  // same players. A part-filled sheet or an unsettled tie asks first.
+  const endGame = async () => {
+    const missing = missingScores(game);
+    const { outcome } = scoreGame(game.config, game.players);
+    const question =
+      missing > 0
+        ? {
+            message: `${missing} score ${missing === 1 ? "box is" : "boxes are"} empty. Save as unfinished?`,
+            confirm: "Save unfinished",
+          }
+        : outcome.decision === "needs-food"
+          ? {
+              message:
+                "The tie isn't settled: unused food is still empty. End the game anyway?",
+              confirm: "End game",
+            }
+          : null;
+    if (question) {
+      const answer = await choose({
+        message: question.message,
         actions: [
-          { id: "new", label: "New players" },
-          { id: "same", label: "Same players", primary: true },
+          { id: "keep", label: "Keep playing" },
+          { id: "end", label: question.confirm, primary: true },
         ],
       });
-      if (!who) return;
-      keep = who === "same";
+      if (answer !== "end") return;
     }
-    if (save) saveGame();
+    const saved = toSavedGame(game);
+    writeHistory(h => addToHistory(h, saved));
     const codes = withCodes(game.players);
-    setGame(
-      newGame(
-        config,
-        game.players.map(p => (keep ? p.name : "")),
-        keep ? codes.map(c => c || undefined) : []
+    setGame({
+      ...newGame(
+        game.config,
+        game.players.map(p => p.name),
+        codes.map(c => c || undefined)
+      ),
+      lastGame: { id: saved.id, config: game.config, players: game.players },
+    });
+  };
+
+  // Puts the last game back on the sheet, exactly as it was.
+  const undoEnd = () => {
+    const last = game.lastGame;
+    if (!last) return;
+    writeHistory(h => removeFromHistory(h, last.id));
+    setGame({ config: last.config, players: last.players });
+  };
+
+  const clearNames = () =>
+    edit({
+      players: game.players.map(p => ({ ...p, name: "", code: undefined })),
+    });
+
+  const closePast = useCallback(() => setPastOpen(false), []);
+
+  const deleteGame = (id: string) =>
+    writeHistory(h => removeFromHistory(h, id));
+
+  // A fix to a past game keeps its place and its date.
+  const editGame = (id: string, players: PlayerSheet[]) => {
+    const old = loadHistory().find(g => g.id === id);
+    if (!old) return;
+    writeHistory(h =>
+      addToHistory(
+        h,
+        toSavedGame({ config: old.config, players }, new Date(), id)
       )
     );
   };
 
-  const closePast = useCallback(() => setPastOpen(false), []);
-
-  const deleteGame = (id: string) => {
-    const next = removeFromHistory(loadHistory(), id);
-    setHistory(next);
-    saveHistory(next);
-    // The sheet on screen was that game: saving it again makes a new entry.
-    if (game.savedAs === id) setGame({ ...game, savedAs: undefined });
-  };
-
   const playAgain = async (saved: SavedGame) => {
-    if (hasUnsavedScores(game)) {
-      const kept = await keepOrToss(
-        `Play again? ${notSaved("The game on the sheet")}`
-      );
-      if (!kept) return;
-      if (kept === "save") saveGame();
-    }
+    const scored = hasAnyScore(game);
+    if (
+      scored &&
+      !(await ask({
+        message:
+          "Play again? The game on the sheet will be saved to Past games first.",
+        confirm: "Save it and play again",
+      }))
+    )
+      return;
+    if (scored) writeHistory(h => addToHistory(h, toSavedGame(game)));
     // Unnamed players were saved as "Player 2" and so on; start those blank.
     const playerNames = saved.players.map(p =>
       /^Player \d+$/.test(p.name) ? "" : p.name
@@ -299,9 +279,8 @@ const LoadedScorepad = () => {
 
   const { config, players } = game;
   const limits = playerLimits(config);
-  // Once saved, the next step is a new game, so New game takes the lead.
-  const upToDate = !!game.savedAs && !game.dirty;
-  const saveLabel = !game.savedAs ? "Save" : upToDate ? "Saved" : "Update";
+  const scored = hasAnyScore(game);
+  const last = game.lastGame && history.find(g => g.id === game.lastGame?.id);
 
   return (
     <div className="scorepad">
@@ -327,23 +306,36 @@ const LoadedScorepad = () => {
         />
       </div>
 
+      {last && (
+        <p className="last-game hand-caps">
+          ✓ Last game:{" "}
+          <button
+            type="button"
+            className="text-link"
+            onClick={() => setPastOpen(last.id)}
+          >
+            {last.summary}
+          </button>{" "}
+          ·{" "}
+          <button type="button" className="text-link" onClick={undoEnd}>
+            Undo
+          </button>
+        </p>
+      )}
       <div className="sheet-actions hand-caps">
         <button
           type="button"
-          className={`ink-button${upToDate ? "" : " ink-button-primary"}`}
-          onClick={saveGame}
-          disabled={!hasAnyScore(game) || upToDate}
+          className="ink-button ink-button-primary"
+          onClick={endGame}
+          disabled={!scored}
         >
-          {saveLabel}
+          End game
         </button>
-        <button
-          type="button"
-          className={`ink-button${upToDate ? " ink-button-primary" : ""}`}
-          onClick={() => startNewGame()}
-          disabled={sheetIsBlank}
-        >
-          New game
-        </button>
+        {!scored && players.some(p => p.name.trim()) && (
+          <button type="button" className="text-link" onClick={clearNames}>
+            Clear names
+          </button>
+        )}
         {history.length > 0 && (
           <button
             type="button"
@@ -357,8 +349,10 @@ const LoadedScorepad = () => {
       {pastOpen && (
         <PastGames
           history={history}
+          initialOpen={pastOpen === true ? undefined : pastOpen}
           onClose={closePast}
           onDelete={deleteGame}
+          onEdit={editGame}
           onPlayAgain={playAgain}
           ask={ask}
         />

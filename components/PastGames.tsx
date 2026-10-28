@@ -2,10 +2,11 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Ask } from "./ConfirmDialog";
 import { ScoreIcon } from "./ScoreIcon";
-import { CATEGORY_ICONS, sheetTitle } from "./sum-table/SumTable";
-import { SavedGame } from "@/lib/game";
+import SumTable, { CATEGORY_ICONS, sheetTitle } from "./sum-table/SumTable";
+import { playerHasData, SavedGame } from "@/lib/game";
 import { withCodes } from "@/lib/names";
 import { categoriesFor, describeConfig, GROUP_LABELS } from "@/lib/rules";
+import { PlayerSheet } from "@/lib/scoring";
 
 const formatDay = (iso: string) =>
   new Date(iso).toLocaleDateString(undefined, {
@@ -166,19 +167,30 @@ const FullSheet = ({ game }: { game: SavedGame }) => {
 
 export const PastGames = ({
   history,
+  initialOpen,
   onClose,
   onDelete,
+  onEdit,
   onPlayAgain,
   ask,
 }: {
   history: SavedGame[];
+  /** A game to open straight away. */
+  initialOpen?: string;
   onClose: () => void;
   onDelete: (id: string) => void;
+  onEdit: (id: string, players: PlayerSheet[]) => void;
   onPlayAgain: (game: SavedGame) => void;
   ask: Ask;
 }) => {
-  const [openId, setOpenId] = useState<string>();
+  const [openId, setOpenId] = useState(initialOpen);
+  // The open game's sheet while it's being edited.
+  const [draft, setDraft] = useState<PlayerSheet[]>();
   const open = history.find(g => g.id === openId);
+  const fold = () => {
+    setDraft(undefined);
+    setOpenId(undefined);
+  };
   const drawerRef = useRef<HTMLElement>(null);
   const lastOpened = useRef<string>(undefined);
 
@@ -190,7 +202,9 @@ export const PastGames = ({
     const trap = (e: KeyboardEvent) => {
       if (e.key !== "Tab" || !drawerRef.current || dialogOpen()) return;
       const items = [
-        ...drawerRef.current.querySelectorAll<HTMLElement>("button"),
+        ...drawerRef.current.querySelectorAll<HTMLElement>(
+          "button:not(:disabled), input:not(:disabled)"
+        ),
       ];
       const first = items[0];
       const last = items[items.length - 1];
@@ -224,9 +238,13 @@ export const PastGames = ({
     )?.focus();
   }, [openId]);
 
+  // Escape leaves an edit first, then the drawer.
+  const editing = !!draft;
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !dialogOpen()) onClose();
+      if (e.key !== "Escape" || dialogOpen()) return;
+      if (editing) setDraft(undefined);
+      else onClose();
     };
     document.addEventListener("keydown", onKey);
     // Keep the sheet behind the drawer from scrolling with it.
@@ -236,7 +254,7 @@ export const PastGames = ({
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = overflow;
     };
-  }, [onClose]);
+  }, [onClose, editing]);
 
   return (
     <div className="past-games">
@@ -256,11 +274,12 @@ export const PastGames = ({
         </div>
 
         {open ? (
-          // Tapping the open sheet anywhere but its buttons folds it back up.
+          // Tapping the open sheet anywhere but its buttons folds it back up,
+          // unless it's being edited.
           <article
-            className="past-slip past-slip-full"
+            className={`past-slip past-slip-full${draft ? " is-editing" : ""}`}
             onClick={e => {
-              if (!(e.target as Element).closest("button")) setOpenId(undefined);
+              if (!draft && !(e.target as Element).closest("button")) fold();
             }}
           >
             <button
@@ -268,39 +287,74 @@ export const PastGames = ({
               className="past-slip-toggle hand-caps"
               aria-expanded="true"
               aria-label={`${formatDay(open.finishedAt)}. Close full sheet`}
-              onClick={() => setOpenId(undefined)}
+              onClick={fold}
             >
               <SlipHead game={open} open />
             </button>
-            <FullSheet game={open} />
-            <p className="sheet-result">
-              {open.summary}
-              {open.detail && (
-                <span className="sheet-result-detail">{open.detail}</span>
-              )}
-            </p>
-            <div className="past-actions hand-caps">
-              <button type="button" onClick={() => onPlayAgain(open)}>
-                Play again with these players
-              </button>
-              <button
-                type="button"
-                className="past-muted"
-                onClick={async () => {
-                  const ok = await ask({
-                    message: "Delete this game from Past games?",
-                    confirm: "Delete",
-                    danger: true,
-                  });
-                  if (ok) {
-                    setOpenId(undefined);
-                    onDelete(open.id);
-                  }
-                }}
-              >
-                Delete
-              </button>
-            </div>
+            {draft ? (
+              <>
+                <SumTable
+                  game={{ config: open.config, players: draft }}
+                  onPlayersChange={setDraft}
+                  idPrefix="past-"
+                />
+                <div className="past-edit-actions hand-caps">
+                  <button
+                    type="button"
+                    className="ink-button"
+                    onClick={() => setDraft(undefined)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="ink-button ink-button-primary"
+                    disabled={!draft.some(p => playerHasData(p, open.config))}
+                    onClick={() => {
+                      onEdit(open.id, draft);
+                      setDraft(undefined);
+                    }}
+                  >
+                    Save changes
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <FullSheet game={open} />
+                <p className="sheet-result">
+                  {open.summary}
+                  {open.detail && (
+                    <span className="sheet-result-detail">{open.detail}</span>
+                  )}
+                </p>
+                <div className="past-actions hand-caps">
+                  <button type="button" onClick={() => onPlayAgain(open)}>
+                    Play again with these players
+                  </button>
+                  <button type="button" onClick={() => setDraft(open.sheet)}>
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    className="past-muted"
+                    onClick={async () => {
+                      const ok = await ask({
+                        message: "Delete this game from Past games?",
+                        confirm: "Delete",
+                        danger: true,
+                      });
+                      if (ok) {
+                        fold();
+                        onDelete(open.id);
+                      }
+                    }}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </>
+            )}
           </article>
         ) : (
           history.map((g, i) => (
