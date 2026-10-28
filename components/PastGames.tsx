@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
 import { Ask } from "./ConfirmDialog";
+import { SavedStamp } from "./SavedStamp";
 import { ScoreIcon } from "./ScoreIcon";
 import SumTable, { CATEGORY_ICONS, sheetTitle } from "./sum-table/SumTable";
 import { playerHasData, SavedGame } from "@/lib/game";
@@ -186,9 +187,12 @@ export const PastGames = ({
   const [openId, setOpenId] = useState(initialOpen);
   // The open game's sheet while it's being edited.
   const [draft, setDraft] = useState<PlayerSheet[]>();
+  // Bumped each time an edit is saved, to replay the stamp.
+  const [stamp, setStamp] = useState(0);
   const open = history.find(g => g.id === openId);
   const fold = () => {
     setDraft(undefined);
+    setStamp(0);
     setOpenId(undefined);
   };
   const drawerRef = useRef<HTMLElement>(null);
@@ -291,6 +295,9 @@ export const PastGames = ({
             >
               <SlipHead game={open} open />
             </button>
+            {stamp > 0 && (
+              <SavedStamp key={stamp} onDone={() => setStamp(0)} />
+            )}
             {draft ? (
               <>
                 <SumTable
@@ -313,6 +320,7 @@ export const PastGames = ({
                     onClick={() => {
                       onEdit(open.id, draft);
                       setDraft(undefined);
+                      setStamp(s => s + 1);
                     }}
                   >
                     Save changes

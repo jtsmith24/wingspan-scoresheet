@@ -9,6 +9,7 @@ import SumTable from "./sum-table/SumTable";
 import { Expansion, ExpansionTabs } from "./GameSetup";
 import { PastGames } from "./PastGames";
 import { useDialog } from "./ConfirmDialog";
+import { SavedStamp } from "./SavedStamp";
 import {
   addToHistory,
   CurrentGame,
@@ -68,6 +69,10 @@ const LoadedScorepad = () => {
   // Open, and optionally on one game.
   const [pastOpen, setPastOpen] = useState<boolean | string>(false);
   const [dialog, , ask] = useDialog();
+  // The fresh sheet waiting while an ended game's scores lift off.
+  const [ending, setEnding] = useState<CurrentGame>();
+  // Bumped each time a game ends, to replay the Saved stamp.
+  const [stamp, setStamp] = useState(0);
 
   const theme = themeFor(game.config, preferred);
   useEffect(() => {
@@ -87,6 +92,15 @@ const LoadedScorepad = () => {
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
   }, []);
+
+  useEffect(() => {
+    if (!ending) return;
+    const swap = setTimeout(() => {
+      setGameState(ending);
+      setEnding(undefined);
+    }, 550);
+    return () => clearTimeout(swap);
+  }, [ending]);
 
   const prefer = (edition: Edition) => {
     setPreferred(edition);
@@ -205,14 +219,24 @@ const LoadedScorepad = () => {
     const saved = toSavedGame(game);
     writeHistory(h => addToHistory(h, saved));
     const codes = withCodes(game.players);
-    setGame({
+    const next = {
       ...newGame(
         game.config,
         game.players.map(p => p.name),
         codes.map(c => c || undefined)
       ),
       lastGame: { id: saved.id, config: game.config, players: game.players },
-    });
+    };
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setGame(next);
+      return;
+    }
+    // Stored straight away; the sheet on screen catches up once the stamp
+    // has settled and the scores have lifted off.
+    saveCurrentGame(next);
+    setCanPersist(getStore().persistent);
+    setEnding(next);
+    setStamp(s => s + 1);
   };
 
   // Puts the last game back on the sheet, exactly as it was.
@@ -274,8 +298,8 @@ const LoadedScorepad = () => {
   const last = game.lastGame && history.find(g => g.id === game.lastGame?.id);
 
   return (
-    <div className="scorepad">
-      <div className="sheet-with-tabs">
+    <div className="scorepad" inert={!!ending}>
+      <div className={`sheet-with-tabs${ending ? " is-ending" : ""}`}>
         <ExpansionTabs
           config={config}
           theme={theme}
@@ -295,10 +319,11 @@ const LoadedScorepad = () => {
             players.length > limits.min ? removePlayer : undefined
           }
         />
+        {stamp > 0 && <SavedStamp key={stamp} onDone={() => setStamp(0)} />}
       </div>
 
       {last && (
-        <p className="last-game hand-caps">
+        <p className={`last-game hand-caps${stamp > 0 ? " just-ended" : ""}`}>
           ✓ Last game:{" "}
           <button
             type="button"

@@ -551,3 +551,47 @@ test.describe("editing a past game", () => {
     await expect(sheet.cell(0, 1)).toHaveValue("5");
   });
 });
+
+test.describe("with motion", () => {
+  test.use({ reducedMotion: "no-preference" });
+
+  test("ending stamps Saved, then the scores lift off and the note shows", async ({ page }) => {
+    const sheet = await openApp(page);
+    await playQuickGame(sheet);
+    await sheet.endButton().click();
+    const stamp = page.locator(".sheet-with-tabs .saved-stamp");
+    await expect(stamp).toBeVisible();
+    // Saved before anything moves, so a closed tab loses nothing.
+    expect(await history(page)).toHaveLength(1);
+    expect((await readStorage(page, KEYS.current)).lastGame).toBeTruthy();
+    await expect(sheet.lastGame()).toBeVisible();
+    await expect(sheet.cell(0, 0)).toHaveValue("");
+    await expect(stamp).toHaveCount(0);
+    // Undo still puts the game back.
+    await sheet.undo().click();
+    await expect(sheet.cell(0, 0)).not.toHaveValue("");
+    expect(await history(page)).toHaveLength(0);
+  });
+
+  test("the sheet can't be typed on while it clears", async ({ page }) => {
+    const sheet = await openApp(page);
+    await playQuickGame(sheet);
+    await sheet.endButton().click();
+    await expect(page.locator(".scorepad")).toHaveAttribute("inert");
+    await expect(page.locator(".scorepad")).not.toHaveAttribute("inert");
+    expect(await history(page)).toHaveLength(1);
+  });
+
+  test("saving an edit stamps the past game's slip", async ({ page }) => {
+    const sheet = await openApp(page);
+    await endQuickGame(sheet);
+    await openFirstSlip(sheet, page);
+    await full(page).getByRole("button", { name: "Edit" }).click();
+    await page.locator("#past-cell-0-0").fill("40");
+    await full(page).getByRole("button", { name: "Save changes" }).click();
+    const stamp = full(page).locator(".saved-stamp");
+    await expect(stamp).toBeVisible();
+    await expect(stamp).toHaveCount(0);
+    await expect(full(page).getByRole("button", { name: "Edit" })).toBeVisible();
+  });
+});

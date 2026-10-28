@@ -18,6 +18,8 @@ export default defineConfig({
     baseURL: `http://127.0.0.1:${PORT}`,
     channel: "chrome",
     trace: "retain-on-failure",
+    // End game clears at once; the "with motion" tests turn the stamp back on.
+    reducedMotion: "reduce",
   },
   projects: [
     {

@@ -502,6 +502,7 @@ button.past-slip:hover {
 }
 
 .past-slip-full {
+  position: relative;
   padding: 0.8rem;
   cursor: pointer;
 }
@@ -722,6 +723,7 @@ button.past-slip:hover {
 
 /* Expansion tabs */
 .sheet-with-tabs {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1047,5 +1049,69 @@ select:not(:disabled),
   .score-cell:hover:not(:has(:disabled)):not(:focus-within),
   .player-cell:hover:not(:focus-within) {
     background-color: color-mix(in srgb, var(--wash-1) 15%, transparent);
+  }
+}
+
+/* Saved: a stamp settles over the sheet and fades, while an ended game's
+   scores lift off underneath it. */
+.saved-stamp {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 2;
+  padding: 0.2rem 1.4rem;
+  translate: -50% -50%;
+  font-size: 2.2rem;
+  letter-spacing: 0.08em;
+  color: var(--pen);
+  border: 3px solid var(--pen);
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--paper) 55%, transparent);
+  pointer-events: none;
+  animation: saved-stamp 0.9s ease-out both;
+}
+@keyframes saved-stamp {
+  0% {
+    opacity: 0;
+    scale: 1.08;
+    rotate: -8deg;
+  }
+  30%,
+  55% {
+    opacity: 0.7;
+    scale: 1;
+    rotate: -8deg;
+  }
+  100% {
+    opacity: 0;
+    scale: 1;
+    rotate: -8deg;
+  }
+}
+.is-ending .score-input,
+.is-ending .nectar-points {
+  color: transparent;
+  transition: color 0.3s ease-in 0.2s;
+}
+.is-ending .total-row td > *,
+.is-ending .sheet-result {
+  opacity: 0;
+  transition: opacity 0.3s ease-in 0.2s;
+}
+.just-ended {
+  animation: just-ended 0.35s ease-out both;
+}
+@keyframes just-ended {
+  from {
+    opacity: 0;
+    translate: 0 0.3rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .saved-stamp {
+    display: none;
+  }
+  .just-ended {
+    animation: none;
   }
 }
