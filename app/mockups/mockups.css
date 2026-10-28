@@ -254,3 +254,51 @@
     display: none;
   }
 }
+
+/* D: the stamp settles, no thud. */
+.mk-stamp-soft {
+  opacity: 0;
+  animation: mk-stamp-soft 0.9s ease-out both;
+}
+@keyframes mk-stamp-soft {
+  0% {
+    opacity: 0;
+    scale: 1.08;
+    rotate: -8deg;
+  }
+  30%,
+  55% {
+    opacity: 0.7;
+    scale: 1;
+    rotate: -8deg;
+  }
+  100% {
+    opacity: 0;
+    scale: 1;
+    rotate: -8deg;
+  }
+}
+
+/* E: a small stamp inked into the note. */
+.mk-mark {
+  display: inline-block;
+  margin-right: 0.4rem;
+  padding: 0 0.35rem;
+  font-size: 0.85rem;
+  color: var(--pen);
+  border: 1.5px solid var(--pen);
+  border-radius: 0.3rem;
+  rotate: -4deg;
+  animation: mk-ink 0.4s ease-out calc(var(--note-delay, 0.3s) + 0.1s) both;
+}
+@keyframes mk-ink {
+  from {
+    opacity: 0;
+    scale: 1.1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mk-mark {
+    animation: none;
+  }
+}

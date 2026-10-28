@@ -4,7 +4,7 @@ import { useState } from "react";
 import "./mockups.css";
 import "../../components/sum-table/styles/sum-table-styles.css";
 
-type Style = "tear" | "stamp" | "quiet";
+type Style = "tear" | "stamp" | "quiet" | "soft" | "mark";
 type SheetState = "finished" | "clearing" | "fresh";
 
 const CODES = ["JOR", "SAM", "ALX"];
@@ -84,6 +84,16 @@ const TIMING: Record<Style, React.CSSProperties> = {
     "--note-delay": "0.85s",
     "--bump-delay": "0.85s",
   } as React.CSSProperties,
+  soft: {
+    "--clear-delay": "0.2s",
+    "--note-delay": "0.6s",
+    "--bump-delay": "0.55s",
+  } as React.CSSProperties,
+  mark: {
+    "--clear-delay": "0s",
+    "--note-delay": "0.3s",
+    "--bump-delay": "0.25s",
+  } as React.CSSProperties,
   quiet: {
     "--clear-delay": "0s",
     "--note-delay": "0.3s",
@@ -114,7 +124,12 @@ const Demo = ({ style }: { style: Style }) => {
         </div>
         {ended ? (
           <p className="last-game hand-caps mk-note-in">
-            ✓ Last game:{" "}
+            {style === "mark" ? (
+              <span className="mk-mark">Saved</span>
+            ) : (
+              "✓ "
+            )}
+            Last game:{" "}
             <button type="button" className="text-link">
               Jordan won with 89
             </button>{" "}
@@ -150,6 +165,9 @@ const Demo = ({ style }: { style: Style }) => {
         {ended && style === "stamp" && (
           <div className="mk-stamp hand-caps">Saved</div>
         )}
+        {ended && style === "soft" && (
+          <div className="mk-stamp mk-stamp-soft hand-caps">Saved</div>
+        )}
       </div>
       <figcaption className="hand-caps">
         {ended ? (
@@ -170,7 +188,7 @@ export default function Mockups() {
       <p className="mk-intro">
         What you see the moment you press End game. Each phone works: press
         End game to watch it, Undo to put the scores back, and Play it again
-        to repeat. With reduce motion turned on, all three just show the note.
+        to repeat. With reduce motion turned on, they all just show the note.
       </p>
 
       <section className="mk-option">
@@ -192,6 +210,29 @@ export default function Mockups() {
         </p>
         <Demo style="stamp" />
       </section>
+
+      <h2 className="hand-caps mk-round">Between B and C</h2>
+
+      <section className="mk-option">
+        <h2 className="hand-caps">D · A soft stamp</h2>
+        <p className="mk-note">
+          The Saved stamp settles gently onto the sheet, with no thud or bounce,
+          and fades as the scores lift off underneath it. About 0.9 seconds.
+        </p>
+        <Demo style="soft" />
+      </section>
+
+      <section className="mk-option">
+        <h2 className="hand-caps">E · Saved, in the note</h2>
+        <p className="mk-note">
+          C&apos;s quiet clearing, with a small Saved stamp inked into the
+          last-game note. The stamp stays there until the next game starts.
+          About half a second.
+        </p>
+        <Demo style="mark" />
+      </section>
+
+      <h2 className="hand-caps mk-round">For comparison</h2>
 
       <section className="mk-option">
         <h2 className="hand-caps">C · Quiet</h2>
