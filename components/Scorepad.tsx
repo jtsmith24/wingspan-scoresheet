@@ -67,7 +67,7 @@ const LoadedScorepad = () => {
   const [preferred, setPreferred] = useState(readPreferred);
   // Open, and optionally on one game.
   const [pastOpen, setPastOpen] = useState<boolean | string>(false);
-  const [dialog, choose, ask] = useDialog();
+  const [dialog, , ask] = useDialog();
 
   const theme = themeFor(game.config, preferred);
   useEffect(() => {
@@ -201,16 +201,7 @@ const LoadedScorepad = () => {
               confirm: "End game",
             }
           : null;
-    if (question) {
-      const answer = await choose({
-        message: question.message,
-        actions: [
-          { id: "keep", label: "Keep playing" },
-          { id: "end", label: question.confirm, primary: true },
-        ],
-      });
-      if (answer !== "end") return;
-    }
+    if (question && !(await ask(question))) return;
     const saved = toSavedGame(game);
     writeHistory(h => addToHistory(h, saved));
     const codes = withCodes(game.players);

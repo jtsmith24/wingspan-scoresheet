@@ -57,12 +57,12 @@ test.describe("ending a game", () => {
     await expect(sheet.endButton()).toBeDisabled();
   });
 
-  test("a part-filled sheet asks; Keep playing changes nothing", async ({ page }) => {
+  test("a part-filled sheet asks; Cancel changes nothing", async ({ page }) => {
     const sheet = await openApp(page);
     await sheet.setName(0, "Jordan");
     await sheet.fillColumn(0, [10, 10, 10]);
     await sheet.endButton().click();
-    await respond(page, "3 score boxes are empty. Save as unfinished?", "Keep playing");
+    await respond(page, "3 score boxes are empty. Save as unfinished?", "Cancel");
     await expect(sheet.cell(0, 0)).toHaveValue("10");
     expect(await history(page)).toHaveLength(0);
     await sheet.endButton().click();
@@ -90,7 +90,7 @@ test.describe("ending a game", () => {
     await playQuickGame(sheet);
     await sheet.fillColumn(1, [10, 10, 10, 10, 10, 10]);
     await sheet.endButton().click();
-    await respond(page, /The tie isn't settled/, "Keep playing");
+    await respond(page, /The tie isn't settled/, "Cancel");
     expect(await history(page)).toHaveLength(0);
     await page.locator(".tiebreak-row input").nth(0).fill("2");
     await page.locator(".tiebreak-row input").nth(1).fill("1");

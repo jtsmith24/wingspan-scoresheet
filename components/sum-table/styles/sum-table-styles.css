@@ -396,8 +396,9 @@ tr.group-start:not(:first-child) > * {
     opacity 0.15s;
 }
 
+/* A faint wash of ink, so it shows on paper-coloured cards too. */
 .ink-button:hover:not(:disabled) {
-  background: var(--paper);
+  background: color-mix(in srgb, var(--ink) 10%, var(--paper));
 }
 
 .ink-button-primary {
@@ -989,5 +990,62 @@ button.past-slip:hover {
   .expansion-tab {
     padding: 0.25rem 0.35rem 0.9rem;
     font-size: 0.8rem;
+  }
+}
+
+/* Anything that does something when clicked gets the pointing hand. */
+button:not(:disabled),
+select:not(:disabled),
+.mix-option {
+  cursor: pointer;
+}
+
+/* Hover cues, only where there's a mouse: on touch screens a hover sticks
+   after a tap. Quiet controls turn from ink to pen; faded ones brighten. */
+.text-link,
+.past-actions button,
+.past-close,
+.past-slip-toggle,
+.name-peek,
+.mix-option,
+.mode-select select {
+  transition:
+    color 0.15s,
+    border-color 0.15s,
+    opacity 0.15s;
+}
+
+@media (hover: hover) {
+  .text-link:hover,
+  .past-actions button:hover,
+  .past-slip-toggle:hover,
+  .mix-option:hover,
+  .mode-select select:hover {
+    color: var(--pen);
+    border-color: var(--pen);
+  }
+
+  .past-close:hover,
+  button.past-muted:hover,
+  .app-dialog-under .text-link:hover {
+    opacity: 1;
+  }
+
+  .name-peek:hover {
+    text-decoration: underline dotted;
+    text-underline-offset: 0.2em;
+  }
+
+  .player-cell .remove-player:hover {
+    opacity: 1;
+  }
+
+  .expansion-tab.is-on:hover {
+    box-shadow: 0 -3px 9px -2px rgba(60, 45, 30, 0.4);
+  }
+
+  .score-cell:hover:not(:has(:disabled)):not(:focus-within),
+  .player-cell:hover:not(:focus-within) {
+    background-color: color-mix(in srgb, var(--wash-1) 15%, transparent);
   }
 }

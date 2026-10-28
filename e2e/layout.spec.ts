@@ -75,7 +75,7 @@ test.describe("fits the screen", () => {
       expect(new Set(buttons.map(b => b.top)).size, `one row at ${width}px`).toBe(1);
       expect(Math.min(...buttons.map(b => b.h)), `44px at ${width}px`).toBeGreaterThanOrEqual(44);
       expect(await insideViewport(page, "dialog[open] .app-dialog-card"), `${width}px`).toBe(true);
-      await respond(page, /Save as unfinished\?/, "Keep playing");
+      await respond(page, /Save as unfinished\?/, "Cancel");
     }
   });
 
@@ -91,5 +91,45 @@ test.describe("fits the screen", () => {
       expect(await insideViewport(page, ".past-drawer"), `${width}px`).toBe(true);
       expect(await pageOverflows(page), `${width}px`).toBe(false);
     }
+  });
+});
+
+test.describe("pointer and hover", () => {
+  test.beforeEach(({}, info) => test.skip(info.project.name !== "desktop", "needs a mouse"));
+
+  /** Every enabled control on screen that should show the pointing hand. */
+  const wrongCursors = (page: Page) =>
+    page.evaluate(() =>
+      [...document.querySelectorAll<HTMLElement>("button:not(:disabled), select, .mix-option")]
+        .filter(el => el.getClientRects().length && getComputedStyle(el).cursor !== "pointer")
+        .map(el => el.outerHTML.slice(0, 80))
+    );
+
+  test("everything clickable shows the pointing hand", async ({ page }) => {
+    const sheet = await openApp(page);
+    await sheet.setName(0, "Jordan");
+    expect(await wrongCursors(page)).toEqual([]); // Clear names, + Player, tabs
+    await sheet.expansions(["Asia"], { close: false });
+    expect(await wrongCursors(page)).toEqual([]); // checklist, mode menu, Done
+    await sheet.checklist().getByRole("button", { name: "Done" }).click();
+    await playQuickGame(sheet);
+    await sheet.cell(0, 0).fill("");
+    await sheet.endButton().click();
+    expect(await wrongCursors(page)).toEqual([]); // a dialog
+    await respond(page, /Save as unfinished/, "Save unfinished");
+    expect(await wrongCursors(page)).toEqual([]); // Undo, the last game, Past games
+    await sheet.pastButton().click();
+    await page.locator("button.past-slip").click();
+    expect(await wrongCursors(page)).toEqual([]); // the open slip
+  });
+
+  test("quiet links change on hover", async ({ page }) => {
+    const sheet = await openApp(page);
+    await playQuickGame(sheet);
+    await sheet.endButton().click();
+    const link = sheet.pastButton();
+    const before = await link.evaluate(el => getComputedStyle(el).color);
+    await link.hover();
+    await expect.poll(() => link.evaluate(el => getComputedStyle(el).color)).not.toBe(before);
   });
 });
