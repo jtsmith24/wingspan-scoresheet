@@ -247,6 +247,26 @@ const LoadedScorepad = () => {
     setGame({ config: last.config, players: last.players });
   };
 
+  // A fresh start without keeping the game: names and boxes stay.
+  const clearScores = async () => {
+    if (
+      !(await ask({
+        message: "Clear every score? This game won't be saved.",
+        confirm: "Clear scores",
+        danger: true,
+      }))
+    )
+      return;
+    edit({
+      players: game.players.map(p => ({
+        ...p,
+        scores: {},
+        nectarSpent: {},
+        unusedFood: "",
+      })),
+    });
+  };
+
   const clearNames = () =>
     edit({
       players: game.players.map(p => ({ ...p, name: "", code: undefined })),
@@ -347,6 +367,11 @@ const LoadedScorepad = () => {
         >
           End game
         </button>
+        {scored && (
+          <button type="button" className="text-link" onClick={clearScores}>
+            Clear scores
+          </button>
+        )}
         {!scored && players.some(p => p.name.trim()) && (
           <button type="button" className="text-link" onClick={clearNames}>
             Clear names

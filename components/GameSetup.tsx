@@ -195,13 +195,20 @@ export const ExpansionTabs = ({
               )}
             </div>
           ))}
-          <button
-            type="button"
-            className="text-link mix-done"
-            onClick={() => setOpen(false)}
-          >
-            Done
-          </button>
+          <div className="mix-footer">
+            {EXPANSIONS.some(e => isOn(config, e.id)) && (
+              <button type="button" className="text-link" onClick={onBase}>
+                Clear all
+              </button>
+            )}
+            <button
+              type="button"
+              className="text-link mix-done"
+              onClick={() => setOpen(false)}
+            >
+              Done
+            </button>
+          </div>
         </div>
       )}
     </div>

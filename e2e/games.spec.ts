@@ -228,6 +228,41 @@ test.describe("Undo and the last-game note", () => {
   });
 });
 
+test.describe("Clear scores", () => {
+  const clearScores = (page: Page) => page.getByRole("button", { name: "Clear scores" });
+
+  test("asks, then empties every box but keeps the players; nothing is saved", async ({ page }) => {
+    const sheet = await openApp(page);
+    await expect(clearScores(page)).toHaveCount(0);
+    await sheet.expansions(["Oceania"]);
+    await playQuickGame(sheet);
+    await clearScores(page).click();
+    await respond(page, "Clear every score? This game won't be saved.", "Cancel");
+    await expect(sheet.cell(0, 0)).not.toHaveValue("");
+    await clearScores(page).click();
+    await respond(page, "Clear every score? This game won't be saved.", "Clear scores");
+    await expect(sheet.cell(0, 0)).toHaveValue("");
+    await expect(sheet.endButton()).toBeDisabled();
+    await expect(clearScores(page)).toHaveCount(0);
+    expect(await sheet.codes()).toEqual(["JOR", "SAM"]);
+    expect((await readStorage(page, KEYS.current)).config.oceania).toBe(true);
+    expect(await history(page)).toHaveLength(0);
+    // Then the names can go too.
+    await sheet.clearNames().click();
+    expect(await sheet.codes()).toEqual(["", ""]);
+  });
+
+  test("clearing the next sheet takes Undo for the last game away", async ({ page }) => {
+    const sheet = await openApp(page);
+    await endQuickGame(sheet);
+    await sheet.cell(0, 0).fill("4");
+    await clearScores(page).click();
+    await respond(page, /Clear every score/, "Clear scores");
+    await expect(sheet.lastGame()).toHaveCount(0);
+    expect(await history(page)).toHaveLength(1);
+  });
+});
+
 test.describe("Clear names", () => {
   test("only on a sheet with names and no scores", async ({ page }) => {
     const sheet = await openApp(page);

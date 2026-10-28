@@ -901,10 +901,15 @@ button.past-slip:hover {
   gap: 0.6rem;
 }
 
-.mix-done {
-  align-self: flex-end;
+.mix-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
   margin-top: 0.2rem;
   font-size: 1rem;
+}
+.mix-done {
+  margin-left: auto;
 }
 
 .mix-swatch {
