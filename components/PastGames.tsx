@@ -2,8 +2,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Ask } from "./ConfirmDialog";
 import { SavedStamp } from "./SavedStamp";
-import { ScoreIcon } from "./ScoreIcon";
-import SumTable, { CATEGORY_ICONS, sheetTitle } from "./sum-table/SumTable";
+import SumTable, { sheetTitle } from "./sum-table/SumTable";
 import { playerHasData, SavedGame } from "@/lib/game";
 import { withCodes } from "@/lib/names";
 import { categoriesFor, describeConfig, GROUP_LABELS } from "@/lib/rules";
@@ -111,7 +110,6 @@ const FullSheet = ({ game }: { game: SavedGame }) => {
           <tbody>
             {categories.map((c, row) => {
               const starts = row === 0 || categories[row - 1].group !== c.group;
-              const icon = CATEGORY_ICONS[c.id];
               return (
                 <tr key={c.id} className={starts ? "group-start" : ""}>
                   {starts && (
@@ -125,7 +123,6 @@ const FullSheet = ({ game }: { game: SavedGame }) => {
                     </th>
                   )}
                   <th scope="row" className="row-label hand-caps">
-                    {icon && <ScoreIcon name={icon} />}
                     <span>{c.label}</span>
                   </th>
                   {game.players.map((p, i) => (
@@ -149,7 +146,6 @@ const FullSheet = ({ game }: { game: SavedGame }) => {
             {tiebreak && (
               <tr className="tiebreak-row">
                 <th colSpan={2} scope="row" className="row-label hand-caps">
-                  <ScoreIcon name="food" />
                   <span>Unused food</span>
                 </th>
                 {game.players.map((p, i) => (

@@ -1,15 +1,12 @@
 "use client";
 import React, { useRef, useState } from "react";
 import "./styles/sum-table-styles.css";
-import { ScoreIcon, ScoreIconName } from "../ScoreIcon";
 import { CurrentGame, missingScores, playerHasData } from "@/lib/game";
 import { Move, nextCell } from "@/lib/gridNavigation";
 import { codeFor, MAX_NAME_LENGTH, withCodes } from "@/lib/names";
 import {
   categoriesFor,
-  CategoryId,
   GROUP_LABELS,
-  Habitat,
   HABITAT_LABELS,
   HABITATS,
   usesFriendlyNectarTies,
@@ -25,28 +22,11 @@ import {
   summarize,
 } from "@/lib/scoring";
 
-export const CATEGORY_ICONS: Partial<
-  Record<CategoryId | Habitat, ScoreIconName>
-> = {
-  birds: "bird",
-  bonus: "bonus",
-  goals: "goal",
-  eggs: "egg",
-  food: "food",
-  tucked: "tucked",
-  duet: "duet",
-  hummingbirds: "hummingbird",
-  forest: "forest",
-  grassland: "grassland",
-  wetland: "wetland",
-};
-
 /** One row of inputs on the sheet: a scoring category or a nectar habitat. */
 interface InputRow {
   key: string;
   label: string;
   hint: string;
-  icon?: ScoreIconName;
   group: string;
   allowsNegative?: boolean;
   value: (p: PlayerSheet) => string;
@@ -116,7 +96,6 @@ const SumTable = ({
       key: c.id,
       label: c.label,
       hint: c.hint,
-      icon: CATEGORY_ICONS[c.id],
       group: GROUP_LABELS[c.group],
       allowsNegative: c.allowsNegative,
       value: p => p.scores[c.id] ?? "",
@@ -129,7 +108,6 @@ const SumTable = ({
         key: `nectar-${habitat}`,
         label: HABITAT_LABELS[habitat],
         hint: `Nectar spent in the ${HABITAT_LABELS[habitat].toLowerCase()}`,
-        icon: CATEGORY_ICONS[habitat],
         group: `Nectar ${GROUP_LABELS.majority}`,
         value: p => p.nectarSpent[habitat] ?? "",
         update: (p, v) => ({
@@ -373,7 +351,6 @@ const SumTable = ({
                     className="row-label hand-caps"
                     title={row.hint}
                   >
-                    {row.icon && <ScoreIcon name={row.icon} />}
                     <span>{row.label}</span>
                   </th>
                   {players.map((player, col) => (
@@ -414,7 +391,6 @@ const SumTable = ({
             {showTiebreak && (
               <tr className="tiebreak-row">
                 <th colSpan={2} scope="row" className="row-label hand-caps">
-                  <ScoreIcon name="food" />
                   <span>Unused food</span>
                   <small>Tiebreak</small>
                 </th>

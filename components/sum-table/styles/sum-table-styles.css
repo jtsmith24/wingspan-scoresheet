@@ -185,14 +185,6 @@ tr.group-start:not(:first-child) > * {
   vertical-align: middle;
 }
 
-.score-icon {
-  display: inline-block;
-  width: 1.35rem;
-  height: 1.35rem;
-  margin-right: 0.4rem;
-  opacity: 0.8;
-}
-
 /* Handwritten entries */
 .score-cell {
   transition: background-color 0.15s;
@@ -271,14 +263,8 @@ tr.group-start:not(:first-child) > * {
     width: 1.5rem;
   }
   .row-label {
-    font-size: 0.85rem;
+    font-size: 0.95rem;
     padding: 0 0.3rem !important;
-  }
-  .score-icon {
-    display: block;
-    width: 1.1rem;
-    height: 1.1rem;
-    margin: 0 0 0.15rem;
   }
   .sheet-title {
     font-size: 0.95rem;
