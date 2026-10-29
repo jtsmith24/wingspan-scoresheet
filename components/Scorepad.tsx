@@ -352,7 +352,7 @@ const LoadedScorepad = () => {
           </button>
         </p>
       )}
-      {/* End game sits on the right, under a right thumb. */}
+      {/* End game comes last, on the right, nearer a right thumb. */}
       <div className="sheet-actions hand-caps">
         {history.length > 0 && (
           <button
@@ -370,7 +370,7 @@ const LoadedScorepad = () => {
         )}
         <button
           type="button"
-          className="ink-button ink-button-primary end-game"
+          className="ink-button ink-button-primary"
           onClick={endGame}
           disabled={!scored}
         >
