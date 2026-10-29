@@ -244,6 +244,40 @@ test.describe("Americas", () => {
     await expect(page.locator(`#past-cell-${row}-0`)).toHaveValue("-2");
   });
 
+  test("a pending minus only joins digits typed straight after it", async ({ page, context }) => {
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+    const sheet = await openApp(page);
+    await sheet.expansions(["Americas"]);
+    const row = (await sheet.rowLabels()).indexOf("hummingbirds");
+    const cell = sheet.cell(row, 0);
+    // Pasting after it replaces it.
+    await cell.click();
+    await cell.press("-");
+    await page.evaluate(() => navigator.clipboard.writeText("12"));
+    await page.keyboard.press("ControlOrMeta+v");
+    await expect(cell).toHaveValue("12");
+    // Leaving drops it.
+    await cell.press("Enter");
+    await cell.click();
+    await cell.press("-");
+    await sheet.cell(0, 0).click();
+    await expect(cell).not.toHaveAttribute("placeholder");
+    await cell.click();
+    await cell.press("3");
+    await expect(cell).toHaveValue("3");
+    // Backspacing "-1" keeps the minus; a second Backspace really clears it.
+    await cell.press("Enter");
+    await cell.click();
+    await cell.pressSequentially("-1");
+    await expect(cell).toHaveValue("-1");
+    await cell.press("Backspace");
+    await expect(cell).toHaveAttribute("placeholder", "−");
+    await cell.press("Backspace");
+    await expect(cell).not.toHaveAttribute("placeholder");
+    await cell.press("3");
+    await expect(cell).toHaveValue("3");
+  });
+
   test("a lone minus counts as blank", async ({ page }) => {
     const sheet = await openApp(page);
     await sheet.expansions(["Americas"]);

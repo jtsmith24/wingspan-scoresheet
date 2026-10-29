@@ -195,41 +195,51 @@ const SumTable = ({
   // browser does the editing, with a few rules on top:
   // - A minus flips the sign of the number there, so "5-" reads -5. On an
   //   empty box, or one just focused (its score selected, so replaced), it
-  //   starts a negative number: a field can't show a lone "-", so the score
-  //   is stored as "-" and shown as the placeholder until digits follow.
+  //   starts a negative number. A field can't show a lone "-", so it's kept
+  //   as a pending minus, shown as the placeholder, for the digits typed next.
+  //   Leaving the box drops it.
   // - Other symbols are refused.
-  // - Text the field can't read ("1e", or anything a keyboard forces in)
-  //   never wipes the score: React puts the last good one straight back.
+  // - Text the field can't read ("1e", or whatever a keyboard forces in)
+  //   never replaces the score: the last good one is put straight back.
   const signedTyping =
     (value: string, row: number, col: number) =>
     (el: HTMLInputElement | null) => {
       if (!el) return;
+      const set = (next: string) => handleCellChange(next, row, col, true);
+      const pend = () => {
+        el.value = "";
+        el.dataset.pending = "1";
+        set("-");
+      };
       const onBeforeInput = (e: InputEvent) => {
         // Only plain keystrokes the browser lets us stop; anything else
-        // (predictions, composition) is left to the checks on change.
+        // (predictions, composition) is checked once it lands.
         if (!e.cancelable || e.isComposing || e.inputType !== "insertText")
           return;
         const data = e.data ?? "";
         if (/^-?\d+$/.test(data)) return;
         e.preventDefault();
-        if (data !== "-" || el.validity.badInput) return;
+        if (data !== "-") return;
         const fresh = el.dataset.fresh === "1";
         delete el.dataset.fresh;
-        const next =
-          value === "-"
-            ? ""
-            : fresh || value === ""
-              ? "-"
-              : value.startsWith("-")
-                ? value.slice(1)
-                : `-${value}`;
-        handleCellChange(next, row, col, true);
+        if (value === "-") {
+          delete el.dataset.pending;
+          set("");
+        } else if (fresh || value === "") pend();
+        else set(value.startsWith("-") ? value.slice(1) : `-${value}`);
       };
-      // Emptied from text it couldn't read ("-" then Backspace): the field
-      // reads "" both times, so React sees no change.
-      const onInput = () => {
-        if (el.value === "" && !el.validity.badInput && value !== "")
-          handleCellChange("", row, col, true);
+      // Runs before React's onChange, which skips unreadable text.
+      const onInput = (e: Event) => {
+        delete el.dataset.fresh;
+        if (!el.validity.badInput) {
+          // Emptied: React may see "" both times and miss it.
+          if (el.value === "" && value !== "" && value !== "-") set("");
+          return;
+        }
+        // Backspacing "-1" leaves a lone minus: keep it pending.
+        const { inputType } = e as InputEvent;
+        if (inputType?.startsWith("delete") && /^-\d$/.test(value)) pend();
+        else el.value = value === "-" ? "" : value;
       };
       el.addEventListener("beforeinput", onBeforeInput);
       el.addEventListener("input", onInput);
@@ -255,28 +265,39 @@ const SumTable = ({
       onChange={e => {
         if (!allowsNegative)
           return handleCellChange(e.target.value, row, col, false);
-        delete e.target.dataset.fresh;
-        if (e.target.validity.badInput) {
-          // Backspacing "-1" leaves a lone minus: keep it pending. Anything
-          // else unreadable is put back to the last good score by React.
-          const { inputType } = e.nativeEvent as InputEvent;
-          if (inputType?.startsWith("delete") && /^-\d$/.test(value))
-            handleCellChange("-", row, col, true);
-          return;
-        }
+        if (e.target.validity.badInput) return;
         const typed = e.target.value;
-        // Digits after a lone minus make a negative number.
-        handleCellChange(
-          value === "-" && /^\d+$/.test(typed) ? `-${typed}` : typed,
-          row,
-          col,
-          true
-        );
+        // Digits typed straight after a pending minus make a negative.
+        const pending =
+          value === "-" &&
+          e.target.dataset.pending === "1" &&
+          (e.nativeEvent as InputEvent).inputType === "insertText" &&
+          /^\d+$/.test(typed);
+        delete e.target.dataset.pending;
+        handleCellChange(pending ? `-${typed}` : typed, row, col, true);
       }}
+      onPaste={
+        allowsNegative
+          ? e => {
+              delete e.currentTarget.dataset.pending;
+              delete e.currentTarget.dataset.fresh;
+            }
+          : undefined
+      }
+      onBlur={
+        allowsNegative
+          ? e => {
+              delete e.target.dataset.pending;
+              if (value === "-") handleCellChange("", row, col, true);
+            }
+          : undefined
+      }
       onKeyDown={e => {
-        // Backspace on a lone minus: the field looks empty, so clear it here.
+        // Backspace on a pending minus: the field looks empty, so clear it.
         if (allowsNegative && value === "-" && e.key === "Backspace") {
           e.preventDefault();
+          delete e.currentTarget.dataset.pending;
+          e.currentTarget.value = "";
           handleCellChange("", row, col, true);
         }
         handleCellKeyDown(e, row, col);
