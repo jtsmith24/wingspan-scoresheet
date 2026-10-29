@@ -182,10 +182,18 @@ export const PastGames = ({
 }) => {
   const [openId, setOpenId] = useState(initialOpen);
   // The open game's sheet while it's being edited.
-  const [draft, setDraft] = useState<PlayerSheet[]>();
+  const [editDraft, setEditDraft] = useState<{
+    id: string;
+    players: PlayerSheet[];
+  }>();
   // Bumped each time an edit is saved, to replay the stamp.
   const [stamp, setStamp] = useState(0);
   const open = history.find(g => g.id === openId);
+  // A draft only belongs to the game it was started on: if that game is
+  // deleted elsewhere, or another one is opened, it's dropped.
+  const draft = open && editDraft?.id === open.id ? editDraft.players : undefined;
+  const setDraft = (players: PlayerSheet[] | undefined) =>
+    setEditDraft(players && open ? { id: open.id, players } : undefined);
   const fold = () => {
     setDraft(undefined);
     setStamp(0);
@@ -243,7 +251,7 @@ export const PastGames = ({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape" || dialogOpen()) return;
-      if (editing) setDraft(undefined);
+      if (editing) setEditDraft(undefined);
       else onClose();
     };
     document.addEventListener("keydown", onKey);

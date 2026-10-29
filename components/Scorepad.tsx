@@ -2,13 +2,15 @@
 import React, {
   useCallback,
   useEffect,
+  useLayoutEffect,
+  useRef,
   useState,
   useSyncExternalStore,
 } from "react";
 import SumTable from "./sum-table/SumTable";
 import { Expansion, ExpansionTabs } from "./GameSetup";
 import { PastGames } from "./PastGames";
-import { useDialog } from "./ConfirmDialog";
+import { Ask, useDialog } from "./ConfirmDialog";
 import { SavedStamp } from "./SavedStamp";
 import {
   addToHistory,
@@ -54,7 +56,7 @@ const LoadedScorepad = () => {
   const [canPersist, setCanPersist] = useState(() => getStore().persistent);
   // Open, and optionally on one game.
   const [pastOpen, setPastOpen] = useState<boolean | string>(false);
-  const [dialog, , ask] = useDialog();
+  const [dialog, , askDialog] = useDialog();
   // The fresh sheet waiting while an ended game's scores lift off.
   const [ending, setEnding] = useState<CurrentGame>();
   // Bumped each time a game ends, to replay the Saved stamp.
@@ -69,12 +71,29 @@ const LoadedScorepad = () => {
     } catch {}
   }, [paletteKey]);
 
+  // The sheet as it is now, for questions that were asked about it earlier.
+  const latest = useRef(game);
+  useLayoutEffect(() => {
+    latest.current = game;
+  }, [game]);
+
+  // Asks about the sheet, and only says yes if it's still the same sheet
+  // when answered: another tab may have changed it in the meantime.
+  const ask: Ask = async question => {
+    const before = latest.current;
+    return (await askDialog(question)) && latest.current === before;
+  };
+
   // Another tab changed the sheet or saved games: show its version, so a
-  // stale copy here can't overwrite newer work there.
+  // stale copy here can't overwrite newer work there. That includes a sheet
+  // still clearing here after End game: the other tab's change is newer.
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
       if (e.key === STORAGE_KEYS.history) setHistory(loadHistory());
-      if (e.key === STORAGE_KEYS.current) setGameState(loadCurrentGame());
+      if (e.key === STORAGE_KEYS.current) {
+        setEnding(undefined);
+        setGameState(loadCurrentGame());
+      }
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
@@ -174,6 +193,7 @@ const LoadedScorepad = () => {
     const next = change(loadHistory());
     saveHistory(next);
     setHistory(next);
+    setCanPersist(getStore().persistent);
   };
 
   // Ends the game on the sheet: into Past games, and a fresh sheet with the
@@ -359,7 +379,7 @@ const LoadedScorepad = () => {
           onDelete={deleteGame}
           onEdit={editGame}
           onPlayAgain={playAgain}
-          ask={ask}
+          ask={askDialog}
         />
       )}
       {dialog}

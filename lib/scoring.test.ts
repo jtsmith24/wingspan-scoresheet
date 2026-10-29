@@ -215,3 +215,41 @@ describe("hummingbirds", () => {
     expect(totals).toEqual([20]);
   });
 });
+
+describe("who can win", () => {
+  const americas = { ...DEFAULT_CONFIG, americas: true };
+  const sheet = (name: string, scores: Record<string, string>) => ({
+    id: name || "blank",
+    name,
+    scores,
+    nectarSpent: {},
+    unusedFood: "",
+  });
+
+  it("a blank column's 0 doesn't beat a negative total", () => {
+    const { outcome } = scoreGame(americas, [
+      sheet("Jordan", { hummingbirds: "-3" }),
+      sheet("", {}),
+    ]);
+    expect(outcome.winners).toEqual([0]);
+    expect(outcome.decision).toBe("solo");
+  });
+
+  it("keeps the sheet's column numbers when a blank column comes first", () => {
+    const { outcome } = scoreGame(DEFAULT_CONFIG, [
+      sheet("", {}),
+      sheet("Jordan", { birds: "10" }),
+      sheet("Sam", { birds: "20" }),
+    ]);
+    expect(outcome.winners).toEqual([2]);
+    expect(outcome.totals).toEqual([0, 10, 20]);
+  });
+
+  it("a real 0 doesn't tie with a blank column", () => {
+    const { outcome } = scoreGame(DEFAULT_CONFIG, [
+      sheet("Jordan", { birds: "0" }),
+      sheet("", {}),
+    ]);
+    expect(outcome.decision).toBe("solo");
+  });
+});

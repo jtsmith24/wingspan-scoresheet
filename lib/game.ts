@@ -8,6 +8,7 @@ import {
 import {
   describeTiebreak,
   displayName,
+  inGame,
   playerHasData,
   scoreGame,
   summarize,
@@ -105,10 +106,6 @@ export function fitPlayers(
 
 export { playerHasData };
 
-/** Players taking part: anyone with a name or a score. */
-const inGame = (p: PlayerSheet, config: GameConfig) =>
-  !!p.name.trim() || playerHasData(p, config);
-
 /**
  * Score boxes still blank for players in the game; a winner is only called
  * at 0. Nectar rows don't count, since blank there means none was spent.
@@ -137,9 +134,10 @@ export function toSavedGame(
   finishedAt = new Date(),
   id = newId()
 ): SavedGame {
-  // Columns nobody wrote in (an extra "Player 4") aren't part of the game.
-  const scored = game.players.filter(p => playerHasData(p, game.config));
-  const players = scored.length ? scored : game.players;
+  // Columns nobody wrote in (an extra "Player 4") aren't part of the game;
+  // a named player with blank boxes is, so an unfinished game keeps them.
+  const taking = game.players.filter(p => inGame(p, game.config));
+  const players = taking.length ? taking : game.players;
   const { breakdowns, totals, outcome } = scoreGame(game.config, players);
   const names = players.map(displayName);
   const codes = withCodes(players);

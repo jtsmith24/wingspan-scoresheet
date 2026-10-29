@@ -198,3 +198,88 @@ test.describe("two tabs open", () => {
     await expect(a.pastButton()).toHaveCount(0);
   });
 });
+
+test.describe("two tabs, changes crossing", () => {
+  test("a question answered after the other tab changed the sheet does nothing", async ({ page, context }) => {
+    const a = await openApp(page);
+    await a.setName(0, "Jordan");
+    await a.cell(0, 0).fill("5");
+    const other = await context.newPage();
+    await other.goto("/");
+    const b = new Sheet(other);
+    await a.endButton().click();
+    await expect(page.locator("dialog[open]")).toBeVisible();
+    await b.cell(1, 0).fill("7");
+    await expect(a.cell(1, 0)).toHaveValue("7");
+    await respond(page, /Save as unfinished/, "Save unfinished");
+    expect(await readStorage(page, KEYS.history)).toBeNull();
+    await expect(a.cell(1, 0)).toHaveValue("7");
+    await expect(a.cell(0, 0)).toHaveValue("5");
+  });
+
+  test("an edit open on a game deleted in the other tab can't land on another game", async ({ page, context }) => {
+    const a = await openApp(page);
+    await playQuickGame(a, "Alex", "Blake");
+    await a.endButton().click();
+    await playQuickGame(a, "Casey", "Drew");
+    await a.endButton().click();
+    await a.pastButton().click();
+    await page.locator("button.past-slip").first().click();
+    await page.locator(".past-actions").getByRole("button", { name: "Edit" }).click();
+    await page.locator("#past-cell-0-0").fill("99");
+    const other = await context.newPage();
+    await other.goto("/");
+    await new Sheet(other).pastButton().click();
+    await other.locator("button.past-slip").first().click();
+    await other.locator(".past-actions").getByRole("button", { name: "Delete" }).click();
+    await respond(other, /Delete this game/, "Delete");
+    await expect(page.locator("button.past-slip")).toHaveCount(1);
+    await page.locator("button.past-slip").click();
+    await expect(page.locator("#past-cell-0-0")).toHaveCount(0);
+    await expect(page.locator(".past-actions").getByRole("button", { name: "Edit" })).toBeVisible();
+    const [left] = await readStorage(page, KEYS.history);
+    expect(left.players.map((p: { name: string }) => p.name)).toEqual(["Alex", "Blake"]);
+  });
+
+  test.describe("with motion", () => {
+    test.use({ reducedMotion: "no-preference" });
+
+    test("a change from the other tab while the sheet clears wins", async ({ page, context }) => {
+      const a = await openApp(page);
+      const other = await context.newPage();
+      await other.goto("/");
+      await playQuickGame(a);
+      await a.endButton().click();
+      await other.evaluate(key => {
+        const g = JSON.parse(localStorage.getItem(key)!);
+        g.players[0].name = "Zed";
+        g.players[0].code = "ZED";
+        delete g.lastGame;
+        localStorage.setItem(key, JSON.stringify(g));
+      }, KEYS.current);
+      await page.waitForTimeout(900);
+      expect(await a.codes()).toEqual(["ZED", "SAM"]);
+      await expect(a.lastGame()).toHaveCount(0);
+    });
+  });
+});
+
+test("storage full when editing a past game: the note shows", async ({ page }) => {
+  const sheet = await openApp(page);
+  await playQuickGame(sheet);
+  await sheet.endButton().click();
+  await page.evaluate(() => {
+    const real = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (k: string, v: string) {
+      if (k.endsWith(":history")) throw new DOMException("full", "QuotaExceededError");
+      return real.call(this, k, v);
+    };
+  });
+  await sheet.pastButton().click();
+  await page.locator("button.past-slip").click();
+  await page.locator(".past-actions").getByRole("button", { name: "Edit" }).click();
+  await page.locator("#past-cell-0-0").fill("50");
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".storage-note")).toBeVisible();
+});

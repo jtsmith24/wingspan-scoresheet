@@ -96,6 +96,11 @@ export function playerHasData(p: PlayerSheet, config: GameConfig): boolean {
   );
 }
 
+/** Players taking part: anyone with a name or a score. Blank columns aren't. */
+export function inGame(p: PlayerSheet, config: GameConfig): boolean {
+  return !!p.name.trim() || playerHasData(p, config);
+}
+
 export type Breakdown = Partial<Record<CategoryId, number>>;
 
 /** Per-category points for every player. Nectar is computed, everything else is typed in. */
@@ -172,11 +177,20 @@ export function decideOutcome(
 export function scoreGame(config: GameConfig, players: PlayerSheet[]) {
   const breakdowns = scoreBreakdowns(config, players);
   const totals = breakdowns.map(sumBreakdown);
-  const outcome = decideOutcome(
-    totals,
-    players.map((p) => p.unusedFood),
+  // Only players in the game can win: a blank column's 0 can't beat a
+  // negative total or tie a real 0. Indexes stay the sheet's columns.
+  const taking = players.flatMap((p, i) => (inGame(p, config) ? [i] : []));
+  const among = decideOutcome(
+    taking.map((i) => totals[i]),
+    taking.map((i) => players[i].unusedFood),
     players.some((p) => playerHasData(p, config)),
   );
+  const outcome: Outcome = {
+    ...among,
+    totals,
+    leaders: among.leaders.map((k) => taking[k]),
+    winners: among.winners.map((k) => taking[k]),
+  };
   return { breakdowns, totals, outcome };
 }
 

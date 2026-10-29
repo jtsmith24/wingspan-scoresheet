@@ -111,13 +111,22 @@ describe("games and history", () => {
   });
 
   it("ignores scores in rows the current setup hides", () => {
-    const game = newGame({ ...DEFAULT_CONFIG, oceania: true }, ["Jordan", "Sam"]);
+    const game = newGame({ ...DEFAULT_CONFIG, oceania: true }, ["Jordan", ""]);
     game.players[0].scores.birds = "40";
     game.players[1].nectarSpent.forest = "2";
     expect(playerHasData(game.players[1], game.config)).toBe(true);
     const base = { ...game, config: DEFAULT_CONFIG };
     expect(playerHasData(base.players[1], base.config)).toBe(false);
     expect(toSavedGame(base).players.map((p) => p.name)).toEqual(["Jordan"]);
+  });
+
+  it("keeps a named player with blank boxes in an unfinished game", () => {
+    const game = newGame(DEFAULT_CONFIG, ["Alice", "Bob", ""]);
+    fill(game.players[0], "5");
+    const saved = toSavedGame(game);
+    expect(saved.decision).toBe("unfinished");
+    expect(saved.players.map((p) => p.name)).toEqual(["Alice", "Bob"]);
+    expect(saved.sheet.map((p) => p.name)).toEqual(["Alice", "Bob"]);
   });
 
   it("drops unused food left over from an earlier tie", () => {

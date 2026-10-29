@@ -28,6 +28,8 @@ export function createStore(storage: Storage | null = resolveStorage()): KeyValu
   // Every write lands here first, so it always holds this visit's newest value,
   // even if the browser later refuses to store it.
   const memory = new Map<string, string>();
+  // Keys whose newest value only made it into memory.
+  const unsaved = new Set<string>();
   let persistent = storage !== null;
 
   return {
@@ -36,9 +38,10 @@ export function createStore(storage: Storage | null = resolveStorage()): KeyValu
     },
     read(key, fallback, isValid) {
       // Storage first, so changes made in another tab are seen. Memory takes
-      // over once storage has failed, since it then holds the newest copy.
+      // over for a key once storing it has failed, since it then holds the
+      // newest copy; other keys still read from storage.
       let raw: string | null | undefined;
-      if (storage && persistent) {
+      if (storage && !unsaved.has(key)) {
         try {
           raw = storage.getItem(key);
         } catch {
@@ -61,14 +64,17 @@ export function createStore(storage: Storage | null = resolveStorage()): KeyValu
       if (!storage) return false;
       try {
         storage.setItem(key, raw);
+        unsaved.delete(key);
         return true;
       } catch {
+        unsaved.add(key);
         persistent = false;
         return false;
       }
     },
     remove(key) {
       memory.delete(key);
+      unsaved.delete(key);
       try {
         storage?.removeItem(key);
       } catch {
