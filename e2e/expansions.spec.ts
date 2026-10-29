@@ -135,147 +135,74 @@ test.describe("Americas", () => {
     expect(await sheet.rowLabels()).toContain("hummingbirds");
     const row = (await sheet.rowLabels()).indexOf("hummingbirds");
     await sheet.cell(row, 0).pressSequentially("-4");
-    await expect(sheet.cell(row, 0)).toHaveValue("-4");
+    // The box shows the digits; the sign tab shows the minus.
+    await expect(sheet.cell(row, 0)).toHaveValue("4");
+    await expect(sheet.cell(row, 0)).toHaveClass(/is-negative/);
     await sheet.cell(0, 0).fill("10");
     expect((await sheet.totals())[0]).toBe("6");
   });
 
-  test("hummingbird boxes bring up a keyboard with a minus; the rest the number pad", async ({ page }) => {
+  test("the sign tab switches a hummingbird score between plus and minus", async ({ page }) => {
     const sheet = await openApp(page);
     await sheet.expansions(["Americas"]);
     const row = (await sheet.rowLabels()).indexOf("hummingbirds");
     const cell = sheet.cell(row, 0);
-    await expect(cell).toHaveAttribute("type", "number");
-    await expect(cell).not.toHaveAttribute("inputmode");
-    await expect(sheet.cell(0, 0)).toHaveAttribute("inputmode", "numeric");
-    await expect(sheet.cell(0, 0)).toHaveAttribute("type", "text");
-  });
-
-  test("a hummingbird box takes only whole numbers, and arrows still move between boxes", async ({ page }) => {
-    const sheet = await openApp(page);
-    await sheet.expansions(["Americas"]);
-    const row = (await sheet.rowLabels()).indexOf("hummingbirds");
-    const cell = sheet.cell(row, 0);
-    await cell.click();
-    await cell.pressSequentially("-1e2.5");
-    await expect(cell).toHaveValue("-125");
-    for (let i = 0; i < 4; i++) await cell.press("Backspace");
-    await expect(cell).toHaveValue("");
-    await cell.pressSequentially("-4");
-    await cell.press("ArrowUp");
-    await expect(sheet.cell(row - 1, 0)).toBeFocused();
-    await expect(cell).toHaveValue("-4");
-    expect((await sheet.totals())[0]).toBe("-4");
-  });
-
-  test("a minus anywhere flips the sign; other symbols are ignored", async ({ page }) => {
-    const sheet = await openApp(page);
-    await sheet.expansions(["Americas"]);
-    const row = (await sheet.rowLabels()).indexOf("hummingbirds");
-    const cell = sheet.cell(row, 0);
-    await cell.click();
-    await cell.pressSequentially("5-");
-    await expect(cell).toHaveValue("-5");
-    await cell.pressSequentially("/:(");
-    await expect(cell).toHaveValue("-5");
-    await cell.press("-");
+    const tab = page.locator(".score-cell").filter({ has: cell }).locator(".sign-tab");
+    // Number pad and digits only, like every other box.
+    await expect(cell).toHaveAttribute("inputmode", "numeric");
+    await cell.pressSequentially("5/x.");
     await expect(cell).toHaveValue("5");
-    await cell.press("Backspace");
-    await expect(cell).toHaveValue("");
-    // A lone minus shows while the number is typed after it.
-    await cell.press("-");
-    await expect(cell).toHaveAttribute("placeholder", "−");
-    await cell.press("3");
-    await expect(cell).toHaveValue("-3");
-    expect((await sheet.totals())[0]).toBe("-3");
+    await expect(tab).toHaveText("+");
+    await tab.click();
+    await expect(tab).toHaveText("−");
+    await expect(tab).toHaveAttribute("aria-pressed", "true");
+    await expect(cell).toHaveValue("5");
+    expect((await sheet.totals())[0]).toBe("-5");
+    // Pressed while typing, the tab leaves the box focused (keyboard up),
+    // and typing carries on from the same number.
+    await expect(cell).toBeFocused();
+    await cell.press("2");
+    expect((await sheet.totals())[0]).toBe("-52");
+    await tab.click();
+    expect((await sheet.totals())[0]).toBe("52");
   });
 
-  test("typing in a hummingbird box that already has a score replaces it", async ({ page }) => {
+  test("the sign tab on a box not in use doesn't bring the keyboard up", async ({ page }) => {
     const sheet = await openApp(page);
     await sheet.expansions(["Americas"]);
     const row = (await sheet.rowLabels()).indexOf("hummingbirds");
-    const cell = sheet.cell(row, 0);
-    await cell.click();
-    await cell.pressSequentially("7");
-    await cell.press("Enter");
-    await cell.click();
-    await cell.pressSequentially("-2");
-    await expect(cell).toHaveValue("-2");
-    await cell.press("Enter");
-    await cell.click();
-    await cell.press("/");
-    await expect(cell).toHaveValue("-2");
-  });
-
-  test("a paste the box can't read never wipes the score; good ones go in", async ({ page, context }) => {
-    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
-    const sheet = await openApp(page);
-    await sheet.expansions(["Americas"]);
-    await playQuickGame(sheet);
-    const row = (await sheet.rowLabels()).indexOf("hummingbirds");
-    await sheet.cell(row, 1).fill("3");
-    const paste = async (id: string, text: string) => {
-      await page.evaluate(t => navigator.clipboard.writeText(t), text);
-      await page.locator(`#${id}`).click();
-      await page.keyboard.press("ControlOrMeta+a");
-      await page.keyboard.press("ControlOrMeta+v");
-      await page.locator(`#${id}`).press("Enter");
-    };
-    await paste(`cell-${row}-0`, "-2");
-    await expect(sheet.cell(row, 0)).toHaveValue("-2");
-    for (const bad of ["1e", "2.5.5", "e"]) {
-      await paste(`cell-${row}-0`, bad);
-      await expect(sheet.cell(row, 0)).toHaveValue("-2");
-      expect((await sheet.totals())[0]).toBe("58");
-    }
-    // Typing after a paste carries on from it.
-    await paste(`cell-${row}-0`, "12");
-    await sheet.cell(row, 0).click();
-    await page.keyboard.press("End");
-    await sheet.cell(row, 0).press("3");
-    await expect(sheet.cell(row, 0)).toHaveValue("123");
-    // The same box when fixing a past game.
-    await sheet.cell(row, 0).fill("-2");
-    await sheet.endButton().click();
-    await sheet.pastButton().click();
-    await page.locator("button.past-slip").click();
-    await page.locator(".past-actions").getByRole("button", { name: "Edit" }).click();
-    await paste(`past-cell-${row}-0`, "1e");
-    await expect(page.locator(`#past-cell-${row}-0`)).toHaveValue("-2");
-  });
-
-  test("a pending minus only joins digits typed straight after it", async ({ page, context }) => {
-    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
-    const sheet = await openApp(page);
-    await sheet.expansions(["Americas"]);
-    const row = (await sheet.rowLabels()).indexOf("hummingbirds");
-    const cell = sheet.cell(row, 0);
-    // Pasting after it replaces it.
-    await cell.click();
-    await cell.press("-");
-    await page.evaluate(() => navigator.clipboard.writeText("12"));
-    await page.keyboard.press("ControlOrMeta+v");
-    await expect(cell).toHaveValue("12");
-    // Leaving drops it.
-    await cell.press("Enter");
-    await cell.click();
-    await cell.press("-");
     await sheet.cell(0, 0).click();
-    await expect(cell).not.toHaveAttribute("placeholder");
-    await cell.click();
-    await cell.press("3");
-    await expect(cell).toHaveValue("3");
-    // Backspacing "-1" keeps the minus; a second Backspace really clears it.
-    await cell.press("Enter");
-    await cell.click();
-    await cell.pressSequentially("-1");
-    await expect(cell).toHaveValue("-1");
-    await cell.press("Backspace");
-    await expect(cell).toHaveAttribute("placeholder", "−");
-    await cell.press("Backspace");
-    await expect(cell).not.toHaveAttribute("placeholder");
-    await cell.press("3");
-    await expect(cell).toHaveValue("3");
+    await page.locator(".score-cell").filter({ has: sheet.cell(row, 1) }).locator(".sign-tab").click();
+    await expect(sheet.cell(row, 1)).not.toBeFocused();
+  });
+
+  test("minus first: the sign stays for the digits typed after it", async ({ page }) => {
+    const sheet = await openApp(page);
+    await sheet.expansions(["Americas"]);
+    const row = (await sheet.rowLabels()).indexOf("hummingbirds");
+    const tab = page.locator(".score-cell").filter({ has: sheet.cell(row, 1) }).locator(".sign-tab");
+    await tab.click();
+    await expect(tab).toHaveText("−");
+    await sheet.cell(row, 1).fill("3");
+    expect((await sheet.totals())[1]).toBe("-3");
+    // On a keyboard, the minus key switches it too.
+    await sheet.cell(row, 1).press("-");
+    await expect(tab).toHaveText("+");
+    expect((await sheet.totals())[1]).toBe("3");
+  });
+
+  test("a negative score is kept through a reload and into Past games", async ({ page }) => {
+    const sheet = await openApp(page);
+    await sheet.expansions(["Americas"]);
+    await sheet.fillEvery(0, 1);
+    await sheet.fillEvery(1, 1);
+    const row = (await sheet.rowLabels()).indexOf("hummingbirds");
+    await page.locator(".score-cell").filter({ has: sheet.cell(row, 0) }).locator(".sign-tab").click();
+    await page.reload();
+    expect((await sheet.totals())[0]).toBe("5");
+    await sheet.endButton().click();
+    const [game] = await readStorage(page, KEYS.history);
+    expect(game.players[0].breakdown.hummingbirds).toBe(-1);
   });
 
   test("a lone minus counts as blank", async ({ page }) => {
@@ -284,8 +211,7 @@ test.describe("Americas", () => {
     await sheet.fillEvery(0, 1);
     await sheet.fillEvery(1, 1);
     const row = (await sheet.rowLabels()).indexOf("hummingbirds");
-    await sheet.cell(0, 0).click();
-    await sheet.cell(row, 1).click();
+    await sheet.cell(row, 1).fill("");
     await sheet.cell(row, 1).press("-");
     await expect(sheet.result()).toHaveText("1 box left to fill");
   });

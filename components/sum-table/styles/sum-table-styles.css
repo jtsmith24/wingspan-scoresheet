@@ -1117,17 +1117,38 @@ select:not(:disabled),
   }
 }
 
-/* Hummingbird boxes are number fields: no spinner arrows. */
-.score-input[type="number"] {
-  -moz-appearance: textfield;
-  appearance: textfield;
+/* Hummingbirds: a sign tab down the box's left edge, solid red for minus. */
+.signed-score {
+  display: flex;
+  height: 100%;
 }
-.score-input[type="number"]::-webkit-inner-spin-button,
-.score-input[type="number"]::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
+.signed-score .score-input {
+  min-width: 0;
+  padding-right: 1.1rem;
 }
-.score-input[type="number"]::placeholder {
-  color: var(--pen);
-  opacity: 1;
+.sign-tab {
+  flex-shrink: 0;
+  width: 1.1rem;
+  font-family: var(--font-label);
+  font-size: 1rem;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--rule) 14%, transparent);
+  border-right: 1px dashed color-mix(in srgb, var(--rule) 60%, transparent);
+  transition: background-color 0.15s, color 0.15s;
+}
+.sign-tab.is-negative {
+  color: #fff;
+  background: #9b3b32;
+  border-right-color: #9b3b32;
+}
+.score-input.is-negative {
+  color: #9b3b32;
+}
+@media (hover: hover) {
+  .sign-tab:hover {
+    background: color-mix(in srgb, var(--rule) 30%, transparent);
+  }
+  .sign-tab.is-negative:hover {
+    background: #86302a;
+  }
 }

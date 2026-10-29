@@ -189,65 +189,15 @@ const SumTable = ({
     }
   };
 
-  // Hummingbird points can be negative. A number field brings up a phone
-  // keyboard with a minus key (iPhone's numbers-and-symbols page, Android's
-  // number pad); the plain number pad that other boxes get has none. The
-  // browser does the editing, with a few rules on top:
-  // - A minus flips the sign of the number there, so "5-" reads -5. On an
-  //   empty box, or one just focused (its score selected, so replaced), it
-  //   starts a negative number. A field can't show a lone "-", so it's kept
-  //   as a pending minus, shown as the placeholder, for the digits typed next.
-  //   Leaving the box drops it.
-  // - Other symbols are refused.
-  // - Text the field can't read ("1e", or whatever a keyboard forces in)
-  //   never replaces the score: the last good one is put straight back.
-  const signedTyping =
-    (value: string, row: number, col: number) =>
-    (el: HTMLInputElement | null) => {
-      if (!el) return;
-      const set = (next: string) => handleCellChange(next, row, col, true);
-      const pend = () => {
-        el.value = "";
-        el.dataset.pending = "1";
-        set("-");
-      };
-      const onBeforeInput = (e: InputEvent) => {
-        // Only plain keystrokes the browser lets us stop; anything else
-        // (predictions, composition) is checked once it lands.
-        if (!e.cancelable || e.isComposing || e.inputType !== "insertText")
-          return;
-        const data = e.data ?? "";
-        if (/^-?\d+$/.test(data)) return;
-        e.preventDefault();
-        if (data !== "-") return;
-        const fresh = el.dataset.fresh === "1";
-        delete el.dataset.fresh;
-        if (value === "-") {
-          delete el.dataset.pending;
-          set("");
-        } else if (fresh || value === "") pend();
-        else set(value.startsWith("-") ? value.slice(1) : `-${value}`);
-      };
-      // Runs before React's onChange, which skips unreadable text.
-      const onInput = (e: Event) => {
-        delete el.dataset.fresh;
-        if (!el.validity.badInput) {
-          // Emptied: React may see "" both times and miss it.
-          if (el.value === "" && value !== "" && value !== "-") set("");
-          return;
-        }
-        // Backspacing "-1" leaves a lone minus: keep it pending.
-        const { inputType } = e as InputEvent;
-        if (inputType?.startsWith("delete") && /^-\d$/.test(value)) pend();
-        else el.value = value === "-" ? "" : value;
-      };
-      el.addEventListener("beforeinput", onBeforeInput);
-      el.addEventListener("input", onInput);
-      return () => {
-        el.removeEventListener("beforeinput", onBeforeInput);
-        el.removeEventListener("input", onInput);
-      };
-    };
+  // Hummingbird points can be negative. Every box takes digits on the
+  // phone's number pad, which has no minus key, so a hummingbird box gets a
+  // sign tab to tap instead (or the minus key on a keyboard). The sign is
+  // kept as a leading "-" in the score, even before any digits are typed.
+  const flipSign = (value: string) =>
+    value.startsWith("-") ? value.slice(1) : `-${value}`;
+  // Whether the box was being typed in when its sign tab was pressed: the
+  // keyboard should stay up, with the caret where it was.
+  const typingInBox = useRef(false);
 
   const renderInput = (
     value: string,
@@ -255,74 +205,68 @@ const SumTable = ({
     col: number,
     label: string,
     allowsNegative?: boolean
-  ) => (
-    <input
-      className="score-input"
-      type={allowsNegative ? "number" : "text"}
-      value={allowsNegative && value === "-" ? "" : value}
-      placeholder={allowsNegative && value === "-" ? "−" : undefined}
-      ref={allowsNegative ? signedTyping(value, row, col) : undefined}
-      onChange={e => {
-        if (!allowsNegative)
-          return handleCellChange(e.target.value, row, col, false);
-        if (e.target.validity.badInput) return;
-        const typed = e.target.value;
-        // Digits typed straight after a pending minus make a negative.
-        const pending =
-          value === "-" &&
-          e.target.dataset.pending === "1" &&
-          (e.nativeEvent as InputEvent).inputType === "insertText" &&
-          /^\d+$/.test(typed);
-        delete e.target.dataset.pending;
-        handleCellChange(pending ? `-${typed}` : typed, row, col, true);
-      }}
-      onPaste={
-        allowsNegative
-          ? e => {
-              delete e.currentTarget.dataset.pending;
-              delete e.currentTarget.dataset.fresh;
+  ) => {
+    const negative = !!allowsNegative && value.startsWith("-");
+    const input = (
+      <input
+        className={`score-input${negative ? " is-negative" : ""}`}
+        type="text"
+        value={allowsNegative ? value.replace(/^-/, "") : value}
+        onChange={e => {
+          const typed = e.target.value;
+          // A typed or pasted "-7" sets the sign itself.
+          const next =
+            negative && !typed.startsWith("-") ? `-${typed}` : typed;
+          handleCellChange(next, row, col, allowsNegative);
+        }}
+        onKeyDown={e => {
+          if (allowsNegative && e.key === "-") {
+            e.preventDefault();
+            handleCellChange(flipSign(value), row, col, true);
+          }
+          handleCellKeyDown(e, row, col);
+        }}
+        onFocus={e => e.target.select()}
+        inputMode="numeric"
+        id={`${idPrefix}cell-${row}-${col}`}
+        aria-label={`${label}, ${names[col]}`}
+        disabled={!isEnabled(row, col)}
+      />
+    );
+    if (!allowsNegative) return input;
+    return (
+      <div className="signed-score">
+        <button
+          type="button"
+          className={`sign-tab${negative ? " is-negative" : ""}`}
+          tabIndex={-1}
+          aria-label={`${label}, ${names[col]}: ${negative ? "minus" : "plus"}. Switch sign`}
+          aria-pressed={negative}
+          onPointerDown={e => {
+            typingInBox.current =
+              document.activeElement?.id === `${idPrefix}cell-${row}-${col}`;
+            // Keep focus in the box, so the keyboard stays up.
+            e.preventDefault();
+          }}
+          onClick={() => {
+            handleCellChange(flipSign(value), row, col, true);
+            if (!typingInBox.current) return;
+            // Some phones move focus anyway: put it back, caret at the end.
+            const box = document.getElementById(
+              `${idPrefix}cell-${row}-${col}`
+            ) as HTMLInputElement | null;
+            if (box && document.activeElement !== box) {
+              box.focus();
+              box.setSelectionRange(box.value.length, box.value.length);
             }
-          : undefined
-      }
-      onBlur={
-        allowsNegative
-          ? e => {
-              delete e.target.dataset.pending;
-              if (value === "-") handleCellChange("", row, col, true);
-            }
-          : undefined
-      }
-      onKeyDown={e => {
-        // Backspace on a pending minus: the field looks empty, so clear it.
-        if (allowsNegative && value === "-" && e.key === "Backspace") {
-          e.preventDefault();
-          delete e.currentTarget.dataset.pending;
-          e.currentTarget.value = "";
-          handleCellChange("", row, col, true);
-        }
-        handleCellKeyDown(e, row, col);
-      }}
-      // A wheel over a focused number field would change the score.
-      onWheel={allowsNegative ? e => e.currentTarget.blur() : undefined}
-      onFocus={e => {
-        e.target.select();
-        if (allowsNegative) e.target.dataset.fresh = "1";
-      }}
-      // A tap inside a box already in use places the caret instead.
-      onPointerDown={
-        allowsNegative
-          ? e => {
-              if (document.activeElement === e.currentTarget)
-                delete e.currentTarget.dataset.fresh;
-            }
-          : undefined
-      }
-      inputMode={allowsNegative ? undefined : "numeric"}
-      id={`${idPrefix}cell-${row}-${col}`}
-      aria-label={`${label}, ${names[col]}`}
-      disabled={!isEnabled(row, col)}
-    />
-  );
+          }}
+        >
+          {negative ? "−" : "+"}
+        </button>
+        {input}
+      </div>
+    );
+  };
 
   const result = summarize(outcome, names);
   const detail = describeTiebreak(
