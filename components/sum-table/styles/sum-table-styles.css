@@ -366,8 +366,12 @@ tr.group-start:not(:first-child) > * {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: center;
   gap: 0.75rem;
+  width: 100%;
+  padding: 0 0.25rem;
+}
+.sheet-actions .end-game {
+  margin-left: auto;
 }
 
 .ink-button {
@@ -402,7 +406,6 @@ tr.group-start:not(:first-child) > * {
 }
 
 .history-link {
-  margin-left: 0.25rem;
   font-size: 1.05rem;
 }
 

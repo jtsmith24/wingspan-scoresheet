@@ -352,20 +352,8 @@ const LoadedScorepad = () => {
           </button>
         </p>
       )}
+      {/* End game sits on the right, under a right thumb. */}
       <div className="sheet-actions hand-caps">
-        <button
-          type="button"
-          className="ink-button ink-button-primary"
-          onClick={endGame}
-          disabled={!scored}
-        >
-          End game
-        </button>
-        {(scored || players.some(p => p.name.trim())) && (
-          <button type="button" className="text-link" onClick={clearSheet}>
-            Clear
-          </button>
-        )}
         {history.length > 0 && (
           <button
             type="button"
@@ -375,6 +363,19 @@ const LoadedScorepad = () => {
             Past games · {history.length}
           </button>
         )}
+        {(scored || players.some(p => p.name.trim())) && (
+          <button type="button" className="text-link" onClick={clearSheet}>
+            Clear
+          </button>
+        )}
+        <button
+          type="button"
+          className="ink-button ink-button-primary end-game"
+          onClick={endGame}
+          disabled={!scored}
+        >
+          End game
+        </button>
       </div>
       {pastOpen && (
         <PastGames
