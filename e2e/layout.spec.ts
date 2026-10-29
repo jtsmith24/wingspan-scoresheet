@@ -21,6 +21,22 @@ test.describe("fits the screen", () => {
 
   const widths = (project: string) => (project === "phone" ? PHONE_WIDTHS : WIDE_WIDTHS);
 
+  test("five players: three-digit hummingbird scores fit beside the sign tab", async ({ page }, info) => {
+    const sheet = await openApp(page);
+    for (let i = 0; i < 3; i++) await sheet.addPlayer().click();
+    await sheet.expansions(["Americas"]);
+    const row = (await sheet.rowLabels()).indexOf("hummingbirds");
+    for (let c = 0; c < 5; c++) await sheet.cell(row, c).fill(c % 2 ? "100" : "-123");
+    for (const width of widths(info.project.name)) {
+      await page.setViewportSize({ width, height: 800 });
+      const fits = await page.evaluate(
+        r => [...document.querySelectorAll<HTMLInputElement>(`input[id^="cell-${r}-"]`)].map(i => i.scrollWidth <= i.clientWidth),
+        row
+      );
+      expect(fits, `${width}px`).toEqual([true, true, true, true, true]);
+    }
+  });
+
   test("five named players and every expansion: no sideways page scroll", async ({ page }, info) => {
     const sheet = await openApp(page);
     for (let i = 0; i < 3; i++) await sheet.addPlayer().click();

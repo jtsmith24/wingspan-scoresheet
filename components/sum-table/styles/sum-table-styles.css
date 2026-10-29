@@ -1144,6 +1144,17 @@ select:not(:disabled),
 .score-input.is-negative {
   color: #9b3b32;
 }
+/* Phone columns can be 2.5rem wide: a slimmer tab leaves room for three digits. */
+@media (max-width: 640px) {
+  .sign-tab {
+    width: 0.75rem;
+    font-size: 0.85rem;
+  }
+  .signed-score .score-input {
+    padding-right: 0;
+    font-size: 1.15rem;
+  }
+}
 @media (hover: hover) {
   .sign-tab:hover {
     background: color-mix(in srgb, var(--rule) 30%, transparent);

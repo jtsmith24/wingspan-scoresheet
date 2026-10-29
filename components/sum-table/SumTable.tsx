@@ -229,7 +229,9 @@ const SumTable = ({
         onFocus={e => e.target.select()}
         inputMode="numeric"
         id={`${idPrefix}cell-${row}-${col}`}
-        aria-label={`${label}, ${names[col]}`}
+        // The box shows only digits, so say the sign.
+        aria-label={`${label}, ${names[col]}${negative ? ", minus" : ""}`}
+        aria-keyshortcuts={allowsNegative ? "-" : undefined}
         disabled={!isEnabled(row, col)}
       />
     );

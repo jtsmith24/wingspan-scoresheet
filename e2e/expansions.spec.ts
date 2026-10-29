@@ -156,6 +156,7 @@ test.describe("Americas", () => {
     await tab.click();
     await expect(tab).toHaveText("−");
     await expect(tab).toHaveAttribute("aria-pressed", "true");
+    await expect(cell).toHaveAttribute("aria-label", /, minus$/);
     await expect(cell).toHaveValue("5");
     expect((await sheet.totals())[0]).toBe("-5");
     // Pressed while typing, the tab leaves the box focused (keyboard up),
