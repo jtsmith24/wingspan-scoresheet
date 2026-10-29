@@ -1127,3 +1127,7 @@ select:not(:disabled),
   -webkit-appearance: none;
   margin: 0;
 }
+.score-input[type="number"]::placeholder {
+  color: var(--pen);
+  opacity: 1;
+}

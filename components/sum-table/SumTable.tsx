@@ -191,7 +191,35 @@ const SumTable = ({
 
   // Hummingbird points can be negative. A number field brings up a phone
   // keyboard with a minus key (iPhone's numbers-and-symbols page, Android's
-  // number pad); the plain number pad that other boxes get has none.
+  // number pad); the plain number pad that other boxes get has none. But a
+  // number field takes any keystroke ("5-", "1e") and then reads as blank,
+  // so typing is handled here: digits add on, minus flips the sign, anything
+  // else is ignored. The first keystroke after focusing replaces the score,
+  // as in the other boxes, where focusing selects it.
+  const signedTyping =
+    (value: string, row: number, col: number) =>
+    (el: HTMLInputElement | null) => {
+      if (!el) return;
+      const onBeforeInput = (e: InputEvent) => {
+        e.preventDefault();
+        const deleting = e.inputType.startsWith("delete");
+        if (!deleting && !/[\d-]/.test(e.data ?? "")) return;
+        const fresh = el.dataset.fresh === "1";
+        delete el.dataset.fresh;
+        let next = fresh ? "" : value;
+        if (deleting) next = next.slice(0, -1);
+        else
+          for (const ch of e.data ?? "") {
+            if (/\d/.test(ch)) next += ch;
+            else if (ch === "-")
+              next = next.startsWith("-") ? next.slice(1) : `-${next}`;
+          }
+        handleCellChange(next, row, col, true);
+      };
+      el.addEventListener("beforeinput", onBeforeInput);
+      return () => el.removeEventListener("beforeinput", onBeforeInput);
+    };
+
   const renderInput = (
     value: string,
     row: number,
@@ -202,13 +230,11 @@ const SumTable = ({
     <input
       className="score-input"
       type={allowsNegative ? "number" : "text"}
-      value={value}
+      // A number field can't hold a lone "-": it shows as the placeholder.
+      value={allowsNegative && value === "-" ? "" : value}
+      ref={allowsNegative ? signedTyping(value, row, col) : undefined}
       onChange={e => handleCellChange(e.target.value, row, col, allowsNegative)}
-      onKeyDown={e => {
-        // Number fields also take exponents and decimals; scores don't.
-        if (allowsNegative && /^[eE+.,]$/.test(e.key)) e.preventDefault();
-        handleCellKeyDown(e, row, col);
-      }}
+      onKeyDown={e => handleCellKeyDown(e, row, col)}
       // A pasted "1e" would read as blank and wipe the score: the paste is
       // handled here, and only a whole number goes in.
       onPaste={
@@ -222,7 +248,20 @@ const SumTable = ({
       }
       // A wheel over a focused number field would change the score.
       onWheel={allowsNegative ? e => e.currentTarget.blur() : undefined}
-      onFocus={e => e.target.select()}
+      onFocus={e => {
+        e.target.select();
+        if (allowsNegative) e.target.dataset.fresh = "1";
+      }}
+      // A tap inside a box already in use places the caret: no longer fresh.
+      onPointerDown={
+        allowsNegative
+          ? e => {
+              if (document.activeElement === e.currentTarget)
+                delete e.currentTarget.dataset.fresh;
+            }
+          : undefined
+      }
+      placeholder={allowsNegative && value === "-" ? "−" : undefined}
       inputMode={allowsNegative ? undefined : "numeric"}
       id={`${idPrefix}cell-${row}-${col}`}
       aria-label={`${label}, ${names[col]}`}

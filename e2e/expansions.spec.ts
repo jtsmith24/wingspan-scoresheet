@@ -159,12 +159,52 @@ test.describe("Americas", () => {
     await cell.click();
     await cell.pressSequentially("-1e2.5");
     await expect(cell).toHaveValue("-125");
-    await cell.fill("");
+    for (let i = 0; i < 4; i++) await cell.press("Backspace");
+    await expect(cell).toHaveValue("");
     await cell.pressSequentially("-4");
     await cell.press("ArrowUp");
     await expect(sheet.cell(row - 1, 0)).toBeFocused();
     await expect(cell).toHaveValue("-4");
     expect((await sheet.totals())[0]).toBe("-4");
+  });
+
+  test("a minus anywhere flips the sign; other symbols are ignored", async ({ page }) => {
+    const sheet = await openApp(page);
+    await sheet.expansions(["Americas"]);
+    const row = (await sheet.rowLabels()).indexOf("hummingbirds");
+    const cell = sheet.cell(row, 0);
+    await cell.click();
+    await cell.pressSequentially("5-");
+    await expect(cell).toHaveValue("-5");
+    await cell.pressSequentially("/:(");
+    await expect(cell).toHaveValue("-5");
+    await cell.press("-");
+    await expect(cell).toHaveValue("5");
+    await cell.press("Backspace");
+    await expect(cell).toHaveValue("");
+    // A lone minus shows while the number is typed after it.
+    await cell.press("-");
+    await expect(cell).toHaveAttribute("placeholder", "−");
+    await cell.press("3");
+    await expect(cell).toHaveValue("-3");
+    expect((await sheet.totals())[0]).toBe("-3");
+  });
+
+  test("typing in a hummingbird box that already has a score replaces it", async ({ page }) => {
+    const sheet = await openApp(page);
+    await sheet.expansions(["Americas"]);
+    const row = (await sheet.rowLabels()).indexOf("hummingbirds");
+    const cell = sheet.cell(row, 0);
+    await cell.click();
+    await cell.pressSequentially("7");
+    await cell.press("Enter");
+    await cell.click();
+    await cell.pressSequentially("-2");
+    await expect(cell).toHaveValue("-2");
+    await cell.press("Enter");
+    await cell.click();
+    await cell.press("/");
+    await expect(cell).toHaveValue("-2");
   });
 
   test("pasting into a hummingbird box takes only a whole number", async ({ page }) => {
@@ -204,7 +244,9 @@ test.describe("Americas", () => {
     await sheet.fillEvery(0, 1);
     await sheet.fillEvery(1, 1);
     const row = (await sheet.rowLabels()).indexOf("hummingbirds");
-    await sheet.cell(row, 1).pressSequentially("-");
+    await sheet.cell(0, 0).click();
+    await sheet.cell(row, 1).click();
+    await sheet.cell(row, 1).press("-");
     await expect(sheet.result()).toHaveText("1 box left to fill");
   });
 
