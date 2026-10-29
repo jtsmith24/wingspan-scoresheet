@@ -60,18 +60,30 @@ test.describe("Expansions tab", () => {
     await sheet.expansions(["Oceania", "Americas"]);
     await page.reload();
     await expect(sheet.expansionsTab()).toContainText("Oceania + Americas");
-    expect(await sheet.edition()).toMatch(/oceania|americas/);
+    expect(await sheet.edition()).toBe("mix");
   });
 
-  test("the palette follows the box ticked most recently", async ({ page }) => {
+  test("one expansion has its own palette; several mix, whatever the order", async ({ page }) => {
     const sheet = await openApp(page);
     await sheet.expansions(["Americas"]);
     expect(await sheet.edition()).toBe("americas");
+    expect((await sheet.washes())[3]).toBe("transparent");
     await sheet.expansions(["Americas", "European"]);
-    expect(await sheet.edition()).toBe("european");
-    await expect(sheet.expansionsTab()).toHaveClass(/tab-european/);
+    expect(await sheet.edition()).toBe("mix");
+    await expect(sheet.expansionsTab()).toHaveClass(/tab-blend/);
+    // Each expansion brings its own cloud: main colours first, checklist order.
+    expect(await sheet.washes()).toEqual(["#a49ad3", "#97c79a", "#cdbfe6", "#cfe3b8"]);
+    const mixed = await sheet.washes();
+    await sheet.expansions([]);
+    await sheet.expansions(["European"]);
+    await sheet.expansions(["European", "Americas"]);
+    expect(await sheet.washes()).toEqual(mixed);
     await sheet.expansions(["Americas"]);
     expect(await sheet.edition()).toBe("americas");
+    await expect(sheet.expansionsTab()).toHaveClass(/tab-americas/);
+    expect(await sheet.washes()).toEqual(["#97c79a", "#cfe3b8", "#f2d89b", "transparent"]);
+    await sheet.expansions([]);
+    expect(await sheet.edition()).toBe("base");
   });
 });
 

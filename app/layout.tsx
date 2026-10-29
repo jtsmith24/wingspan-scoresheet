@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Josefin_Sans, Patrick_Hand, Patrick_Hand_SC } from "next/font/google";
 import "./globals.css";
+import { applyPalette, PALETTE_KEY } from "@/lib/theme";
 
 const display = Josefin_Sans({
   subsets: ["latin"],
@@ -29,8 +30,8 @@ export const metadata: Metadata = {
 };
 
 // Sets the saved palette before first paint so returning players don't see
-// the base game's blue flash into their expansion's colours.
-const paletteScript = `try{var p=localStorage.getItem("wingspan-palette");if(p)document.documentElement.dataset.edition=p}catch(e){}`;
+// the base game's blue flash into their expansions' colours.
+const paletteScript = `try{var p=localStorage.getItem("${PALETTE_KEY}");if(p)(${applyPalette})(p)}catch(e){}`;
 
 export default function RootLayout({
   children,

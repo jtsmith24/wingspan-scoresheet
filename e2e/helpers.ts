@@ -3,7 +3,6 @@ import { expect, test as base, type Page } from "@playwright/test";
 export const KEYS = {
   current: "wingspan-scoresheet:v1:current",
   history: "wingspan-scoresheet:v1:history",
-  edition: "wingspan-edition",
   palette: "wingspan-palette",
 };
 
@@ -140,6 +139,13 @@ export class Sheet {
 
   edition = () =>
     this.page.evaluate(() => document.documentElement.dataset.edition);
+
+  /** The four page washes as the browser resolves them. */
+  washes = () =>
+    this.page.evaluate(() => {
+      const style = getComputedStyle(document.documentElement);
+      return [1, 2, 3, 4].map(i => style.getPropertyValue(`--wash-${i}`).trim());
+    });
 }
 
 /** Waits for the in-app dialog showing `message`, then presses `button`. */

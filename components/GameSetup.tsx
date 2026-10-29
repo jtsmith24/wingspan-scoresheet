@@ -90,14 +90,14 @@ function expansionNames(config: GameConfig, short: boolean) {
  */
 export const ExpansionTabs = ({
   config,
-  theme,
+  palette,
   onToggle,
   onAsiaMode,
   onBase,
 }: {
   config: GameConfig;
-  /** The edition the page is coloured as; the Expansions tab matches it. */
-  theme: Edition;
+  /** The palettes the page is coloured by; the Expansions tab matches them. */
+  palette: Edition[];
   onToggle: (expansion: Expansion) => void;
   onAsiaMode: (mode: AsiaMode) => void;
   onBase: () => void;
@@ -149,7 +149,18 @@ export const ExpansionTabs = ({
         </div>
         <div
           ref={tabRef}
-          className={`expansion-tab tab-${any ? theme : "mix"}${any ? " is-on" : ""}`}
+          className={`expansion-tab tab-${
+            !any ? "mix" : palette.length > 1 ? "blend" : palette[0]
+          }${any ? " is-on" : ""}`}
+          style={
+            palette.length > 1
+              ? ({
+                  "--blend": `linear-gradient(90deg, ${palette
+                    .map(e => `var(--${e}-1)`)
+                    .join(", ")})`,
+                } as React.CSSProperties)
+              : undefined
+          }
         >
           <button
             type="button"

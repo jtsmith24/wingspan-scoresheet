@@ -47,6 +47,25 @@ test.describe("keeping things between visits", () => {
     await page.reload();
     expect(await page.evaluate(() => (window as unknown as { early: string }).early)).toBe("oceania");
   });
+
+  test("a mix of expansions is on before the app starts too", async ({ page }) => {
+    const sheet = await openApp(page);
+    await sheet.expansions(["Oceania", "Asia"]);
+    await page.addInitScript(() => {
+      new MutationObserver((_, obs) => {
+        if (document.body) {
+          const root = document.documentElement;
+          (window as unknown as { early: string }).early =
+            `${root.dataset.edition} ${root.style.getPropertyValue("--wash-2")}`;
+          obs.disconnect();
+        }
+      }).observe(document, { childList: true, subtree: true });
+    });
+    await page.reload();
+    expect(await page.evaluate(() => (window as unknown as { early: string }).early)).toBe(
+      "mix var(--asia-1)"
+    );
+  });
 });
 
 test.describe("bad or missing storage", () => {

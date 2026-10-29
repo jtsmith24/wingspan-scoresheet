@@ -781,16 +781,16 @@ button.past-slip:hover {
 }
 
 .tab-european {
-  --tone: #a49ad3;
+  --tone: var(--european-1);
 }
 .tab-oceania {
-  --tone: #f0cf72;
+  --tone: var(--oceania-1);
 }
 .tab-asia {
-  --tone: #eaa7b8;
+  --tone: var(--asia-1);
 }
 .tab-americas {
-  --tone: #97c79a;
+  --tone: var(--americas-1);
 }
 
 .tab-base {
@@ -798,6 +798,9 @@ button.past-slip:hover {
 }
 .tab-mix {
   --tone: #d8cbb8;
+}
+.expansion-tab.tab-blend.is-on {
+  background: var(--blend);
 }
 
 .expansion-tab {

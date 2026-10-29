@@ -34,11 +34,7 @@ import { STORAGE_KEYS } from "@/lib/storage";
 import { withCodes } from "@/lib/names";
 import { GameConfig, playerLimits, sameConfig } from "@/lib/rules";
 import { displayName, PlayerSheet, scoreGame } from "@/lib/scoring";
-import { Edition, themeFor } from "@/lib/theme";
-
-const THEME_KEY = "wingspan-edition";
-/** The palette on screen, read by an inline script in the layout before first paint. */
-export const PALETTE_KEY = "wingspan-palette";
+import { applyPalette, paletteFor, PALETTE_KEY } from "@/lib/theme";
 
 const subscribeNever = () => () => {};
 
@@ -52,20 +48,10 @@ export const Scorepad = () => {
   return inBrowser ? <LoadedScorepad /> : null;
 };
 
-const readPreferred = () => {
-  try {
-    return (localStorage.getItem(THEME_KEY) as Edition) ?? undefined;
-  } catch {
-    return undefined;
-  }
-};
-
 const LoadedScorepad = () => {
   const [game, setGameState] = useState(loadCurrentGame);
   const [history, setHistory] = useState(loadHistory);
   const [canPersist, setCanPersist] = useState(() => getStore().persistent);
-  // The expansion picked most recently; the palette follows it while it's on.
-  const [preferred, setPreferred] = useState(readPreferred);
   // Open, and optionally on one game.
   const [pastOpen, setPastOpen] = useState<boolean | string>(false);
   const [dialog, , ask] = useDialog();
@@ -74,13 +60,14 @@ const LoadedScorepad = () => {
   // Bumped each time a game ends, to replay the Saved stamp.
   const [stamp, setStamp] = useState(0);
 
-  const theme = themeFor(game.config, preferred);
+  const palette = paletteFor(game.config);
+  const paletteKey = palette.join("+");
   useEffect(() => {
-    document.documentElement.dataset.edition = theme;
+    applyPalette(paletteKey);
     try {
-      localStorage.setItem(PALETTE_KEY, theme);
+      localStorage.setItem(PALETTE_KEY, paletteKey);
     } catch {}
-  }, [theme]);
+  }, [paletteKey]);
 
   // Another tab changed the sheet or saved games: show its version, so a
   // stale copy here can't overwrite newer work there.
@@ -101,13 +88,6 @@ const LoadedScorepad = () => {
     }, 550);
     return () => clearTimeout(swap);
   }, [ending]);
-
-  const prefer = (edition: Edition) => {
-    setPreferred(edition);
-    try {
-      localStorage.setItem(THEME_KEY, edition);
-    } catch {}
-  };
 
   // Every change is saved straight away so a closed tab loses nothing.
   // Once any write has failed (say, history no longer fits), the store stays
@@ -172,7 +152,6 @@ const LoadedScorepad = () => {
     const { config } = game;
     const turningOn =
       expansion === "asia" ? config.asia === "off" : !config[expansion];
-    if (turningOn) prefer(expansion);
     setConfig(
       expansion === "asia"
         ? { ...config, asia: turningOn ? "standard" : "off" }
@@ -312,7 +291,7 @@ const LoadedScorepad = () => {
       <div className={`sheet-with-tabs${ending ? " is-ending" : ""}`}>
         <ExpansionTabs
           config={config}
-          theme={theme}
+          palette={palette}
           onToggle={toggleExpansion}
           onAsiaMode={asia => setConfig({ ...config, asia })}
           onBase={baseOnly}

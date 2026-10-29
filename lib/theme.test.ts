@@ -1,21 +1,18 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_CONFIG } from "./rules";
-import { themeFor } from "./theme";
+import { paletteFor } from "./theme";
 
 describe("theme", () => {
   it("uses the base palette with no expansions", () => {
-    expect(themeFor(DEFAULT_CONFIG)).toBe("base");
-    expect(themeFor(DEFAULT_CONFIG, "oceania")).toBe("base");
+    expect(paletteFor(DEFAULT_CONFIG)).toEqual(["base"]);
   });
 
-  it("keeps the most recently chosen expansion while it's on", () => {
-    const config = { ...DEFAULT_CONFIG, european: true, americas: true };
-    expect(themeFor(config, "european")).toBe("european");
+  it("uses one expansion's own palette", () => {
+    expect(paletteFor({ ...DEFAULT_CONFIG, asia: "duet" })).toEqual(["asia"]);
   });
 
-  it("falls back to the newest expansion in play", () => {
-    const config = { ...DEFAULT_CONFIG, european: true, oceania: true };
-    expect(themeFor(config, "americas")).toBe("oceania");
-    expect(themeFor({ ...config, asia: "duet" })).toBe("asia");
+  it("mixes several in the checklist's order", () => {
+    const config = { ...DEFAULT_CONFIG, americas: true, european: true, oceania: true };
+    expect(paletteFor(config)).toEqual(["european", "oceania", "americas"]);
   });
 });
