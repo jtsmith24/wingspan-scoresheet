@@ -40,7 +40,12 @@ test.describe("fits the screen", () => {
   test("Past games keeps its width with a game open, and five players fit", async ({ page }, info) => {
     const sheet = await openApp(page);
     for (let i = 0; i < 3; i++) await sheet.addPlayer().click();
-    for (let c = 0; c < 5; c++) await sheet.fillEvery(c, 10 + c);
+    await sheet.expansions(["Americas"]);
+    const hummingbirds = (await sheet.rowLabels()).indexOf("hummingbirds");
+    for (let c = 0; c < 5; c++) {
+      await sheet.fillEvery(c, 100 + c);
+      await sheet.cell(hummingbirds, c).fill(c % 2 ? "100" : "-123");
+    }
     await sheet.endButton().click();
     for (const width of widths(info.project.name)) {
       await page.setViewportSize({ width, height: 800 });
@@ -55,6 +60,12 @@ test.describe("fits the screen", () => {
       if (width >= 360) expect(await tableFits(), `viewing at ${width}px`).toBe(true);
       await page.locator(".past-actions").getByRole("button", { name: "Edit" }).click();
       if (width >= 360) expect(await tableFits(), `editing at ${width}px`).toBe(true);
+      // Three-digit hummingbird scores fit beside their sign tabs.
+      if (width >= 360)
+        expect(
+          await drawer.locator('input[id^="past-cell-"]').evaluateAll(inputs => inputs.every(i => i.scrollWidth <= i.clientWidth)),
+          `hummingbird digits at ${width}px`
+        ).toBe(true);
       await page.keyboard.press("Escape");
       await page.keyboard.press("Escape");
     }

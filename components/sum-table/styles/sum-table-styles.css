@@ -1192,7 +1192,8 @@ select:not(:disabled),
 .score-input.is-negative {
   color: #9b3b32;
 }
-/* Phone columns can be 2.5rem wide: a slimmer tab leaves room for three digits. */
+/* Phone columns, and every Past games sheet, can be 2.5rem wide: a slimmer
+   tab leaves room for three digits. */
 @media (max-width: 640px) {
   .sign-tab {
     width: 0.75rem;
@@ -1202,6 +1203,14 @@ select:not(:disabled),
     padding-right: 0;
     font-size: 1.15rem;
   }
+}
+.past-drawer .sign-tab {
+  width: 0.75rem;
+  font-size: 0.85rem;
+}
+.past-drawer .signed-score .score-input {
+  padding-right: 0;
+  font-size: 1.15rem;
 }
 @media (hover: hover) {
   .sign-tab:hover {
