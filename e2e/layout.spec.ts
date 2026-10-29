@@ -37,6 +37,29 @@ test.describe("fits the screen", () => {
     }
   });
 
+  test("Past games keeps its width with a game open, and five players fit", async ({ page }, info) => {
+    const sheet = await openApp(page);
+    for (let i = 0; i < 3; i++) await sheet.addPlayer().click();
+    for (let c = 0; c < 5; c++) await sheet.fillEvery(c, 10 + c);
+    await sheet.endButton().click();
+    for (const width of widths(info.project.name)) {
+      await page.setViewportSize({ width, height: 800 });
+      await sheet.pastButton().click();
+      const drawer = page.locator(".past-drawer");
+      const listWidth = (await drawer.boundingBox())!.width;
+      await page.locator("button.past-slip").click();
+      expect((await drawer.boundingBox())!.width, `${width}px`).toBe(listWidth);
+      const tableFits = () =>
+        drawer.locator("table").evaluate(t => t.getBoundingClientRect().width <= t.parentElement!.clientWidth + 0.5);
+      // Like the main sheet, five players fit from 360px; narrower scrolls.
+      if (width >= 360) expect(await tableFits(), `viewing at ${width}px`).toBe(true);
+      await page.locator(".past-actions").getByRole("button", { name: "Edit" }).click();
+      if (width >= 360) expect(await tableFits(), `editing at ${width}px`).toBe(true);
+      await page.keyboard.press("Escape");
+      await page.keyboard.press("Escape");
+    }
+  });
+
   test("five named players and every expansion: no sideways page scroll", async ({ page }, info) => {
     const sheet = await openApp(page);
     for (let i = 0; i < 3; i++) await sheet.addPlayer().click();

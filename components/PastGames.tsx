@@ -281,7 +281,7 @@ export const PastGames = ({
       <div className="past-dim" onClick={onClose} />
       <aside
         ref={drawerRef}
-        className={`past-drawer${open ? " is-open" : ""}`}
+        className="past-drawer"
         role="dialog"
         aria-modal="true"
         aria-label="Past games"

@@ -439,8 +439,53 @@ tr.group-start:not(:first-child) > * {
   box-shadow: -12px 0 32px -12px rgba(60, 45, 30, 0.45);
 }
 
-.past-drawer.is-open {
-  width: min(34rem, 100%);
+/* The drawer keeps its width with a game open: its sheets always use the
+   compact sizes phones get, so five players fit. */
+.past-drawer .past-sheet .label-col {
+  width: 5.9rem !important;
+}
+/* On a phone the drawer is the whole screen: slimmer margins, so a
+   five-player sheet fits a 360px phone as the main sheet does. */
+@media (max-width: 400px) {
+  .past-drawer {
+    padding: 1rem 0.5rem;
+  }
+  .past-slip-full {
+    padding: 0.8rem 0.25rem;
+  }
+}
+/* Editing, the sheet already sits on the slip: no second card around it. */
+.past-drawer .score-sheet {
+  padding: 0;
+  background: none;
+  box-shadow: none;
+}
+.past-drawer .score-sheet::before {
+  display: none;
+}
+.past-drawer #sum-table {
+  --fixed: 7.4rem;
+  --col-min: 2.5rem;
+}
+.past-drawer #sum-table .label-col {
+  width: 5.9rem;
+}
+.past-drawer #sum-table .group-col {
+  width: 1.5rem;
+}
+.past-drawer .row-label {
+  font-size: 0.95rem;
+  padding: 0 0.3rem !important;
+}
+.past-drawer .sheet-title {
+  font-size: 0.95rem;
+  padding: 0 0.3rem !important;
+}
+.past-drawer .score-input {
+  font-size: 1.35rem;
+}
+.past-drawer .player-input {
+  font-size: 1.1rem;
 }
 
 .past-head {
