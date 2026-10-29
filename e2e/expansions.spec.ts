@@ -1,4 +1,4 @@
-import { expect, noDialog, openApp, readStorage, respond, test, KEYS } from "./helpers";
+import { expect, noDialog, openApp, playQuickGame, readStorage, respond, test, KEYS } from "./helpers";
 
 const BASE_ROWS = 6;
 
@@ -165,6 +165,37 @@ test.describe("Americas", () => {
     await expect(sheet.cell(row - 1, 0)).toBeFocused();
     await expect(cell).toHaveValue("-4");
     expect((await sheet.totals())[0]).toBe("-4");
+  });
+
+  test("pasting into a hummingbird box takes only a whole number", async ({ page }) => {
+    const sheet = await openApp(page);
+    await sheet.expansions(["Americas"]);
+    await playQuickGame(sheet);
+    const row = (await sheet.rowLabels()).indexOf("hummingbirds");
+    await sheet.cell(row, 0).fill("-2");
+    await sheet.cell(row, 1).fill("3");
+    const paste = (id: string, text: string) =>
+      page.locator(`#${id}`).evaluate((el, t) => {
+        const data = new DataTransfer();
+        data.setData("text", t);
+        el.dispatchEvent(new ClipboardEvent("paste", { clipboardData: data, cancelable: true, bubbles: true }));
+      }, text);
+    const id = `cell-${row}-0`;
+    for (const bad of ["1e", "2.5", "-", "12 birds"]) {
+      await paste(id, bad);
+      await expect(sheet.cell(row, 0)).toHaveValue("-2");
+    }
+    await paste(id, " -12 ");
+    await expect(sheet.cell(row, 0)).toHaveValue("-12");
+    // The same box when fixing a past game.
+    await sheet.endButton().click();
+    await sheet.pastButton().click();
+    await page.locator("button.past-slip").click();
+    await page.locator(".past-actions").getByRole("button", { name: "Edit" }).click();
+    await paste(`past-cell-${row}-0`, "1e");
+    await expect(page.locator(`#past-cell-${row}-0`)).toHaveValue("-12");
+    await paste(`past-cell-${row}-0`, "7");
+    await expect(page.locator(`#past-cell-${row}-0`)).toHaveValue("7");
   });
 
   test("a lone minus counts as blank", async ({ page }) => {

@@ -209,6 +209,17 @@ const SumTable = ({
         if (allowsNegative && /^[eE+.,]$/.test(e.key)) e.preventDefault();
         handleCellKeyDown(e, row, col);
       }}
+      // A pasted "1e" would read as blank and wipe the score: the paste is
+      // handled here, and only a whole number goes in.
+      onPaste={
+        allowsNegative
+          ? e => {
+              e.preventDefault();
+              const text = e.clipboardData.getData("text").trim();
+              if (text !== "-") handleCellChange(text, row, col, true);
+            }
+          : undefined
+      }
       // A wheel over a focused number field would change the score.
       onWheel={allowsNegative ? e => e.currentTarget.blur() : undefined}
       onFocus={e => e.target.select()}
