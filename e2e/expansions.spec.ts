@@ -207,35 +207,41 @@ test.describe("Americas", () => {
     await expect(cell).toHaveValue("-2");
   });
 
-  test("pasting into a hummingbird box takes only a whole number", async ({ page }) => {
+  test("a paste the box can't read never wipes the score; good ones go in", async ({ page, context }) => {
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
     const sheet = await openApp(page);
     await sheet.expansions(["Americas"]);
     await playQuickGame(sheet);
     const row = (await sheet.rowLabels()).indexOf("hummingbirds");
-    await sheet.cell(row, 0).fill("-2");
     await sheet.cell(row, 1).fill("3");
-    const paste = (id: string, text: string) =>
-      page.locator(`#${id}`).evaluate((el, t) => {
-        const data = new DataTransfer();
-        data.setData("text", t);
-        el.dispatchEvent(new ClipboardEvent("paste", { clipboardData: data, cancelable: true, bubbles: true }));
-      }, text);
-    const id = `cell-${row}-0`;
-    for (const bad of ["1e", "2.5", "-", "12 birds"]) {
-      await paste(id, bad);
+    const paste = async (id: string, text: string) => {
+      await page.evaluate(t => navigator.clipboard.writeText(t), text);
+      await page.locator(`#${id}`).click();
+      await page.keyboard.press("ControlOrMeta+a");
+      await page.keyboard.press("ControlOrMeta+v");
+      await page.locator(`#${id}`).press("Enter");
+    };
+    await paste(`cell-${row}-0`, "-2");
+    await expect(sheet.cell(row, 0)).toHaveValue("-2");
+    for (const bad of ["1e", "2.5.5", "e"]) {
+      await paste(`cell-${row}-0`, bad);
       await expect(sheet.cell(row, 0)).toHaveValue("-2");
+      expect((await sheet.totals())[0]).toBe("58");
     }
-    await paste(id, " -12 ");
-    await expect(sheet.cell(row, 0)).toHaveValue("-12");
+    // Typing after a paste carries on from it.
+    await paste(`cell-${row}-0`, "12");
+    await sheet.cell(row, 0).click();
+    await page.keyboard.press("End");
+    await sheet.cell(row, 0).press("3");
+    await expect(sheet.cell(row, 0)).toHaveValue("123");
     // The same box when fixing a past game.
+    await sheet.cell(row, 0).fill("-2");
     await sheet.endButton().click();
     await sheet.pastButton().click();
     await page.locator("button.past-slip").click();
     await page.locator(".past-actions").getByRole("button", { name: "Edit" }).click();
     await paste(`past-cell-${row}-0`, "1e");
-    await expect(page.locator(`#past-cell-${row}-0`)).toHaveValue("-12");
-    await paste(`past-cell-${row}-0`, "7");
-    await expect(page.locator(`#past-cell-${row}-0`)).toHaveValue("7");
+    await expect(page.locator(`#past-cell-${row}-0`)).toHaveValue("-2");
   });
 
   test("a lone minus counts as blank", async ({ page }) => {

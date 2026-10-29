@@ -191,33 +191,52 @@ const SumTable = ({
 
   // Hummingbird points can be negative. A number field brings up a phone
   // keyboard with a minus key (iPhone's numbers-and-symbols page, Android's
-  // number pad); the plain number pad that other boxes get has none. But a
-  // number field takes any keystroke ("5-", "1e") and then reads as blank,
-  // so typing is handled here: digits add on, minus flips the sign, anything
-  // else is ignored. The first keystroke after focusing replaces the score,
-  // as in the other boxes, where focusing selects it.
+  // number pad); the plain number pad that other boxes get has none. The
+  // browser does the editing, with a few rules on top:
+  // - A minus flips the sign of the number there, so "5-" reads -5. On an
+  //   empty box, or one just focused (its score selected, so replaced), it
+  //   starts a negative number: a field can't show a lone "-", so the score
+  //   is stored as "-" and shown as the placeholder until digits follow.
+  // - Other symbols are refused.
+  // - Text the field can't read ("1e", or anything a keyboard forces in)
+  //   never wipes the score: React puts the last good one straight back.
   const signedTyping =
     (value: string, row: number, col: number) =>
     (el: HTMLInputElement | null) => {
       if (!el) return;
       const onBeforeInput = (e: InputEvent) => {
+        // Only plain keystrokes the browser lets us stop; anything else
+        // (predictions, composition) is left to the checks on change.
+        if (!e.cancelable || e.isComposing || e.inputType !== "insertText")
+          return;
+        const data = e.data ?? "";
+        if (/^-?\d+$/.test(data)) return;
         e.preventDefault();
-        const deleting = e.inputType.startsWith("delete");
-        if (!deleting && !/[\d-]/.test(e.data ?? "")) return;
+        if (data !== "-" || el.validity.badInput) return;
         const fresh = el.dataset.fresh === "1";
         delete el.dataset.fresh;
-        let next = fresh ? "" : value;
-        if (deleting) next = next.slice(0, -1);
-        else
-          for (const ch of e.data ?? "") {
-            if (/\d/.test(ch)) next += ch;
-            else if (ch === "-")
-              next = next.startsWith("-") ? next.slice(1) : `-${next}`;
-          }
+        const next =
+          value === "-"
+            ? ""
+            : fresh || value === ""
+              ? "-"
+              : value.startsWith("-")
+                ? value.slice(1)
+                : `-${value}`;
         handleCellChange(next, row, col, true);
       };
+      // Emptied from text it couldn't read ("-" then Backspace): the field
+      // reads "" both times, so React sees no change.
+      const onInput = () => {
+        if (el.value === "" && !el.validity.badInput && value !== "")
+          handleCellChange("", row, col, true);
+      };
       el.addEventListener("beforeinput", onBeforeInput);
-      return () => el.removeEventListener("beforeinput", onBeforeInput);
+      el.addEventListener("input", onInput);
+      return () => {
+        el.removeEventListener("beforeinput", onBeforeInput);
+        el.removeEventListener("input", onInput);
+      };
     };
 
   const renderInput = (
@@ -230,29 +249,45 @@ const SumTable = ({
     <input
       className="score-input"
       type={allowsNegative ? "number" : "text"}
-      // A number field can't hold a lone "-": it shows as the placeholder.
       value={allowsNegative && value === "-" ? "" : value}
+      placeholder={allowsNegative && value === "-" ? "−" : undefined}
       ref={allowsNegative ? signedTyping(value, row, col) : undefined}
-      onChange={e => handleCellChange(e.target.value, row, col, allowsNegative)}
-      onKeyDown={e => handleCellKeyDown(e, row, col)}
-      // A pasted "1e" would read as blank and wipe the score: the paste is
-      // handled here, and only a whole number goes in.
-      onPaste={
-        allowsNegative
-          ? e => {
-              e.preventDefault();
-              const text = e.clipboardData.getData("text").trim();
-              if (text !== "-") handleCellChange(text, row, col, true);
-            }
-          : undefined
-      }
+      onChange={e => {
+        if (!allowsNegative)
+          return handleCellChange(e.target.value, row, col, false);
+        delete e.target.dataset.fresh;
+        if (e.target.validity.badInput) {
+          // Backspacing "-1" leaves a lone minus: keep it pending. Anything
+          // else unreadable is put back to the last good score by React.
+          const { inputType } = e.nativeEvent as InputEvent;
+          if (inputType?.startsWith("delete") && /^-\d$/.test(value))
+            handleCellChange("-", row, col, true);
+          return;
+        }
+        const typed = e.target.value;
+        // Digits after a lone minus make a negative number.
+        handleCellChange(
+          value === "-" && /^\d+$/.test(typed) ? `-${typed}` : typed,
+          row,
+          col,
+          true
+        );
+      }}
+      onKeyDown={e => {
+        // Backspace on a lone minus: the field looks empty, so clear it here.
+        if (allowsNegative && value === "-" && e.key === "Backspace") {
+          e.preventDefault();
+          handleCellChange("", row, col, true);
+        }
+        handleCellKeyDown(e, row, col);
+      }}
       // A wheel over a focused number field would change the score.
       onWheel={allowsNegative ? e => e.currentTarget.blur() : undefined}
       onFocus={e => {
         e.target.select();
         if (allowsNegative) e.target.dataset.fresh = "1";
       }}
-      // A tap inside a box already in use places the caret: no longer fresh.
+      // A tap inside a box already in use places the caret instead.
       onPointerDown={
         allowsNegative
           ? e => {
@@ -261,7 +296,6 @@ const SumTable = ({
             }
           : undefined
       }
-      placeholder={allowsNegative && value === "-" ? "−" : undefined}
       inputMode={allowsNegative ? undefined : "numeric"}
       id={`${idPrefix}cell-${row}-${col}`}
       aria-label={`${label}, ${names[col]}`}
