@@ -168,13 +168,21 @@ test.describe("Americas", () => {
     expect((await sheet.totals())[0]).toBe("52");
   });
 
-  test("the sign tab on a box not in use doesn't bring the keyboard up", async ({ page }) => {
+  test("the sign tab on a box not being typed in leaves the keyboard down", async ({ page }) => {
     const sheet = await openApp(page);
     await sheet.expansions(["Americas"]);
     const row = (await sheet.rowLabels()).indexOf("hummingbirds");
+    await sheet.cell(row, 1).fill("4");
+    // Typing in another box: the tab puts the keyboard away.
     await sheet.cell(0, 0).click();
-    await page.locator(".score-cell").filter({ has: sheet.cell(row, 1) }).locator(".sign-tab").click();
-    await expect(sheet.cell(row, 1)).not.toBeFocused();
+    const tab = page.locator(".score-cell").filter({ has: sheet.cell(row, 1) }).locator(".sign-tab");
+    await tab.click();
+    await expect(tab).toHaveText("−");
+    expect(await page.evaluate(() => document.activeElement?.tagName)).not.toBe("INPUT");
+    // Nothing focused: it stays that way.
+    await tab.click();
+    await expect(tab).toHaveText("+");
+    expect(await page.evaluate(() => document.activeElement?.tagName)).not.toBe("INPUT");
   });
 
   test("minus first: the sign stays for the digits typed after it", async ({ page }) => {

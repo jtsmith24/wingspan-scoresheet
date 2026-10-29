@@ -247,8 +247,12 @@ const SumTable = ({
           onPointerDown={e => {
             typingInBox.current =
               document.activeElement?.id === `${idPrefix}cell-${row}-${col}`;
-            // Keep focus in the box, so the keyboard stays up.
+            // Typing in this box: keep focus there, so the keyboard stays up.
+            // Otherwise put the keyboard away, as a tap elsewhere would; only
+            // a tap inside a box brings it up.
             e.preventDefault();
+            if (!typingInBox.current)
+              (document.activeElement as HTMLElement | null)?.blur();
           }}
           onClick={() => {
             handleCellChange(flipSign(value), row, col, true);
