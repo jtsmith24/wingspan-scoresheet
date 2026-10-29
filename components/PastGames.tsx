@@ -176,14 +176,18 @@ export const PastGames = ({
   initialOpen?: string;
   onClose: () => void;
   onDelete: (id: string) => void;
-  onEdit: (id: string, players: PlayerSheet[]) => void;
+  /** False if the game changed since `base` and wasn't saved over. */
+  onEdit: (id: string, players: PlayerSheet[], base: string) => boolean;
   onPlayAgain: (game: SavedGame) => void;
   ask: Ask;
 }) => {
   const [openId, setOpenId] = useState(initialOpen);
   // The open game's sheet while it's being edited.
+  // `base` is the game as it was when editing began, to notice another tab
+  // saving changes to it in the meantime.
   const [editDraft, setEditDraft] = useState<{
     id: string;
+    base: string;
     players: PlayerSheet[];
   }>();
   // Bumped each time an edit is saved, to replay the stamp.
@@ -192,10 +196,18 @@ export const PastGames = ({
   // A draft only belongs to the game it was started on: if that game is
   // deleted elsewhere, or another one is opened, it's dropped.
   const draft = open && editDraft?.id === open.id ? editDraft.players : undefined;
-  const setDraft = (players: PlayerSheet[] | undefined) =>
-    setEditDraft(players && open ? { id: open.id, players } : undefined);
+  const changedElsewhere =
+    !!open && !!draft && JSON.stringify(open.sheet) !== editDraft?.base;
+  const startEdit = (game: SavedGame) =>
+    setEditDraft({
+      id: game.id,
+      base: JSON.stringify(game.sheet),
+      players: game.sheet,
+    });
+  const setDraft = (players: PlayerSheet[]) =>
+    setEditDraft(d => d && { ...d, players });
   const fold = () => {
-    setDraft(undefined);
+    setEditDraft(undefined);
     setStamp(0);
     setOpenId(undefined);
   };
@@ -309,21 +321,36 @@ export const PastGames = ({
                   onPlayersChange={setDraft}
                   idPrefix="past-"
                 />
+                {changedElsewhere && (
+                  <p className="past-conflict" role="alert">
+                    This game was changed in another tab.{" "}
+                    <button
+                      type="button"
+                      className="text-link"
+                      onClick={() => startEdit(open)}
+                    >
+                      Start over from that version
+                    </button>
+                  </p>
+                )}
                 <div className="past-edit-actions hand-caps">
                   <button
                     type="button"
                     className="ink-button"
-                    onClick={() => setDraft(undefined)}
+                    onClick={() => setEditDraft(undefined)}
                   >
                     Cancel
                   </button>
                   <button
                     type="button"
                     className="ink-button ink-button-primary"
-                    disabled={!draft.some(p => playerHasData(p, open.config))}
+                    disabled={
+                      changedElsewhere ||
+                      !draft.some(p => playerHasData(p, open.config))
+                    }
                     onClick={() => {
-                      onEdit(open.id, draft);
-                      setDraft(undefined);
+                      if (!onEdit(open.id, draft, editDraft!.base)) return;
+                      setEditDraft(undefined);
                       setStamp(s => s + 1);
                     }}
                   >
@@ -344,7 +371,7 @@ export const PastGames = ({
                   <button type="button" onClick={() => onPlayAgain(open)}>
                     Play again with these players
                   </button>
-                  <button type="button" onClick={() => setDraft(open.sheet)}>
+                  <button type="button" onClick={() => startEdit(open)}>
                     Edit
                   </button>
                   <button

@@ -12,15 +12,26 @@ export interface KeyValueStore {
   readonly persistent: boolean;
 }
 
+// Storage that can be read is kept even when it can't be written to (say,
+// it's already full), so saved games still show.
 function resolveStorage(): Storage | null {
   try {
     if (typeof window === "undefined" || !window.localStorage) return null;
-    const probe = "__wingspan_probe__";
-    window.localStorage.setItem(probe, probe);
-    window.localStorage.removeItem(probe);
+    window.localStorage.getItem("__wingspan_probe__");
     return window.localStorage;
   } catch {
     return null;
+  }
+}
+
+function canWrite(storage: Storage): boolean {
+  const probe = "__wingspan_probe__";
+  try {
+    storage.setItem(probe, probe);
+    storage.removeItem(probe);
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -28,9 +39,18 @@ export function createStore(storage: Storage | null = resolveStorage()): KeyValu
   // Every write lands here first, so it always holds this visit's newest value,
   // even if the browser later refuses to store it.
   const memory = new Map<string, string>();
-  // Keys whose newest value only made it into memory.
-  const unsaved = new Set<string>();
-  let persistent = storage !== null;
+  // Keys whose newest value only made it into memory, with what storage
+  // held at the time, to notice another tab writing there since.
+  const unsaved = new Map<string, string | null>();
+  let persistent = storage !== null && canWrite(storage);
+
+  const stored = (key: string) => {
+    try {
+      return storage?.getItem(key);
+    } catch {
+      return undefined;
+    }
+  };
 
   return {
     get persistent() {
@@ -39,14 +59,12 @@ export function createStore(storage: Storage | null = resolveStorage()): KeyValu
     read(key, fallback, isValid) {
       // Storage first, so changes made in another tab are seen. Memory takes
       // over for a key once storing it has failed, since it then holds the
-      // newest copy; other keys still read from storage.
-      let raw: string | null | undefined;
-      if (storage && !unsaved.has(key)) {
-        try {
-          raw = storage.getItem(key);
-        } catch {
-          raw = undefined;
-        }
+      // newest copy; other keys still read from storage. If another tab has
+      // stored that key since, its copy is newer and saved, so it wins.
+      let raw = stored(key);
+      if (unsaved.has(key)) {
+        if (raw === unsaved.get(key)) raw = undefined;
+        else unsaved.delete(key);
       }
       raw ??= memory.get(key);
       if (raw == null) return fallback;
@@ -67,7 +85,7 @@ export function createStore(storage: Storage | null = resolveStorage()): KeyValu
         unsaved.delete(key);
         return true;
       } catch {
-        unsaved.add(key);
+        if (!unsaved.has(key)) unsaved.set(key, stored(key) ?? null);
         persistent = false;
         return false;
       }

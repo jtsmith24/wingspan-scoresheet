@@ -267,15 +267,20 @@ const LoadedScorepad = () => {
     writeHistory(h => removeFromHistory(h, id));
 
   // A fix to a past game keeps its place and its date.
-  const editGame = (id: string, players: PlayerSheet[]) => {
+  // Not if it was deleted or changed in another tab since editing began.
+  const editGame = (id: string, players: PlayerSheet[], base: string) => {
     const old = loadHistory().find(g => g.id === id);
-    if (!old) return;
+    if (!old || JSON.stringify(old.sheet) !== base) {
+      setHistory(loadHistory());
+      return false;
+    }
     writeHistory(h =>
       addToHistory(
         h,
         toSavedGame({ config: old.config, players }, new Date(), id)
       )
     );
+    return true;
   };
 
   const playAgain = async (saved: SavedGame) => {

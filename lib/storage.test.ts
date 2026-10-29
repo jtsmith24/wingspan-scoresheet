@@ -37,6 +37,28 @@ describe("store", () => {
     expect(store.read("current", 0)).toBe(3);
   });
 
+  it("another tab's newer save wins over a change that was never stored", () => {
+    let full = true;
+    const storage = fakeStorage(() => full);
+    storage.data.set("history", JSON.stringify(["a"]));
+    const store = createStore(storage);
+    store.write("history", ["a", "mine"]);
+    expect(store.read("history", [])).toEqual(["a", "mine"]);
+    storage.data.set("history", JSON.stringify(["a", "theirs"])); // another tab
+    expect(store.read("history", [])).toEqual(["a", "theirs"]);
+    full = false;
+    store.write("history", ["a", "theirs", "next"]);
+    expect(store.read("history", [])).toEqual(["a", "theirs", "next"]);
+  });
+
+  it("storage that's full from the start still shows what's saved", () => {
+    const storage = fakeStorage(() => true);
+    storage.data.set("history", JSON.stringify(["old game"]));
+    const store = createStore(storage);
+    expect(store.persistent).toBe(false);
+    expect(store.read("history", [])).toEqual(["old game"]);
+  });
+
   it("works from memory alone when there's no storage", () => {
     const store = createStore(null);
     expect(store.write("current", 5)).toBe(false);

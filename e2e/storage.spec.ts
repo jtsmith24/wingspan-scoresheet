@@ -241,6 +241,35 @@ test.describe("two tabs, changes crossing", () => {
     expect(left.players.map((p: { name: string }) => p.name)).toEqual(["Alex", "Blake"]);
   });
 
+  test("two tabs editing the same past game: the second save can't undo the first", async ({ page, context }) => {
+    const a = await openApp(page);
+    await playQuickGame(a);
+    await a.endButton().click();
+    const openEdit = async (p: typeof page) => {
+      await new Sheet(p).pastButton().click();
+      await p.locator("button.past-slip").click();
+      await p.locator(".past-actions").getByRole("button", { name: "Edit" }).click();
+    };
+    await openEdit(page);
+    await page.locator("#past-cell-0-0").fill("11");
+    const other = await context.newPage();
+    await other.goto("/");
+    await openEdit(other);
+    await other.locator("#past-cell-0-1").fill("22");
+    await other.getByRole("button", { name: "Save changes" }).click();
+    await expect(page.locator(".past-conflict")).toContainText("changed in another tab");
+    await expect(page.getByRole("button", { name: "Save changes" })).toBeDisabled();
+    await page.getByRole("button", { name: "Start over from that version" }).click();
+    await expect(page.locator(".past-conflict")).toHaveCount(0);
+    await expect(page.locator("#past-cell-0-1")).toHaveValue("22");
+    await expect(page.locator("#past-cell-0-0")).toHaveValue("10");
+    await page.locator("#past-cell-0-0").fill("11");
+    await page.getByRole("button", { name: "Save changes" }).click();
+    const [game] = await readStorage(page, KEYS.history);
+    expect(game.sheet[0].scores.birds).toBe("11");
+    expect(game.sheet[1].scores.birds).toBe("22");
+  });
+
   test.describe("with motion", () => {
     test.use({ reducedMotion: "no-preference" });
 
