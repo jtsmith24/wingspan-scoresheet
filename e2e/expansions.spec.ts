@@ -140,36 +140,31 @@ test.describe("Americas", () => {
     expect((await sheet.totals())[0]).toBe("6");
   });
 
-  test("± flips the sign without leaving the box; the pad is numbers", async ({ page }) => {
+  test("hummingbird boxes bring up a keyboard with a minus; the rest the number pad", async ({ page }) => {
     const sheet = await openApp(page);
     await sheet.expansions(["Americas"]);
     const row = (await sheet.rowLabels()).indexOf("hummingbirds");
     const cell = sheet.cell(row, 0);
-    await expect(cell).toHaveAttribute("inputmode", "numeric");
-    const sign = page.locator(".score-cell").filter({ has: cell }).locator(".sign-toggle");
-    await expect(sign).toBeHidden();
-    await cell.click();
-    await cell.pressSequentially("4");
-    await sign.click();
-    await expect(cell).toHaveValue("-4");
-    await expect(cell).toBeFocused();
-    await sign.click();
-    await expect(cell).toHaveValue("4");
-    await sign.click();
-    await cell.press("Enter");
-    await expect(sign).toBeHidden();
-    expect((await sheet.totals())[0]).toBe("-4");
+    await expect(cell).toHaveAttribute("type", "number");
+    await expect(cell).not.toHaveAttribute("inputmode");
+    await expect(sheet.cell(0, 0)).toHaveAttribute("inputmode", "numeric");
+    await expect(sheet.cell(0, 0)).toHaveAttribute("type", "text");
   });
 
-  test("± on an empty box starts a negative number", async ({ page }) => {
+  test("a hummingbird box takes only whole numbers, and arrows still move between boxes", async ({ page }) => {
     const sheet = await openApp(page);
     await sheet.expansions(["Americas"]);
     const row = (await sheet.rowLabels()).indexOf("hummingbirds");
-    const cell = sheet.cell(row, 1);
+    const cell = sheet.cell(row, 0);
     await cell.click();
-    await page.locator(".score-cell").filter({ has: cell }).locator(".sign-toggle").click();
-    await cell.pressSequentially("3");
-    await expect(cell).toHaveValue("-3");
+    await cell.pressSequentially("-1e2.5");
+    await expect(cell).toHaveValue("-125");
+    await cell.fill("");
+    await cell.pressSequentially("-4");
+    await cell.press("ArrowUp");
+    await expect(sheet.cell(row - 1, 0)).toBeFocused();
+    await expect(cell).toHaveValue("-4");
+    expect((await sheet.totals())[0]).toBe("-4");
   });
 
   test("a lone minus counts as blank", async ({ page }) => {
@@ -178,7 +173,7 @@ test.describe("Americas", () => {
     await sheet.fillEvery(0, 1);
     await sheet.fillEvery(1, 1);
     const row = (await sheet.rowLabels()).indexOf("hummingbirds");
-    await sheet.cell(row, 1).fill("-");
+    await sheet.cell(row, 1).pressSequentially("-");
     await expect(sheet.result()).toHaveText("1 box left to fill");
   });
 

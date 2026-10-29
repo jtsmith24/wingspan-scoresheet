@@ -189,56 +189,35 @@ const SumTable = ({
     }
   };
 
+  // Hummingbird points can be negative. A number field brings up a phone
+  // keyboard with a minus key (iPhone's numbers-and-symbols page, Android's
+  // number pad); the plain number pad that other boxes get has none.
   const renderInput = (
     value: string,
     row: number,
     col: number,
     label: string,
     allowsNegative?: boolean
-  ) => {
-    const id = `${idPrefix}cell-${row}-${col}`;
-    const input = (
-      <input
-        className="score-input"
-        type="text"
-        value={value}
-        onChange={e =>
-          handleCellChange(e.target.value, row, col, allowsNegative)
-        }
-        onKeyDown={e => handleCellKeyDown(e, row, col)}
-        onFocus={e => e.target.select()}
-        inputMode="numeric"
-        id={id}
-        aria-label={`${label}, ${names[col]}`}
-        disabled={!isEnabled(row, col)}
-      />
-    );
-    if (!allowsNegative) return input;
-    // Phone number pads have no minus key, so the box gets its own.
-    return (
-      <>
-        {input}
-        <button
-          type="button"
-          className="sign-toggle"
-          tabIndex={-1}
-          aria-label={`Plus or minus, ${label}, ${names[col]}`}
-          onMouseDown={e => e.preventDefault()}
-          onClick={() => {
-            handleCellChange(
-              value.startsWith("-") ? value.slice(1) : `-${value}`,
-              row,
-              col,
-              true
-            );
-            focus(`cell-${row}-${col}`);
-          }}
-        >
-          ±
-        </button>
-      </>
-    );
-  };
+  ) => (
+    <input
+      className="score-input"
+      type={allowsNegative ? "number" : "text"}
+      value={value}
+      onChange={e => handleCellChange(e.target.value, row, col, allowsNegative)}
+      onKeyDown={e => {
+        // Number fields also take exponents and decimals; scores don't.
+        if (allowsNegative && /^[eE+.,]$/.test(e.key)) e.preventDefault();
+        handleCellKeyDown(e, row, col);
+      }}
+      // A wheel over a focused number field would change the score.
+      onWheel={allowsNegative ? e => e.currentTarget.blur() : undefined}
+      onFocus={e => e.target.select()}
+      inputMode={allowsNegative ? undefined : "numeric"}
+      id={`${idPrefix}cell-${row}-${col}`}
+      aria-label={`${label}, ${names[col]}`}
+      disabled={!isEnabled(row, col)}
+    />
+  );
 
   const result = summarize(outcome, names);
   const detail = describeTiebreak(
