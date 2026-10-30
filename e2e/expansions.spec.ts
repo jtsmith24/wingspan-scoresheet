@@ -214,6 +214,107 @@ test.describe("Americas", () => {
     expect(game.players[0].breakdown.hummingbirds).toBe(-1);
   });
 
+  test("Flock mode drops the hummingbird row, with a note; Standard brings it back", async ({ page }) => {
+    const sheet = await openApp(page);
+    await sheet.expansions(["Americas", "Asia"]);
+    let row = (await sheet.rowLabels()).indexOf("hummingbirds");
+    await sheet.cell(row, 0).fill("4");
+    await sheet.cell(0, 0).fill("10");
+    expect((await sheet.totals())[0]).toBe("14");
+    const note = page.locator(".sheet-footnote");
+    await expect(note).toHaveCount(0);
+    await sheet.asiaMode("flock");
+    await page.keyboard.press("Escape");
+    expect(await sheet.rowLabels()).not.toContain("hummingbirds");
+    expect((await sheet.totals())[0]).toBe("10");
+    await expect(note).toHaveText("* No hummingbird track with 6–7 players (Flock). Americas birds still play.");
+    // The asterisk ties the tab and the menu's Americas to the footnote,
+    // without being read out as part of the tab's name.
+    await expect(sheet.expansionsTab()).toContainText("Americas*");
+    await expect(sheet.expansionsTab().locator("button")).toHaveAttribute(
+      "aria-label",
+      "Expansions: Asia · Flock + Americas"
+    );
+    await sheet.expansionsTab().locator("button").click();
+    await expect(sheet.checklist().locator(".mix-option", { hasText: "Americas" })).toContainText("Americas*");
+    await sheet.asiaMode("standard");
+    await expect(note).toHaveCount(0);
+    await expect(sheet.checklist().locator(".footnote-mark")).toHaveCount(0);
+    await page.keyboard.press("Escape");
+    row = (await sheet.rowLabels()).indexOf("hummingbirds");
+    await expect(sheet.expansionsTab()).not.toContainText("*");
+    await expect(sheet.cell(row, 0)).toHaveValue("4");
+    expect((await sheet.totals())[0]).toBe("14");
+  });
+
+  test("a Flock game saved with a hidden hummingbird score keeps its total when edited", async ({ page }) => {
+    const sheet = await openApp(page);
+    await sheet.expansions(["Americas"]);
+    const row = (await sheet.rowLabels()).indexOf("hummingbirds");
+    await sheet.cell(row, 0).fill("9");
+    await sheet.expansions(["Americas", "Asia"], { close: false });
+    await sheet.asiaMode("flock");
+    await page.keyboard.press("Escape");
+    for (let c = 0; c < 6; c++) await sheet.fillEvery(c, 10 + c);
+    expect((await sheet.totals())[0]).toBe("60");
+    await sheet.endButton().click();
+    const [saved] = await readStorage(page, KEYS.history);
+    expect(saved.players[0].total).toBe(60);
+    await sheet.pastButton().click();
+    await page.locator("button.past-slip").click();
+    await page.locator(".past-actions").getByRole("button", { name: "Edit" }).click();
+    expect(
+      await page.locator(".past-drawer .row-label").allTextContents()
+    ).not.toContain("Hummingbirds");
+    await page.locator("#past-cell-0-0").fill("11");
+    await page.getByRole("button", { name: "Save changes" }).click();
+    const [edited] = await readStorage(page, KEYS.history);
+    expect(edited.players[0].total).toBe(61);
+    expect(edited.players[0].breakdown.hummingbirds).toBeUndefined();
+  });
+
+  test("tapping a sign tab while typing elsewhere: nothing moves mid-tap, then it flips and the keyboard goes", async ({ page }, info) => {
+    const sheet = await openApp(page);
+    await sheet.expansions(["Americas"]);
+    const row = (await sheet.rowLabels()).indexOf("hummingbirds");
+    const tab = page.locator(".score-cell").filter({ has: sheet.cell(row, 1) }).locator(".sign-tab");
+    const focusedInput = () =>
+      page.evaluate(() => (document.activeElement instanceof HTMLInputElement ? document.activeElement.id : null));
+    // Typing in another box, as on a phone with the keyboard up.
+    await sheet.cell(0, 0).click();
+    // Pressing the tab leaves that box focused, so the keyboard can't close
+    // and move the tab out from under the finger before the tap completes.
+    await tab.dispatchEvent("pointerdown", { button: 0, pointerType: "touch", isPrimary: true });
+    expect(await focusedInput()).toBe("cell-0-0");
+    // The whole tap (a real touch on the phone run) flips it, then no box keeps the keyboard.
+    if (info.project.name === "phone") await tab.tap();
+    else await tab.click();
+    await expect(tab).toHaveText("−");
+    expect(await focusedInput()).toBeNull();
+    // A screen reader's click, with no pointer, flips it too.
+    await tab.evaluate(el => (el as HTMLElement).click());
+    await expect(tab).toHaveText("+");
+  });
+
+  test("flipping a sign on an empty sheet doesn't start the game", async ({ page }) => {
+    const sheet = await openApp(page);
+    await sheet.expansions(["Americas"]);
+    const row = (await sheet.rowLabels()).indexOf("hummingbirds");
+    const tab = page.locator(".score-cell").filter({ has: sheet.cell(row, 0) }).locator(".sign-tab");
+    await tab.click();
+    await expect(tab).toHaveText("−");
+    expect(await sheet.totals()).toEqual(["", ""]);
+    await expect(sheet.endButton()).toBeDisabled();
+    await sheet.cell(row, 0).fill("3");
+    expect((await sheet.totals())[0]).toBe("-3");
+    await expect(sheet.endButton()).toBeEnabled();
+    // Deleting the digits leaves just the sign: back to an empty sheet.
+    await sheet.cell(row, 0).fill("");
+    await expect(tab).toHaveText("−");
+    expect(await sheet.totals()).toEqual(["", ""]);
+    await expect(sheet.endButton()).toBeDisabled();
+  });
+
   test("a lone minus counts as blank", async ({ page }) => {
     const sheet = await openApp(page);
     await sheet.expansions(["Americas"]);

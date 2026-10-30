@@ -195,9 +195,6 @@ const SumTable = ({
   // kept as a leading "-" in the score, even before any digits are typed.
   const flipSign = (value: string) =>
     value.startsWith("-") ? value.slice(1) : `-${value}`;
-  // Whether the box was being typed in when its sign tab was pressed: the
-  // keyboard should stay up, with the caret where it was.
-  const typingInBox = useRef(false);
 
   const renderInput = (
     value: string,
@@ -207,6 +204,7 @@ const SumTable = ({
     allowsNegative?: boolean
   ) => {
     const negative = !!allowsNegative && value.startsWith("-");
+    const id = `${idPrefix}cell-${row}-${col}`;
     const input = (
       <input
         className={`score-input${negative ? " is-negative" : ""}`}
@@ -228,7 +226,7 @@ const SumTable = ({
         }}
         onFocus={e => e.target.select()}
         inputMode="numeric"
-        id={`${idPrefix}cell-${row}-${col}`}
+        id={id}
         // The box shows only digits, so say the sign.
         aria-label={`${label}, ${names[col]}${negative ? ", minus" : ""}`}
         aria-keyshortcuts={allowsNegative ? "-" : undefined}
@@ -244,27 +242,18 @@ const SumTable = ({
           tabIndex={-1}
           aria-label={`${label}, ${names[col]}: ${negative ? "minus" : "plus"}. Switch sign`}
           aria-pressed={negative}
+          // Pressing leaves focus where it is, so nothing moves mid-tap (a
+          // keyboard closing under the finger made phones drop the tap).
           onPointerDown={e => {
-            typingInBox.current =
-              document.activeElement?.id === `${idPrefix}cell-${row}-${col}`;
-            // Typing in this box: keep focus there, so the keyboard stays up.
-            // Otherwise put the keyboard away, as a tap elsewhere would; only
-            // a tap inside a box brings it up.
-            e.preventDefault();
-            if (!typingInBox.current)
-              (document.activeElement as HTMLElement | null)?.blur();
+            if (e.button === 0) e.preventDefault();
           }}
+          // Then the flip, and the keyboard goes away unless this box was the
+          // one being typed in: only a tap inside a box brings it up.
           onClick={() => {
             handleCellChange(flipSign(value), row, col, true);
-            if (!typingInBox.current) return;
-            // Some phones move focus anyway: put it back, caret at the end.
-            const box = document.getElementById(
-              `${idPrefix}cell-${row}-${col}`
-            ) as HTMLInputElement | null;
-            if (box && document.activeElement !== box) {
-              box.focus();
-              box.setSelectionRange(box.value.length, box.value.length);
-            }
+            const active = document.activeElement;
+            if (active instanceof HTMLInputElement && active.id !== id)
+              active.blur();
           }}
         >
           {negative ? "−" : "+"}
