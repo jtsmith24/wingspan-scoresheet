@@ -14,6 +14,10 @@ on:
   push:
     branches: [master]
 
+# Read-only for everything; only the notify job raises itself to filing issues.
+permissions:
+  contents: read
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
