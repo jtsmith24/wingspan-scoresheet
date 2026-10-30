@@ -198,9 +198,12 @@ test("link previews: title, description, Open Graph and a 1200x630 image", async
   expect(await meta("property", "og:image:width")).toBe("1200");
   expect(await meta("property", "og:image:height")).toBe("630");
   expect(await meta("property", "og:image:alt")).toBeTruthy();
-  // The image itself is served (here, from the local build).
-  const image = new URL((await meta("property", "og:image"))!);
-  const response = await request.get(image.pathname + image.search);
-  expect(response.status()).toBe(200);
-  expect(response.headers()["content-type"]).toBe("image/png");
+  // Both images point at the live site, and are served (here, by the local build).
+  for (const url of [await meta("property", "og:image"), await meta("name", "twitter:image")]) {
+    const image = new URL(url!);
+    expect(image.origin).toBe("https://wingspanscoresheet.vercel.app");
+    const response = await request.get(image.pathname + image.search);
+    expect(response.status()).toBe(200);
+    expect(response.headers()["content-type"]).toBe("image/png");
+  }
 });
