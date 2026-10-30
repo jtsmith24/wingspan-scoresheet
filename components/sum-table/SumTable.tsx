@@ -195,9 +195,12 @@ const SumTable = ({
   // kept as a leading "-" in the score, even before any digits are typed.
   const flipSign = (value: string) =>
     value.startsWith("-") ? value.slice(1) : `-${value}`;
-  // Whether the box was being typed in when its sign tab was pressed: the
-  // keyboard should stay up, with the caret where it was.
-  const typingInBox = useRef(false);
+  // The sign tab being pressed: which box it belongs to, whether that box was
+  // being typed in (the keyboard should stay up), and whether the press has
+  // flipped the sign yet.
+  const tabPress = useRef<{ id: string; typing: boolean; flipped: boolean }>(
+    null
+  );
 
   const renderInput = (
     value: string,
@@ -207,6 +210,7 @@ const SumTable = ({
     allowsNegative?: boolean
   ) => {
     const negative = !!allowsNegative && value.startsWith("-");
+    const id = `${idPrefix}cell-${row}-${col}`;
     const input = (
       <input
         className={`score-input${negative ? " is-negative" : ""}`}
@@ -228,7 +232,7 @@ const SumTable = ({
         }}
         onFocus={e => e.target.select()}
         inputMode="numeric"
-        id={`${idPrefix}cell-${row}-${col}`}
+        id={id}
         // The box shows only digits, so say the sign.
         aria-label={`${label}, ${names[col]}${negative ? ", minus" : ""}`}
         aria-keyshortcuts={allowsNegative ? "-" : undefined}
@@ -245,26 +249,42 @@ const SumTable = ({
           aria-label={`${label}, ${names[col]}: ${negative ? "minus" : "plus"}. Switch sign`}
           aria-pressed={negative}
           onPointerDown={e => {
-            typingInBox.current =
-              document.activeElement?.id === `${idPrefix}cell-${row}-${col}`;
+            if (e.button !== 0) return;
+            const typing = document.activeElement?.id === id;
+            tabPress.current = { id, typing, flipped: false };
             // Typing in this box: keep focus there, so the keyboard stays up.
             // Otherwise put the keyboard away, as a tap elsewhere would; only
             // a tap inside a box brings it up.
             e.preventDefault();
-            if (!typingInBox.current)
-              (document.activeElement as HTMLElement | null)?.blur();
+            if (!typing) (document.activeElement as HTMLElement | null)?.blur();
           }}
-          onClick={() => {
+          // The sign flips when the finger lifts, not on the click: the
+          // keyboard closing can move the tab out from under a finger, and
+          // a phone then drops the click. A touch stays with the tab, so its
+          // lift still arrives here.
+          onPointerUp={() => {
+            const press = tabPress.current;
+            if (!press || press.id !== id || press.flipped) return;
+            press.flipped = true;
             handleCellChange(flipSign(value), row, col, true);
-            if (!typingInBox.current) return;
             // Some phones move focus anyway: put it back, caret at the end.
-            const box = document.getElementById(
-              `${idPrefix}cell-${row}-${col}`
-            ) as HTMLInputElement | null;
-            if (box && document.activeElement !== box) {
+            const box = document.getElementById(id) as HTMLInputElement | null;
+            if (press.typing && box && document.activeElement !== box) {
               box.focus();
               box.setSelectionRange(box.value.length, box.value.length);
             }
+          }}
+          // A touch that turns into a scroll isn't a press.
+          onPointerCancel={() => {
+            tabPress.current = null;
+          }}
+          // Already flipped by the press; otherwise this is a screen reader
+          // or other click without a pointer.
+          onClick={() => {
+            const press = tabPress.current;
+            tabPress.current = null;
+            if (press?.id === id && press.flipped) return;
+            handleCellChange(flipSign(value), row, col, true);
           }}
         >
           {negative ? "−" : "+"}

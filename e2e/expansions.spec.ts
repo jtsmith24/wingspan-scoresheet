@@ -273,6 +273,49 @@ test.describe("Americas", () => {
     expect(edited.players[0].breakdown.hummingbirds).toBeUndefined();
   });
 
+  test("the sign flips on the press itself, even if the phone drops the click", async ({ page }) => {
+    const sheet = await openApp(page);
+    await sheet.expansions(["Americas"]);
+    const row = (await sheet.rowLabels()).indexOf("hummingbirds");
+    const tab = page.locator(".score-cell").filter({ has: sheet.cell(row, 1) }).locator(".sign-tab");
+    // Typing in another box, as on a phone with the keyboard up.
+    await sheet.cell(0, 0).click();
+    const press = (...types: string[]) =>
+      tab.evaluate((el, ts) => {
+        for (const type of ts)
+          el.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, button: 0, pointerId: 1, isPrimary: true, pointerType: "touch" }));
+      }, types);
+    // Down and up on the tab, but no click: the keyboard closing moved it.
+    await press("pointerdown", "pointerup");
+    await expect(tab).toHaveText("−");
+    expect(await page.evaluate(() => document.activeElement?.tagName)).not.toBe("INPUT");
+    // A touch that turns into a scroll doesn't flip it.
+    await press("pointerdown", "pointercancel");
+    await expect(tab).toHaveText("−");
+    // A whole tap flips it exactly once.
+    await tab.click();
+    await expect(tab).toHaveText("+");
+  });
+
+  test("flipping a sign on an empty sheet doesn't start the game", async ({ page }) => {
+    const sheet = await openApp(page);
+    await sheet.expansions(["Americas"]);
+    const row = (await sheet.rowLabels()).indexOf("hummingbirds");
+    const tab = page.locator(".score-cell").filter({ has: sheet.cell(row, 0) }).locator(".sign-tab");
+    await tab.click();
+    await expect(tab).toHaveText("−");
+    expect(await sheet.totals()).toEqual(["", ""]);
+    await expect(sheet.endButton()).toBeDisabled();
+    await sheet.cell(row, 0).fill("3");
+    expect((await sheet.totals())[0]).toBe("-3");
+    await expect(sheet.endButton()).toBeEnabled();
+    // Deleting the digits leaves just the sign: back to an empty sheet.
+    await sheet.cell(row, 0).fill("");
+    await expect(tab).toHaveText("−");
+    expect(await sheet.totals()).toEqual(["", ""]);
+    await expect(sheet.endButton()).toBeDisabled();
+  });
+
   test("a lone minus counts as blank", async ({ page }) => {
     const sheet = await openApp(page);
     await sheet.expansions(["Americas"]);
