@@ -10,6 +10,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
+    "check": "eslint . && tsc --noEmit && vitest run",
     "test": "vitest run",
     "test:e2e": "playwright test"
   },
