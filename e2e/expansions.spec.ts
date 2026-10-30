@@ -228,10 +228,21 @@ test.describe("Americas", () => {
     expect(await sheet.rowLabels()).not.toContain("hummingbirds");
     expect((await sheet.totals())[0]).toBe("10");
     await expect(note).toHaveText("* No hummingbird track with 6–7 players (Flock). Americas birds still play.");
+    // The asterisk ties the tab and the menu's Americas to the footnote,
+    // without being read out as part of the tab's name.
+    await expect(sheet.expansionsTab()).toContainText("Americas*");
+    await expect(sheet.expansionsTab().locator("button")).toHaveAttribute(
+      "aria-label",
+      "Expansions: Asia · Flock + Americas"
+    );
+    await sheet.expansionsTab().locator("button").click();
+    await expect(sheet.checklist().locator(".mix-option", { hasText: "Americas" })).toContainText("Americas*");
     await sheet.asiaMode("standard");
     await expect(note).toHaveCount(0);
+    await expect(sheet.checklist().locator(".footnote-mark")).toHaveCount(0);
     await page.keyboard.press("Escape");
     row = (await sheet.rowLabels()).indexOf("hummingbirds");
+    await expect(sheet.expansionsTab()).not.toContainText("*");
     await expect(sheet.cell(row, 0)).toHaveValue("4");
     expect((await sheet.totals())[0]).toBe("14");
   });

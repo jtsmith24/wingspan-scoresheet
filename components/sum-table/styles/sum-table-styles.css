@@ -649,6 +649,12 @@ button.past-slip:hover {
   color: var(--pen);
 }
 
+/* The mark tying an expansion's name to the footnote under the sheet. */
+.footnote-mark {
+  margin-left: -0.35rem;
+  opacity: 0.7;
+}
+
 /* A footnote under the sheet about how this setup is played. */
 .sheet-footnote {
   max-width: 30rem;
