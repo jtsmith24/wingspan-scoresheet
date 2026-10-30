@@ -181,8 +181,10 @@ const SumTable = ({
     col: number
   ) => {
     if (e.key === "Enter") {
+      // Names go across: on to the next player, or done after the last.
       e.preventDefault();
-      e.currentTarget.blur();
+      if (col < players.length - 1) focus(`name-${col + 1}`);
+      else e.currentTarget.blur();
     } else if (e.key === "ArrowDown") {
       e.preventDefault();
       focus(`cell-0-${col}`);
@@ -332,7 +334,7 @@ const SumTable = ({
                     maxLength={MAX_NAME_LENGTH}
                     autoComplete="off"
                     autoCapitalize="words"
-                    enterKeyHint="done"
+                    enterKeyHint={col < players.length - 1 ? "next" : "done"}
                     aria-label={`Player ${col + 1} name`}
                   />
                   {onRemovePlayer && (
