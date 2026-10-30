@@ -1,5 +1,1218 @@
-.custom-number-input::-webkit-inner-spin-button,
-.custom-number-input::-webkit-outer-spin-button {
+/* Card stock: paper tone, a faint wash in the edition's colors, and grain */
+.score-sheet {
+  position: relative;
+  width: 100%;
+  max-width: 46rem;
+  padding: 0.75rem;
+  border-radius: 0.6rem;
+  background-color: var(--paper);
+  background-image:
+    radial-gradient(
+      ellipse at 0% 0%,
+      color-mix(in srgb, var(--wash-2) 55%, transparent) 0%,
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse at 100% 100%,
+      color-mix(in srgb, var(--wash-1) 40%, transparent) 0%,
+      transparent 55%
+    );
+  box-shadow:
+    0 1px 2px rgba(60, 45, 30, 0.15),
+    0 12px 32px -8px rgba(60, 45, 30, 0.35);
+  transition: background-image 0.4s;
+}
+
+.score-sheet::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0.35;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .38 0 0 0 0 .3 0 0 0 .5 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+#sum-table {
+  /* Narrowest the sheet gets before it scrolls: fixed columns plus players. */
+  --fixed: 9rem;
+  --col-min: 3rem;
+  position: relative;
+  width: 100%;
+  min-width: calc(var(--fixed) + var(--players, 2) * var(--col-min));
+  border-collapse: collapse;
+  table-layout: fixed;
+  color: var(--ink);
+  border: 1.5px solid var(--ink);
+}
+
+#sum-table.has-add {
+  --fixed: 11.5rem;
+}
+
+#sum-table th,
+#sum-table td {
+  border: 1px solid var(--rule);
+  height: 3.25rem;
+  padding: 0;
+  text-align: center;
+}
+
+/* Header */
+.sheet-title {
+  text-align: center !important;
+  vertical-align: middle;
+  font-size: 1.15rem;
+  letter-spacing: 0.04em;
+  border-bottom: 1.5px solid var(--ink) !important;
+}
+
+.player-cell {
+  border-bottom: 1.5px solid var(--ink) !important;
+}
+
+.player-input {
+  height: 100%;
+  text-align: center;
+  font-family: var(--font-hand);
+  font-size: 1.35rem;
+  text-transform: uppercase;
+  color: var(--pen);
+}
+
+.player-input::placeholder {
+  font-family: var(--font-label);
+  font-size: 1rem;
+  color: var(--ink);
+  opacity: 0.35;
+}
+
+/* Typing a full name: a wider box floats over the header. */
+.player-input.is-editing {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 5;
+  width: 9rem;
+  height: 2.6rem;
+  translate: -50% -50%;
+  padding: 0 0.5rem;
+  border: 1.5px solid var(--ink);
+  border-radius: 0.35rem;
+  background: var(--paper);
+  box-shadow: 0 6px 16px -6px rgba(60, 45, 30, 0.45);
+  text-transform: none;
+}
+
+.player-input.is-editing.edit-from-end {
+  left: auto;
+  right: 0;
+  translate: 0 -50%;
+}
+
+.player-input.is-editing::placeholder {
+  font-family: var(--font-hand);
+  opacity: 0.4;
+}
+
+/* Saved sheets: tap a code to see the full name in the same floating box. */
+.name-peek {
+  width: 100%;
+  height: 100%;
+  font: inherit;
+  color: inherit;
+}
+
+.name-peek.is-open {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 5;
+  width: max-content;
+  min-width: 100%;
+  height: 2.4rem;
+  translate: -50% -50%;
+  padding: 0 0.6rem;
+  border: 1.5px solid var(--ink);
+  border-radius: 0.35rem;
+  background: var(--paper);
+  box-shadow: 0 6px 16px -6px rgba(60, 45, 30, 0.45);
+}
+
+.name-peek.is-open.edit-from-end {
+  left: auto;
+  right: 0;
+  translate: 0 -50%;
+}
+
+/* Rotated group labels, as printed on the pad */
+#sum-table .group-col {
+  width: 1.9rem;
+}
+
+#sum-table .label-col {
+  width: 10.5rem;
+}
+
+#sum-table .group-label {
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  border-right: 1.5px solid var(--ink);
+}
+
+.group-label span {
+  display: inline-block;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+
+tr.group-start:not(:first-child) > * {
+  border-top: 1.5px solid var(--ink) !important;
+}
+
+.row-label {
+  font-weight: normal;
+  font-size: 1.05rem;
+  line-height: 1.05;
+  letter-spacing: 0.02em;
+  text-align: left !important;
+  padding: 0 0.5rem !important;
+}
+
+.row-label > * {
+  vertical-align: middle;
+}
+
+/* Handwritten entries */
+.score-cell {
+  transition: background-color 0.15s;
+}
+
+.score-cell:focus-within,
+.player-cell:focus-within {
+  background-color: color-mix(in srgb, var(--wash-1) 30%, transparent);
+}
+
+.score-input {
+  height: 100%;
+  text-align: center;
+  font-family: var(--font-hand);
+  font-size: 1.6rem;
+  color: var(--pen);
+  caret-color: var(--pen);
+}
+
+.score-input::-webkit-inner-spin-button,
+.score-input::-webkit-outer-spin-button {
   -webkit-appearance: none;
   margin: 0;
+}
+
+/* Total */
+.total-row > * {
+  height: 3.75rem !important;
+  border-top: 1.5px solid var(--ink) !important;
+}
+
+.total-row th {
+  font-size: 1.4rem;
+  letter-spacing: 0.12em;
+  font-weight: normal;
+}
+
+.total-row td {
+  font-family: var(--font-hand);
+  font-size: 1.75rem;
+  color: var(--pen);
+}
+
+/* The leader gets circled, the way players do it on paper */
+.leader {
+  position: relative;
+  display: inline-block;
+  padding: 0 0.35em;
+}
+
+.leader::after {
+  content: "";
+  position: absolute;
+  inset: -0.2em -0.3em;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 60' preserveAspectRatio='none'%3E%3Cpath d='M58 6C30 3 6 14 5 31s22 26 47 25 44-10 43-27S70 3 40 7' fill='none' stroke='%23283350' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E")
+    center / 100% 100% no-repeat;
+  pointer-events: none;
+}
+
+@media (max-width: 640px) {
+  .score-sheet {
+    padding: 0.5rem;
+  }
+  /* Five players fit a 360px phone without scrolling. */
+  #sum-table {
+    --fixed: 7.4rem;
+    --col-min: 2.5rem;
+  }
+  #sum-table.has-add {
+    --fixed: 9.9rem;
+  }
+  #sum-table .label-col {
+    width: 5.9rem;
+  }
+  #sum-table .group-col {
+    width: 1.5rem;
+  }
+  .row-label {
+    font-size: 0.95rem;
+    padding: 0 0.3rem !important;
+  }
+  .sheet-title {
+    font-size: 0.95rem;
+    padding: 0 0.3rem !important;
+  }
+  .score-input {
+    font-size: 1.35rem;
+  }
+  .player-input {
+    font-size: 1.1rem;
+  }
+  .total-row th {
+    font-size: 1.1rem;
+  }
+  .total-row td {
+    font-size: 1.4rem;
+  }
+}
+
+/* Scorepad: tabs, sheet, actions */
+.scorepad {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  max-width: 46rem;
+}
+
+.sheet-scroll {
+  position: relative;
+  overflow-x: auto;
+}
+
+.score-cell {
+  position: relative;
+}
+
+.score-input:disabled {
+  cursor: default;
+}
+
+.score-cell:has(.score-input:disabled) {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent 0 6px,
+    color-mix(in srgb, var(--rule) 18%, transparent) 6px 7px
+  );
+}
+
+/* Points earned in a habitat, pencilled in the corner */
+.nectar-points {
+  position: absolute;
+  top: 0.15rem;
+  right: 0.3rem;
+  font-family: var(--font-hand);
+  font-size: 0.85rem;
+  color: var(--pen);
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.tiebreak-row > * {
+  border-top: 1px dashed var(--ink) !important;
+}
+
+.tiebreak-row th {
+  text-align: left !important;
+}
+
+.tiebreak-row small {
+  display: block;
+  margin-left: 1.75rem;
+  font-size: 0.75rem;
+  opacity: 0.6;
+}
+
+.sheet-result {
+  position: relative;
+  margin: 0.6rem 0.4rem 0.1rem;
+  font-family: var(--font-hand);
+  font-size: 1.25rem;
+  color: var(--pen);
+  text-align: center;
+}
+
+.sheet-pending {
+  font-size: 1.05rem;
+  opacity: 0.6;
+}
+
+.sheet-result-detail {
+  display: block;
+  font-size: 1rem;
+  opacity: 0.75;
+}
+
+.sheet-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.ink-button {
+  padding: 0.3rem 1.2rem;
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  font-size: 1.1rem;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--paper) 70%, transparent);
+  transition:
+    background-color 0.15s,
+    opacity 0.15s;
+}
+
+/* A faint wash of ink, so it shows on paper-coloured cards too. */
+.ink-button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--ink) 10%, var(--paper));
+}
+
+.ink-button-primary {
+  color: var(--paper);
+  background: var(--ink);
+}
+
+.ink-button-primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--ink) 85%, var(--paper));
+}
+
+.ink-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.history-link {
+  font-size: 1.05rem;
+}
+
+
+
+/* Past games: torn-off slips in a drawer */
+.past-games {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+}
+
+.past-dim {
+  position: absolute;
+  inset: 0;
+  background: rgba(60, 45, 30, 0.3);
+}
+
+.past-drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(24rem, 100%);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  overflow-y: auto;
+  background: color-mix(in srgb, var(--wash-2) 45%, #e9e1d1);
+  box-shadow: -12px 0 32px -12px rgba(60, 45, 30, 0.45);
+}
+
+/* The drawer keeps its width with a game open: its sheets always use the
+   compact sizes phones get, so five players fit. */
+.past-drawer .past-sheet .label-col {
+  width: 5.9rem !important;
+}
+/* On a phone the drawer is the whole screen: slimmer margins, so a
+   five-player sheet fits a 360px phone as the main sheet does. */
+@media (max-width: 400px) {
+  .past-drawer {
+    padding: 1rem 0.5rem;
+  }
+  .past-slip-full {
+    padding: 0.8rem 0.25rem;
+  }
+}
+/* Editing, the sheet already sits on the slip: no second card around it. */
+.past-drawer .score-sheet {
+  padding: 0;
+  background: none;
+  box-shadow: none;
+}
+.past-drawer .score-sheet::before {
+  display: none;
+}
+.past-drawer #sum-table {
+  --fixed: 7.4rem;
+  --col-min: 2.5rem;
+}
+.past-drawer #sum-table .label-col {
+  width: 5.9rem;
+}
+.past-drawer #sum-table .group-col {
+  width: 1.5rem;
+}
+.past-drawer .row-label {
+  font-size: 0.95rem;
+  padding: 0 0.3rem !important;
+}
+.past-drawer .sheet-title {
+  font-size: 0.95rem;
+  padding: 0 0.3rem !important;
+}
+.past-drawer .score-input {
+  font-size: 1.35rem;
+}
+.past-drawer .player-input {
+  font-size: 1.1rem;
+}
+
+.past-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 1.3rem;
+}
+
+.past-head h2 {
+  font-size: inherit;
+}
+
+.past-close {
+  font-size: 1rem;
+  opacity: 0.6;
+}
+
+.past-muted {
+  opacity: 0.6;
+}
+
+.past-slip {
+  display: block;
+  width: 100%;
+  flex-shrink: 0;
+  padding: 0.8rem 1rem;
+  text-align: left;
+  color: var(--ink);
+  background: var(--paper);
+  border-top: 2px dashed color-mix(in srgb, var(--rule) 60%, transparent);
+  box-shadow: 0 6px 14px -8px rgba(60, 45, 30, 0.45);
+  transition: translate 0.15s;
+}
+
+button.past-slip:hover {
+  translate: -0.25rem 0;
+}
+
+.past-slip header {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 1rem;
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 0.3rem;
+  margin-bottom: 0.5rem;
+}
+
+.past-slip-full {
+  position: relative;
+  padding: 0.8rem;
+  cursor: pointer;
+}
+
+.past-slip header,
+.past-slip-toggle {
+  align-items: baseline;
+}
+
+.past-slip-toggle {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  padding-bottom: 0.3rem;
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+  text-align: left;
+  color: inherit;
+}
+
+.past-head-end {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+.past-chevron {
+  font-size: 0.8em;
+  opacity: 0.6;
+}
+
+.past-scores {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.25rem;
+  text-align: center;
+}
+
+.past-scores > div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.past-scores .hand-caps {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.past-total {
+  font-family: var(--font-hand);
+  font-size: 1.5rem;
+  color: var(--pen);
+}
+
+.past-note,
+.past-sheet th,
+.past-sheet td {
+  height: 2.5rem !important;
+}
+
+.past-sheet .label-col {
+  width: 8.5rem !important;
+}
+
+.past-sheet .row-label {
+  font-size: 0.95rem;
+}
+
+.past-sheet .total-row > * {
+  height: 3rem !important;
+}
+
+.past-name {
+  font-family: var(--font-hand);
+  font-size: 1.2rem;
+  color: var(--pen);
+}
+
+.past-cell {
+  font-family: var(--font-hand);
+  font-size: 1.35rem;
+  color: var(--pen);
+}
+
+.past-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.5rem;
+  font-size: 1rem;
+}
+
+.past-actions button:not(.past-muted) {
+  border-bottom: 1.5px solid var(--ink);
+}
+
+/* A past game being fixed: the live sheet, with its own buttons. */
+.past-slip-full.is-editing {
+  cursor: auto;
+}
+.past-edit-actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 0.8rem;
+}
+
+.past-conflict {
+  margin: 0.8rem 0 0;
+  text-align: center;
+  font-size: 1rem;
+  color: var(--pen);
+}
+
+/* After End game: where the last game went, with a way back. */
+.last-game {
+  margin: 0 0 0.6rem;
+  text-align: center;
+  font-size: 0.95rem;
+  opacity: 0.8;
+}
+.last-game .text-link {
+  margin: 0;
+}
+
+/* In-app confirmations: a paper card instead of the browser's dialog. */
+.app-dialog {
+  width: min(26rem, calc(100vw - 1.5rem));
+  margin: auto;
+  padding: 0;
+  border: none;
+  border-radius: 0.6rem;
+  color: var(--ink);
+  background: transparent;
+  overflow: visible;
+}
+
+.app-dialog::backdrop {
+  background: rgba(60, 45, 30, 0.35);
+}
+
+.app-dialog-card {
+  position: relative;
+  padding: 1.25rem 1rem 1rem;
+  border-radius: inherit;
+  background-color: var(--paper);
+  background-image: radial-gradient(
+    ellipse at 0% 0%,
+    color-mix(in srgb, var(--wash-2) 50%, transparent) 0%,
+    transparent 65%
+  );
+  box-shadow: 0 1px 2px rgba(60, 45, 30, 0.15),
+    0 18px 40px -12px rgba(60, 45, 30, 0.5);
+}
+
+.app-dialog-message {
+  font-family: var(--font-hand);
+  font-size: 1.3rem;
+  line-height: 1.3;
+  color: var(--pen);
+}
+
+/* All the choices sit on one line, scaling down a little on small phones. */
+.app-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 1.1rem;
+}
+
+/* Thumb-sized: at least 44px tall, as Apple and Google recommend. */
+.app-dialog-actions .ink-button {
+  flex-shrink: 0;
+  min-height: 2.75rem;
+  white-space: nowrap;
+  font-size: clamp(0.9rem, 3.9vw, 1.1rem);
+  padding: 0.25rem 1.1rem;
+}
+
+/* A pair of answers: equal halves, Cancel as a quiet link beneath. */
+.app-dialog-actions.is-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.app-dialog-actions.is-pair .ink-button {
+  padding: 0.25rem 0.5rem;
+}
+
+.app-dialog-under {
+  display: flex;
+  justify-content: center;
+  margin-top: 0.4rem;
+}
+
+.app-dialog-under .text-link {
+  min-height: 2.75rem;
+  margin: 0;
+  border-bottom: none;
+  font-size: 1.05rem;
+  opacity: 0.7;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.app-dialog-step {
+  margin-bottom: 0.3rem;
+  font-size: 0.9rem;
+  opacity: 0.55;
+}
+
+.app-dialog .ink-button:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.storage-note {
+  max-width: 28rem;
+  font-family: var(--font-label);
+  text-align: center;
+  opacity: 0.75;
+}
+
+/* Expansion tabs */
+.sheet-with-tabs {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.text-link {
+  margin-left: 0.5rem;
+  border-bottom: 1.5px solid var(--ink);
+  font-family: var(--font-label);
+  color: var(--ink);
+}
+
+.expansion-tabs {
+  display: flex;
+  align-self: stretch;
+  align-items: flex-end;
+  gap: 0.3rem;
+  height: 2.4rem;
+  padding-left: 1rem;
+  margin-bottom: -0.7rem;
+}
+
+.tab-short {
+  display: none;
+}
+
+/* The names in play don't fit: use the short forms. */
+.expansion-tabs[data-tight] .tab-long {
+  display: none;
+}
+.expansion-tabs[data-tight] .tab-short {
+  display: inline;
+}
+
+.tab-caret {
+  margin-left: 0.3rem;
+  font-size: 0.75em;
+}
+
+.expansion-tab {
+  --tone: #ccc;
+  display: flex;
+  flex-shrink: 0;
+  align-items: baseline;
+  gap: 0.35rem;
+  padding: 0.25rem 0.8rem 0.9rem;
+  border-radius: 0.45rem 0.45rem 0 0;
+  font-size: 0.95rem;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--tone) 35%, var(--paper));
+  opacity: 0.75;
+  transform: translateY(0.45rem);
+  transition:
+    transform 0.15s,
+    background-color 0.15s,
+    opacity 0.15s;
+}
+
+.expansion-tab:hover {
+  opacity: 1;
+}
+
+.expansion-tab.is-on {
+  background: var(--tone);
+  opacity: 1;
+  transform: none;
+  box-shadow: 0 -2px 6px -2px rgba(60, 45, 30, 0.3);
+}
+
+.tab-european {
+  --tone: var(--european-1);
+}
+.tab-oceania {
+  --tone: var(--oceania-1);
+}
+.tab-asia {
+  --tone: var(--asia-1);
+}
+.tab-americas {
+  --tone: var(--americas-1);
+}
+
+.tab-base {
+  --tone: #a9cfe6;
+}
+.tab-mix {
+  --tone: #d8cbb8;
+}
+.expansion-tab.tab-blend.is-on {
+  background: var(--blend);
+}
+
+.expansion-tab {
+  position: relative;
+}
+
+/* Asia mode dropdown */
+.mode-select {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.mode-select select {
+  appearance: none;
+  padding: 0 1rem 0 0.4rem;
+  border: none;
+  border-bottom: 1.5px solid currentColor;
+  background: transparent;
+  font: inherit;
+  font-size: 0.9em;
+  color: inherit;
+  cursor: pointer;
+}
+
+/* iPhones zoom the page when a select under 16px is focused. */
+@media (pointer: coarse) {
+  .mode-select select {
+    font-size: 16px;
+  }
+}
+
+.mode-select::after {
+  content: "▾";
+  position: absolute;
+  right: 0.1rem;
+  font-size: 0.75em;
+  pointer-events: none;
+}
+
+.expansion-tabs-wrap {
+  position: relative;
+  align-self: stretch;
+}
+
+.mix-popover {
+  position: absolute;
+  top: 2.4rem;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  width: max-content;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--rule);
+  border-radius: 0.6rem;
+  background: var(--paper);
+  box-shadow: 0 14px 30px -10px rgba(60, 45, 30, 0.5);
+}
+
+.mix-hint {
+  font-size: 0.9rem;
+  opacity: 0.65;
+}
+
+.mix-option {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 1.05rem;
+  cursor: pointer;
+}
+
+.mix-option input {
+  width: auto;
+  accent-color: var(--ink);
+}
+
+.mix-option input:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.mix-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.mix-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 0.2rem;
+  font-size: 1rem;
+}
+.mix-done {
+  margin-left: auto;
+}
+
+.mix-swatch {
+  width: 0.8rem;
+  height: 0.8rem;
+  border-radius: 50%;
+  background: var(--tone);
+}
+
+#sum-table .add-col {
+  width: 5.25rem;
+}
+
+#sum-table .add-cell {
+  border-style: dashed;
+}
+
+.add-player {
+  width: 100%;
+  height: 100%;
+  font-size: 1rem;
+  color: var(--ink);
+  opacity: 0.55;
+}
+
+.add-player:hover {
+  opacity: 1;
+}
+
+.player-cell {
+  position: relative;
+}
+
+.remove-player {
+  position: absolute;
+  top: 0.1rem;
+  right: 0.3rem;
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--ink);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.player-cell:hover .remove-player,
+.player-cell:focus-within .remove-player {
+  opacity: 0.6;
+}
+
+@media (hover: none) {
+  .remove-player {
+    opacity: 0.35;
+  }
+}
+
+@media (max-width: 640px) {
+  .expansion-tabs {
+    gap: 0.2rem;
+    padding-left: 0.5rem;
+  }
+  .expansion-tab {
+    padding: 0.25rem 0.5rem 0.9rem;
+    font-size: 0.85rem;
+  }
+  #sum-table .add-col {
+    width: 2.5rem;
+  }
+  .add-player-label {
+    display: none;
+  }
+  .mix-popover {
+    left: auto !important;
+    right: 0;
+  }
+  .past-sheet .label-col {
+    width: 5.9rem !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .expansion-tabs {
+    gap: 0.12rem;
+    padding-left: 0.25rem;
+  }
+  .expansion-tab {
+    padding: 0.25rem 0.35rem 0.9rem;
+    font-size: 0.8rem;
+  }
+}
+
+/* Anything that does something when clicked gets the pointing hand. */
+button:not(:disabled),
+select:not(:disabled),
+.mix-option {
+  cursor: pointer;
+}
+
+/* Hover cues, only where there's a mouse: on touch screens a hover sticks
+   after a tap. Quiet controls turn from ink to pen; faded ones brighten. */
+.text-link,
+.past-actions button,
+.past-close,
+.past-slip-toggle,
+.name-peek,
+.mix-option,
+.mode-select select {
+  transition:
+    color 0.15s,
+    border-color 0.15s,
+    opacity 0.15s;
+}
+
+@media (hover: hover) {
+  .text-link:hover,
+  .past-actions button:hover,
+  .past-slip-toggle:hover,
+  .mix-option:hover,
+  .mode-select select:hover {
+    color: var(--pen);
+    border-color: var(--pen);
+  }
+
+  .past-close:hover,
+  button.past-muted:hover,
+  .app-dialog-under .text-link:hover {
+    opacity: 1;
+  }
+
+  .name-peek:hover {
+    text-decoration: underline dotted;
+    text-underline-offset: 0.2em;
+  }
+
+  .player-cell .remove-player:hover {
+    opacity: 1;
+  }
+
+  .expansion-tab.is-on:hover {
+    box-shadow: 0 -3px 9px -2px rgba(60, 45, 30, 0.4);
+  }
+
+  .score-cell:hover:not(:has(:disabled)):not(:focus-within),
+  .player-cell:hover:not(:focus-within) {
+    background-color: color-mix(in srgb, var(--wash-1) 15%, transparent);
+  }
+}
+
+/* Saved: a stamp settles over the sheet and fades, while an ended game's
+   scores lift off underneath it. */
+.saved-stamp {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 2;
+  padding: 0.2rem 1.4rem;
+  translate: -50% -50%;
+  font-size: 2.2rem;
+  letter-spacing: 0.08em;
+  color: var(--pen);
+  border: 3px solid var(--pen);
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--paper) 55%, transparent);
+  pointer-events: none;
+  animation: saved-stamp 0.9s ease-out both;
+}
+@keyframes saved-stamp {
+  0% {
+    opacity: 0;
+    scale: 1.08;
+    rotate: -8deg;
+  }
+  30%,
+  55% {
+    opacity: 0.7;
+    scale: 1;
+    rotate: -8deg;
+  }
+  100% {
+    opacity: 0;
+    scale: 1;
+    rotate: -8deg;
+  }
+}
+.is-ending .score-input,
+.is-ending .nectar-points {
+  color: transparent;
+  transition: color 0.3s ease-in 0.2s;
+}
+.is-ending .total-row td > *,
+.is-ending .sheet-result {
+  opacity: 0;
+  transition: opacity 0.3s ease-in 0.2s;
+}
+.just-ended {
+  animation: just-ended 0.35s ease-out both;
+}
+@keyframes just-ended {
+  from {
+    opacity: 0;
+    translate: 0 0.3rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .saved-stamp {
+    display: none;
+  }
+  .just-ended {
+    animation: none;
+  }
+}
+
+/* Hummingbirds: a sign tab down the box's left edge, solid red for minus. */
+.signed-score {
+  display: flex;
+  height: 100%;
+}
+.signed-score .score-input {
+  min-width: 0;
+  padding-right: 1.1rem;
+}
+.sign-tab {
+  flex-shrink: 0;
+  width: 1.1rem;
+  font-family: var(--font-label);
+  font-size: 1rem;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--rule) 14%, transparent);
+  border-right: 1px dashed color-mix(in srgb, var(--rule) 60%, transparent);
+  transition: background-color 0.15s, color 0.15s;
+}
+.sign-tab.is-negative {
+  color: #fff;
+  background: #9b3b32;
+  border-right-color: #9b3b32;
+}
+.score-input.is-negative {
+  color: #9b3b32;
+}
+/* Phone columns, and every Past games sheet, can be 2.5rem wide: a slimmer
+   tab leaves room for three digits. */
+@media (max-width: 640px) {
+  .sign-tab {
+    width: 0.75rem;
+    font-size: 0.85rem;
+  }
+  .signed-score .score-input {
+    padding-right: 0;
+    font-size: 1.15rem;
+  }
+}
+.past-drawer .sign-tab {
+  width: 0.75rem;
+  font-size: 0.85rem;
+}
+.past-drawer .signed-score .score-input {
+  padding-right: 0;
+  font-size: 1.15rem;
+}
+@media (hover: hover) {
+  .sign-tab:hover {
+    background: color-mix(in srgb, var(--rule) 30%, transparent);
+  }
+  .sign-tab.is-negative:hover {
+    background: #86302a;
+  }
 }

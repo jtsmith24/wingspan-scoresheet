@@ -1,26 +1,88 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+/* Washes follow each box's cover art; set via data-edition on <html>.
+   A mix of expansions points the washes at each one's colours instead
+   (lib/theme applyPalette). */
+:root {
+  --european-1: #a49ad3;
+  --european-2: #cdbfe6;
+  --european-3: #e3d9ef;
+  --oceania-1: #f0cf72;
+  --oceania-2: #f4e2a6;
+  --oceania-3: #e8c9a0;
+  --asia-1: #eaa7b8;
+  --asia-2: #f4d0d6;
+  --asia-3: #c9dfc6;
+  --americas-1: #97c79a;
+  --americas-2: #cfe3b8;
+  --americas-3: #f2d89b;
+
+  --wash-1: #a9cfe6;
+  --wash-2: #c3bce0;
+  --wash-3: #d9e8c4;
+  --wash-4: transparent;
+  --paper: #f5f0e5;
+  --ink: #4a3d31;
+  --rule: #9a8a78;
+  --pen: #283350;
+}
+:root[data-edition="european"] {
+  --wash-1: var(--european-1);
+  --wash-2: var(--european-2);
+  --wash-3: var(--european-3);
+}
+:root[data-edition="oceania"] {
+  --wash-1: var(--oceania-1);
+  --wash-2: var(--oceania-2);
+  --wash-3: var(--oceania-3);
+}
+:root[data-edition="asia"] {
+  --wash-1: var(--asia-1);
+  --wash-2: var(--asia-2);
+  --wash-3: var(--asia-3);
+}
+:root[data-edition="americas"] {
+  --wash-1: var(--americas-1);
+  --wash-2: var(--americas-2);
+  --wash-3: var(--americas-3);
+}
 
 @layer base {
+  body {
+    @apply min-h-screen;
+    font-family: var(--font-display);
+    color: var(--ink);
+    background-color: var(--paper);
+    background-image: radial-gradient(
+        ellipse at 15% 10%,
+        var(--wash-1) 0%,
+        transparent 55%
+      ),
+      radial-gradient(ellipse at 90% 30%, var(--wash-2) 0%, transparent 50%),
+      radial-gradient(ellipse at 40% 100%, var(--wash-3) 0%, transparent 60%),
+      radial-gradient(ellipse at 95% 90%, var(--wash-4) 0%, transparent 50%);
+    background-attachment: fixed;
+    transition: background-color 0.4s;
+  }
+
   main {
-    @apply h-screen flex flex-col justify-center bg-slate-800;
+    @apply min-h-screen flex flex-col items-center justify-center gap-6 px-2 py-8 sm:px-8;
   }
 
   input {
-    @apply w-full placeholder:opacity-50 placeholder:capitalize placeholder:text-xs 
-    placeholder:text-black bg-transparent 
-    focus:placeholder:invisible focus:outline-none;
+    @apply w-full bg-transparent focus:outline-none;
+  }
+}
+
+@layer components {
+  .wordmark {
+    font-family: var(--font-display);
+    font-weight: 300;
+    letter-spacing: 0.35em;
+    margin-right: -0.35em;
   }
 
-  tr {
-    @apply divide-x-2 divide-slate-500 border-t-2 border-slate-500;
-  }
-
-  th,
-  td,
-  .empty-cell,
-  .row-head {
-    @apply h-20 bg-amber-300 bg-opacity-95 text-black;
+  .hand-caps {
+    font-family: var(--font-label);
   }
 }

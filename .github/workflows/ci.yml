@@ -1,0 +1,105 @@
+# CI: the clean-machine gate before anything reaches master, which Vercel
+# deploys to the live site. Both test jobs are required checks on master
+# (branch protection), so a pull request can't merge while either is red.
+#
+# Run economy, after Hymnal's: pull requests and pushes to master only (a
+# branch with a pull request open would otherwise run twice per push), and
+# draft pull requests don't run at all. Marking one ready for review fires
+# the run that counts.
+name: CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [master]
+
+# Read-only for everything; only the notify job raises itself to filing issues.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Lint, typecheck, unit tests
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      # Known vulnerabilities in what ships (dev tools excluded). A new
+      # advisory can turn this red with no code change; the fix is an upgrade.
+      - run: npm audit --omit=dev --audit-level=high
+
+  e2e:
+    name: E2E
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      # The tests run in the Google Chrome that ships on GitHub's Ubuntu images.
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-traces
+          path: test-results/
+          retention-days: 7
+
+  # A red run on master means the live site's branch is broken: keep one open
+  # issue saying so, with repeat failures added as comments. Pull request runs
+  # don't alert (their red shows on the pull request), and a run cancelled by
+  # a newer push never alerts.
+  notify:
+    name: File an issue when master fails
+    # Only the jobs listed here are watched: add any new job.
+    needs: [checks, e2e]
+    if: always() && !cancelled() && github.event_name == 'push' && contains(needs.*.result, 'failure')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+    steps:
+      - name: Create or update the ci-alert issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SHA: ${{ github.sha }}
+        run: |
+          title="CI is failing on master"
+          body=$(printf '%s\n' \
+            "**Run:** $RUN_URL" \
+            "**Commit:** $SHA" \
+            "" \
+            "A push to master failed CI, and master is what the live site deploys. Fix forward or revert, then close this issue once a run on master is green." \
+            "" \
+            "_Filed automatically by the CI workflow._")
+          gh label create ci-alert --repo "$REPO" --color B60205 \
+            --description "Automated alert from a failed workflow run" --force || true
+          existing=$(TITLE="$title" gh issue list --repo "$REPO" --state open \
+            --label ci-alert --limit 100 --json number,title \
+            --jq 'map(select(.title == env.TITLE)) | .[0].number // empty' || true)
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$REPO" --body "$body"
+          else
+            # An unknown label would fail the create and lose the alert.
+            gh issue create --repo "$REPO" --title "$title" --label ci-alert --body "$body" \
+              || gh issue create --repo "$REPO" --title "$title" --body "$body"
+          fi
