@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { AsiaMode, GameConfig } from "@/lib/rules";
+import { AsiaMode, GameConfig, hummingbirdsInPlay } from "@/lib/rules";
 import { Edition } from "@/lib/theme";
 
 export type Expansion = Exclude<Edition, "base">;
@@ -71,11 +71,20 @@ const AsiaModeSelect = ({
   </span>
 );
 
-/** "European + Oceania"; Asia names its mode unless it's Standard. */
-function expansionNames(config: GameConfig, short: boolean) {
+/** Americas in Flock: marked to match the footnote under the sheet. */
+const americasMarked = (config: GameConfig) =>
+  config.americas && !hummingbirdsInPlay(config);
+
+/**
+ * "European + Oceania"; Asia names its mode unless it's Standard. With
+ * `marks`, Americas carries the footnote's asterisk when it applies.
+ */
+function expansionNames(config: GameConfig, short: boolean, marks = false) {
   return EXPANSIONS.filter(e => isOn(config, e.id))
     .map(e => {
       const name = short ? e.short : e.label;
+      if (e.id === "americas" && marks && americasMarked(config))
+        return `${name}*`;
       return e.id === "asia" && config.asia !== "standard"
         ? `${name} · ${ASIA_MODES.find(m => m.id === config.asia)?.label}`
         : name;
@@ -173,9 +182,11 @@ export const ExpansionTabs = ({
           >
             {any ? (
               <>
-                <span className="tab-long">{names}</span>
-                <span className="tab-short">
-                  {expansionNames(config, true)}
+                <span className="tab-long" aria-hidden="true">
+                  {expansionNames(config, false, true)}
+                </span>
+                <span className="tab-short" aria-hidden="true">
+                  {expansionNames(config, true, true)}
                 </span>
               </>
             ) : (
@@ -200,6 +211,11 @@ export const ExpansionTabs = ({
                 />
                 <span className={`mix-swatch tab-${e.id}`} />
                 {e.label}
+                {e.id === "americas" && americasMarked(config) && (
+                  <span className="footnote-mark" aria-hidden="true">
+                    *
+                  </span>
+                )}
               </label>
               {e.id === "asia" && isOn(config, "asia") && (
                 <AsiaModeSelect mode={config.asia} onChange={onAsiaMode} />

@@ -6,6 +6,7 @@ import {
   isValidScoreInput,
   joinNames,
   parseScore,
+  playerHasData,
   scoreGame,
   scoreNectar,
   scoreNectarHabitat,
@@ -251,5 +252,25 @@ describe("who can win", () => {
       sheet("", {}),
     ]);
     expect(outcome.decision).toBe("solo");
+  });
+});
+
+describe("what counts as a score", () => {
+  const americas = { ...DEFAULT_CONFIG, americas: true };
+  const only = (hummingbirds: string) => ({
+    id: "p",
+    name: "",
+    scores: { hummingbirds },
+    nectarSpent: {},
+    unusedFood: "",
+  });
+
+  it("a sign chosen before any digits isn't a score", () => {
+    expect(playerHasData(only("-"), americas)).toBe(false);
+    expect(playerHasData(only(""), americas)).toBe(false);
+  });
+
+  it("any number is, zero and negative zero included", () => {
+    for (const v of ["3", "-3", "0", "-0"]) expect(playerHasData(only(v), americas)).toBe(true);
   });
 });
