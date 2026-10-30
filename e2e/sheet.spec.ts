@@ -76,8 +76,9 @@ test.describe("names", () => {
       await sheet.name(i).pressSequentially(name, { delay: 30 });
       await sheet.name(i).press("Enter");
     }
-    expect(await sheet.codes()).toEqual(["JOR", "SAM", "ALE"]);
+    // After the last player, Enter leaves no box open (checked before codes(), which blurs).
     expect(await page.evaluate(() => document.activeElement?.tagName)).not.toBe("INPUT");
+    expect(await sheet.codes()).toEqual(["JOR", "SAM", "ALE"]);
   });
 
   test("codes for clashing names: first come keeps theirs", async ({ page }) => {
