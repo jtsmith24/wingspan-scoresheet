@@ -26,7 +26,7 @@ export const viewport: Viewport = {
 
 const title = "Wingspan Score Sheet";
 const description =
-  "A fan-made score sheet for Wingspan: every expansion, automatic totals and tie-breaks, past games and undo. Unofficial; not affiliated with Stonemaier Games.";
+  "A fan-made score sheet for Wingspan: every expansion, automatic totals and tie-breaks, and game saves. Unofficial; not affiliated with Stonemaier Games.";
 
 // Link previews (LinkedIn, messaging apps, X). The image comes from
 // app/opengraph-image.png and app/twitter-image.png.
