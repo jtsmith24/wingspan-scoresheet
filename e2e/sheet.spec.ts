@@ -27,6 +27,30 @@ test.describe("a fresh sheet", () => {
 });
 
 test.describe("names", () => {
+  test("typing straight after tapping a name box keeps every letter", async ({ page }) => {
+    const sheet = await openApp(page);
+    await sheet.addPlayer().click();
+    for (const [i, name] of ["Jordan", "Sam", "Alex"].entries()) {
+      // The first letter lands in the same moment the box takes focus, before
+      // the box has finished swapping its code for the full name.
+      await sheet.name(i).evaluate((el: HTMLInputElement, first) => {
+        el.focus();
+        document.execCommand("insertText", false, first);
+      }, name[0]);
+      await page.waitForTimeout(50);
+      await sheet.name(i).pressSequentially(name.slice(1), { delay: 60 });
+      await sheet.name(i).press("Enter");
+    }
+    expect(await sheet.codes()).toEqual(["JOR", "SAM", "ALE"]);
+    // A name already there is still selected, so typing replaces it.
+    await sheet.name(1).click();
+    await expect(sheet.name(1)).toHaveValue("Sam");
+    await page.waitForTimeout(100);
+    await sheet.name(1).pressSequentially("Blake", { delay: 60 });
+    await sheet.name(1).press("Enter");
+    expect(await sheet.codes()).toEqual(["JOR", "BLA", "ALE"]);
+  });
+
   test("a full name shows while typing and a code after", async ({ page }) => {
     const sheet = await openApp(page);
     await sheet.name(0).click();

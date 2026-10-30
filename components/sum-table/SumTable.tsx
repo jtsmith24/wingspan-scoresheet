@@ -328,9 +328,14 @@ const SumTable = ({
                     onFocus={e => {
                       setEditing(col);
                       nameAtFocus.current = player.name;
-                      // Select the full name once it has replaced the code.
+                      // Select the full name once it has replaced the code,
+                      // unless typing has already begun: selecting then would
+                      // let the next letter replace the first.
                       const input = e.target;
-                      requestAnimationFrame(() => input.select());
+                      const name = player.name;
+                      requestAnimationFrame(() => {
+                        if (input.value === name) input.select();
+                      });
                     }}
                     onBlur={() => finishName(col)}
                     onKeyDown={e => handleNameKeyDown(e, col)}
