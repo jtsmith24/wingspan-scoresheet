@@ -1,69 +1,63 @@
-# Wingspan Scoresheet
+# Wingspan Score Sheet
 
-## Intro/Overview
+A fan-made score sheet for the board game Wingspan. Players type their scores into a sheet that looks like the paper pad, and it adds them up, follows the expansion rules, names the winner and keeps past games.
 
-Wingspan Scoresheet is a digital version of the multiplayer score sheet that comes with the boardgame Wingspan. This app aims to simplify the scoring process at the end of the game by automatically summing all categories for users, thus saving time and reducing the likelihood of human errors. It features user-friendly keyboard navigation, mimicking Excel for ease of use and efficiency.
+**[Open the app](https://wingspanscoresheet.vercel.app/)**. It works in any browser, on a phone, a tablet or a computer, with nothing to install.
 
-## Features
+> Unofficial and fan-made. Not affiliated with or endorsed by Stonemaier Games, who publish Wingspan. No game art is used.
 
-- Automatic summing of all score categories to reduce human error.
-- Excel-like keyboard navigation for efficient score entry.
-- Expansion support: European, Oceania (nectar majorities), Asia (Duet and Flock) and Americas (hummingbird track), alone or mixed.
-- Tiebreaks on unused food, with shared wins when still tied.
-- Games auto-save in the browser, and finished games can be saved to a history.
-- Games are stored on the device; syncing across devices may come later.
+![The original score sheet beside the redesign, on a phone: the same three-player game, with the redesign naming Sam the winner with 77](docs/images/before-after-phone.jpg)
 
-## Tech Stack
+*The same game in the original version (left) and the redesign (right).*
 
-This project is built using:
+## What it does
 
-- **Frontend:** React and Next.js for the application framework.
-- **Styling:** Tailwind CSS for utility-first styling.
-- **Storage:** the browser's local storage, so no account or server is needed.
+- **Every expansion, in any combination:** European, Oceania, Asia and Americas, with their extra scoring rows. Oceania's nectar is scored by majority in each habitat. Asia's Duet (2 players) and Flock (6–7 players) modes have their own rules. Americas' hummingbird scores can be negative.
+- **The winner, by the rules:** the most points wins. A tie goes to whoever has the most unused food, and if that's tied too, the players share the win.
+- **End game:** saves the game to Past games and starts a fresh sheet with the same players. Undo puts it back.
+- **Past games:** open any game to see the full sheet, fix a score, delete it, or play again with the same players.
+- **Kept between visits:** everything is saved in the browser, so closing the tab loses nothing. With two tabs open, neither can overwrite the other's newer work.
+- **Made for phones:** big touch targets, the number pad for scores, and five players fit on a 360px screen.
+- **Each expansion's colours:** the page takes on the colours of the expansions in play, mixing them when there are several.
 
-## Demo Link
+## Built with
 
-[Live demo](https://wingspanscoresheet.vercel.app/)
+Next.js 16 (App Router), React 19, TypeScript and Tailwind CSS 4. Scores and history live in the browser's local storage, so there's no server or account.
 
-## Install and Setup
-1. Clone the project repo
-    ```
-    git clone https://github.com/jtsmith24/wingspan-scoresheet.git
-    ```
-1. Navigate to the project directory:
-    ```
-    cd wingspan-scoresheet
-    ```
-1. Install the necessary dependencies:
-    ```
-    npm install
-    ```
-1. Start the dev server:
-    ```
-    npm run dev
-    ```
-1. Run the tests:
-    ```
-    npm test
-    ```
+## Quality
 
-## Contributing
+- **Unit tests (Vitest)** cover the scoring rules: expansions, nectar majorities, tie-breaks and saving.
+- **Browser tests (Playwright)** run real games in Chrome at desktop and phone sizes. These include layout checks, two tabs open at once, and storage that's full or blocked.
+- **CI (GitHub Actions)** runs lint, type checks, both test suites and a dependency audit on every pull request. `master` only accepts changes that pass, and Vercel deploys `master` to the live site.
+- **Independent review:** every change was reviewed in rounds by a second AI model (OpenAI's Codex) until no issues remained. The app was designed and built with Claude Code.
 
-Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+## Running it locally
 
-If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement".
-Don't forget to give the project a star! Thanks again!
+You need Node.js 24.
+
+```
+git clone https://github.com/jtsmith24/wingspan-scoresheet.git
+cd wingspan-scoresheet
+npm install
+npm run dev
+```
+
+Then open http://localhost:3000.
+
+| Command | What it does |
+|---|---|
+| `npm run check` | Lint, type check and unit tests |
+| `npm run build` | Production build |
+| `npm run test:e2e` | Browser tests against a production build (uses your installed Chrome) |
+
+## History
+
+The first version, built in December 2023, was a single table of six scoring rows that totalled each player's column. It's tagged [`v1-original`](https://github.com/jtsmith24/wingspan-scoresheet/tree/v1-original). The redesign in October 2026 added the expansions, rules, saving and everything above.
 
 ## License
 
-Distributed under the MIT License. See `LICENSE` for more information.
+MIT. See `LICENSE`.
 
 ## Contact
 
-Jordan Smith - <jordansmithdev@gmail.com>
-
-## Acknowledgments
-
-- [React](https://reactjs.org/)
-- [Next.js](https://nextjs.org/)
-- [Tailwind CSS](https://tailwindcss.com/)
+Jordan Smith: <jordansmithdev@gmail.com>
