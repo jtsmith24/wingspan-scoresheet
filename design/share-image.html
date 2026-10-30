@@ -1,0 +1,84 @@
+<!doctype html>
+<!--
+  Source of the link-preview image (app/opengraph-image.png and
+  app/twitter-image.png, 1200x630). An original design in the app's house
+  style: no Stonemaier art or logos. To change it, edit this page, screenshot
+  it at 1200x630 in Chrome (Playwright works), and replace both PNGs.
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@300;400&family=Patrick+Hand&family=Patrick+Hand+SC&display=block" rel="stylesheet">
+<style>
+  :root {
+    --paper: #f5f0e5; --ink: #4a3d31; --rule: #9a8a78; --pen: #283350;
+    --wash-1: #a9cfe6; --wash-2: #c3bce0; --wash-3: #d9e8c4;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    width: 1200px; height: 630px; overflow: hidden;
+    display: flex; align-items: center; gap: 56px; padding: 0 70px;
+    color: var(--ink); background-color: var(--paper);
+    background-image:
+      radial-gradient(ellipse at 15% 10%, var(--wash-1) 0%, transparent 55%),
+      radial-gradient(ellipse at 90% 30%, var(--wash-2) 0%, transparent 50%),
+      radial-gradient(ellipse at 40% 100%, var(--wash-3) 0%, transparent 60%);
+  }
+  .text { flex: 1; }
+  .wordmark {
+    font-family: "Josefin Sans"; font-weight: 300; font-size: 76px;
+    letter-spacing: 0.3em; margin-right: -0.3em; line-height: 1;
+  }
+  .sub {
+    margin-top: 18px; font-family: "Patrick Hand SC"; font-size: 46px; letter-spacing: 0.04em;
+  }
+  .points { margin-top: 30px; font-family: "Patrick Hand"; font-size: 32px; line-height: 1.45; color: var(--pen); }
+  .fan { margin-top: 30px; font-family: "Patrick Hand SC"; font-size: 28px; opacity: 0.75; }
+  .card {
+    width: 430px; padding: 18px; border-radius: 12px; background: var(--paper);
+    background-image:
+      radial-gradient(ellipse at 0% 0%, color-mix(in srgb, var(--wash-2) 55%, transparent) 0%, transparent 60%),
+      radial-gradient(ellipse at 100% 100%, color-mix(in srgb, var(--wash-1) 40%, transparent) 0%, transparent 55%);
+    box-shadow: 0 2px 4px rgba(60,45,30,.15), 0 24px 48px -12px rgba(60,45,30,.4);
+    rotate: 2deg;
+  }
+  table { width: 100%; border-collapse: collapse; border: 2px solid var(--ink); table-layout: fixed; }
+  th, td { border: 1px solid var(--rule); height: 50px; text-align: center; }
+  th.label { width: 46%; text-align: left; padding-left: 12px; font-family: "Patrick Hand SC"; font-weight: normal; font-size: 22px; }
+  thead th { font-family: "Patrick Hand SC"; font-size: 26px; color: var(--pen); }
+  td { font-family: "Patrick Hand"; font-size: 30px; color: var(--pen); }
+  tr.total th, tr.total td { border-top: 2px solid var(--ink); height: 60px; }
+  tr.total th { font-family: "Josefin Sans"; letter-spacing: .15em; font-size: 22px; font-weight: 400; text-align: center; padding: 0; }
+  .leader { position: relative; display: inline-block; padding: 0 .35em; }
+  .leader::after {
+    content: ""; position: absolute; inset: -0.2em -0.3em;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 60' preserveAspectRatio='none'%3E%3Cpath d='M58 6C30 3 6 14 5 31s22 26 47 25 44-10 43-27S70 3 40 7' fill='none' stroke='%23283350' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
+  }
+  .result { margin-top: 12px; text-align: center; font-family: "Patrick Hand"; font-size: 28px; color: var(--pen); }
+</style>
+</head>
+<body>
+  <div class="text">
+    <div class="wordmark">WINGSPAN</div>
+    <div class="sub">Score sheet</div>
+    <div class="points">Every expansion · totals and tie-breaks<br>Past games, undo, works on any phone</div>
+    <div class="fan">Unofficial, fan-made · not affiliated with Stonemaier Games</div>
+  </div>
+  <div class="card">
+    <table>
+      <thead><tr><th class="label"></th><th>JOR</th><th>SAM</th><th>ALE</th></tr></thead>
+      <tbody>
+        <tr><th class="label">Birds</th><td>38</td><td>31</td><td>27</td></tr>
+        <tr><th class="label">Bonus cards</th><td>7</td><td>10</td><td>4</td></tr>
+        <tr><th class="label">Round goals</th><td>12</td><td>14</td><td>9</td></tr>
+        <tr><th class="label">Eggs</th><td>9</td><td>11</td><td>14</td></tr>
+        <tr><th class="label">Food on cards</th><td>4</td><td>2</td><td>6</td></tr>
+        <tr><th class="label">Tucked cards</th><td>6</td><td>9</td><td>11</td></tr>
+        <tr class="total"><th>TOTAL</th><td>76</td><td><span class="leader">77</span></td><td>71</td></tr>
+      </tbody>
+    </table>
+    <div class="result">Sam won with 77</div>
+  </div>
+</body>
+</html>
