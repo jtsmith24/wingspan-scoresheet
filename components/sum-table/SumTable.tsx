@@ -195,12 +195,16 @@ const SumTable = ({
   // kept as a leading "-" in the score, even before any digits are typed.
   const flipSign = (value: string) =>
     value.startsWith("-") ? value.slice(1) : `-${value}`;
-  // The sign tab being pressed: which box it belongs to, whether that box was
-  // being typed in (the keyboard should stay up), and whether the press has
-  // flipped the sign yet.
-  const tabPress = useRef<{ id: string; typing: boolean; flipped: boolean }>(
-    null
-  );
+  // The sign tab being pressed: which box it belongs to, by which pointer,
+  // whether that box was being typed in (the keyboard should stay up), and
+  // whether the press has flipped the sign yet.
+  const tabPress = useRef<{
+    id: string;
+    pointerId: number;
+    touch: boolean;
+    typing: boolean;
+    flipped: boolean;
+  }>(null);
 
   const renderInput = (
     value: string,
@@ -251,20 +255,33 @@ const SumTable = ({
           onPointerDown={e => {
             if (e.button !== 0) return;
             const typing = document.activeElement?.id === id;
-            tabPress.current = { id, typing, flipped: false };
+            tabPress.current = {
+              id,
+              pointerId: e.pointerId,
+              touch: e.pointerType !== "mouse",
+              typing,
+              flipped: false,
+            };
             // Typing in this box: keep focus there, so the keyboard stays up.
             // Otherwise put the keyboard away, as a tap elsewhere would; only
             // a tap inside a box brings it up.
             e.preventDefault();
             if (!typing) (document.activeElement as HTMLElement | null)?.blur();
           }}
-          // The sign flips when the finger lifts, not on the click: the
-          // keyboard closing can move the tab out from under a finger, and
-          // a phone then drops the click. A touch stays with the tab, so its
-          // lift still arrives here.
-          onPointerUp={() => {
+          // A finger or pen flips the sign as it lifts, not on the click: the
+          // keyboard closing can move the tab out from under it, and the phone
+          // then drops the click. The touch stays with the tab, so its lift
+          // still arrives here. A mouse uses the click, which nothing moves.
+          onPointerUp={e => {
             const press = tabPress.current;
-            if (!press || press.id !== id || press.flipped) return;
+            if (
+              !press ||
+              press.id !== id ||
+              !press.touch ||
+              press.pointerId !== e.pointerId ||
+              press.flipped
+            )
+              return;
             press.flipped = true;
             handleCellChange(flipSign(value), row, col, true);
             // Some phones move focus anyway: put it back, caret at the end.
@@ -275,15 +292,16 @@ const SumTable = ({
             }
           }}
           // A touch that turns into a scroll isn't a press.
-          onPointerCancel={() => {
-            tabPress.current = null;
+          onPointerCancel={e => {
+            if (tabPress.current?.pointerId === e.pointerId)
+              tabPress.current = null;
           }}
-          // Already flipped by the press; otherwise this is a screen reader
-          // or other click without a pointer.
-          onClick={() => {
+          // The click a finger's press already flipped is skipped. Any other
+          // click flips: a mouse, or a screen reader (which has no pointer).
+          onClick={e => {
             const press = tabPress.current;
             tabPress.current = null;
-            if (press?.id === id && press.flipped) return;
+            if (e.detail > 0 && press?.id === id && press.flipped) return;
             handleCellChange(flipSign(value), row, col, true);
           }}
         >

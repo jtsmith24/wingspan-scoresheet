@@ -280,21 +280,32 @@ test.describe("Americas", () => {
     const tab = page.locator(".score-cell").filter({ has: sheet.cell(row, 1) }).locator(".sign-tab");
     // Typing in another box, as on a phone with the keyboard up.
     await sheet.cell(0, 0).click();
-    const press = (...types: string[]) =>
-      tab.evaluate((el, ts) => {
-        for (const type of ts)
-          el.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, button: 0, pointerId: 1, isPrimary: true, pointerType: "touch" }));
-      }, types);
-    // Down and up on the tab, but no click: the keyboard closing moved it.
-    await press("pointerdown", "pointerup");
+    const press = (pointerType: string, ...types: string[]) =>
+      tab.evaluate(
+        (el, [kind, ts]) => {
+          for (const type of ts as string[])
+            el.dispatchEvent(
+              new PointerEvent(type, { bubbles: true, cancelable: true, button: 0, pointerId: 7, isPrimary: true, pointerType: kind as string })
+            );
+        },
+        [pointerType, types]
+      );
+    // A finger down and up on the tab, but no click: the keyboard closing moved it.
+    await press("touch", "pointerdown", "pointerup");
     await expect(tab).toHaveText("−");
     expect(await page.evaluate(() => document.activeElement?.tagName)).not.toBe("INPUT");
+    // A screen reader's click afterwards still works: nothing left over swallows it.
+    await tab.evaluate(el => (el as HTMLElement).click());
+    await expect(tab).toHaveText("+");
     // A touch that turns into a scroll doesn't flip it.
-    await press("pointerdown", "pointercancel");
-    await expect(tab).toHaveText("−");
+    await press("touch", "pointerdown", "pointercancel");
+    await expect(tab).toHaveText("+");
+    // A mouse flips on its click, not its release.
+    await press("mouse", "pointerdown", "pointerup");
+    await expect(tab).toHaveText("+");
     // A whole tap flips it exactly once.
     await tab.click();
-    await expect(tab).toHaveText("+");
+    await expect(tab).toHaveText("−");
   });
 
   test("flipping a sign on an empty sheet doesn't start the game", async ({ page }) => {
