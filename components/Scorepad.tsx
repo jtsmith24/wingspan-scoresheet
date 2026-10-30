@@ -34,7 +34,12 @@ import {
 } from "@/lib/persistence";
 import { STORAGE_KEYS } from "@/lib/storage";
 import { withCodes } from "@/lib/names";
-import { GameConfig, playerLimits, sameConfig } from "@/lib/rules";
+import {
+  GameConfig,
+  hummingbirdsInPlay,
+  playerLimits,
+  sameConfig,
+} from "@/lib/rules";
 import { displayName, PlayerSheet, scoreGame } from "@/lib/scoring";
 import { applyPalette, paletteFor, PALETTE_KEY } from "@/lib/theme";
 
@@ -336,6 +341,12 @@ const LoadedScorepad = () => {
         {stamp > 0 && <SavedStamp key={stamp} onDone={() => setStamp(0)} />}
       </div>
 
+      {config.americas && !hummingbirdsInPlay(config) && (
+        <p className="sheet-footnote hand-caps">
+          * No hummingbird track with 6–7 players (Flock). Americas birds
+          still play.
+        </p>
+      )}
       {last && (
         <p className={`last-game hand-caps${stamp > 0 ? " just-ended" : ""}`}>
           ✓ Last game:{" "}

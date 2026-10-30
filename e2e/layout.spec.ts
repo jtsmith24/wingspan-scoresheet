@@ -183,3 +183,27 @@ test.describe("pointer and hover", () => {
     await expect.poll(() => link.evaluate(el => getComputedStyle(el).color)).not.toBe(before);
   });
 });
+
+test("link previews: title, description, Open Graph and a 1200x630 image", async ({ page, request }) => {
+  await page.goto("/");
+  await expect(page).toHaveTitle("Wingspan Score Sheet");
+  const meta = (attr: string, key: string) =>
+    page.locator(`meta[${attr}="${key}"]`).getAttribute("content");
+  expect(await meta("name", "description")).toContain("fan-made");
+  expect(await meta("name", "description")).toContain("not affiliated with Stonemaier Games");
+  expect(await meta("property", "og:title")).toBe("Wingspan Score Sheet");
+  expect(await meta("property", "og:url")).toBe("https://wingspanscoresheet.vercel.app");
+  expect(await meta("property", "og:type")).toBe("website");
+  expect(await meta("name", "twitter:card")).toBe("summary_large_image");
+  expect(await meta("property", "og:image:width")).toBe("1200");
+  expect(await meta("property", "og:image:height")).toBe("630");
+  expect(await meta("property", "og:image:alt")).toBeTruthy();
+  // Both images point at the live site, and are served (here, by the local build).
+  for (const url of [await meta("property", "og:image"), await meta("name", "twitter:image")]) {
+    const image = new URL(url!);
+    expect(image.origin).toBe("https://wingspanscoresheet.vercel.app");
+    const response = await request.get(image.pathname + image.search);
+    expect(response.status()).toBe(200);
+    expect(response.headers()["content-type"]).toBe("image/png");
+  }
+});

@@ -105,14 +105,21 @@ const NECTAR_CATEGORY: Category = {
   hint: "Per habitat: most spent nectar scores 5, second most scores 2",
 };
 
-/** Rows of the scoresheet for a given setup, in scorepad order. */
+/**
+ * Rows of the scoresheet for a given setup, in scorepad order. The
+ * hummingbird track isn't used in Flock mode: the Americas FAQ says it
+ * doesn't scale to 6-7 players, though the Americas birds still play.
+ */
 export function categoriesFor(config: GameConfig): Category[] {
   const rows = [...BASE_CATEGORIES];
   if (config.asia === "duet") rows.push(DUET_CATEGORY);
-  if (config.americas) rows.push(HUMMINGBIRD_CATEGORY);
+  if (hummingbirdsInPlay(config)) rows.push(HUMMINGBIRD_CATEGORY);
   if (config.oceania) rows.push(NECTAR_CATEGORY);
   return rows;
 }
+
+export const hummingbirdsInPlay = (config: GameConfig) =>
+  config.americas && config.asia !== "flock";
 
 export interface PlayerLimits {
   min: number;

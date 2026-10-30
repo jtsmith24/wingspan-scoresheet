@@ -24,9 +24,28 @@ export const viewport: Viewport = {
   themeColor: "#f5f0e5",
 };
 
+const title = "Wingspan Score Sheet";
+const description =
+  "A fan-made score sheet for Wingspan: every expansion, automatic totals and tie-breaks, and game saves. Unofficial; not affiliated with Stonemaier Games.";
+
+// Link previews (LinkedIn, messaging apps, X). The image comes from
+// app/opengraph-image.png and app/twitter-image.png.
 export const metadata: Metadata = {
-  title: "Wingspan Scoresheet",
-  description: "An app to help you sum up your Wingspan scores",
+  metadataBase: new URL("https://wingspanscoresheet.vercel.app"),
+  title,
+  description,
+  openGraph: {
+    title,
+    description,
+    url: "/",
+    siteName: title,
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title,
+    description,
+  },
 };
 
 // Sets the saved palette before first paint so returning players don't see
