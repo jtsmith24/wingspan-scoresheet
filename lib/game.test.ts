@@ -53,6 +53,20 @@ describe("scoresheet rows", () => {
     ).toEqual(["hummingbirds", "nectar"]);
   });
 
+  it("drops the hummingbird row in Flock mode, where the track isn't used", () => {
+    const flock = { ...DEFAULT_CONFIG, americas: true, asia: "flock" as const };
+    expect(categoriesFor(flock).map(c => c.id)).not.toContain("hummingbirds");
+    expect(categoriesFor({ ...flock, asia: "standard" }).map(c => c.id)).toContain("hummingbirds");
+    // A hummingbird score typed before switching to Flock counts for nothing.
+    const game = newGame(flock, ["A", "B", "C", "D", "E", "F"]);
+    game.players.forEach(p => fill(p, "5"));
+    game.players[0].scores.hummingbirds = "9";
+    expect(missingScores(game)).toBe(0);
+    const saved = toSavedGame(game);
+    expect(saved.players[0].total).toBe(5);
+    expect(saved.players[0].breakdown.hummingbirds).toBeUndefined();
+  });
+
   it("limits player counts by mode", () => {
     expect(playerLimits(DEFAULT_CONFIG)).toEqual({ min: 1, max: 5 });
     expect(playerLimits({ ...DEFAULT_CONFIG, asia: "duet" })).toEqual({ min: 2, max: 2 });

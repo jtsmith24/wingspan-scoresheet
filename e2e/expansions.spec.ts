@@ -214,6 +214,62 @@ test.describe("Americas", () => {
     expect(game.players[0].breakdown.hummingbirds).toBe(-1);
   });
 
+  test("Flock mode drops the hummingbird row, with a note; Standard brings it back", async ({ page }) => {
+    const sheet = await openApp(page);
+    await sheet.expansions(["Americas", "Asia"]);
+    let row = (await sheet.rowLabels()).indexOf("hummingbirds");
+    await sheet.cell(row, 0).fill("4");
+    await sheet.cell(0, 0).fill("10");
+    expect((await sheet.totals())[0]).toBe("14");
+    const note = sheet.checklist().locator(".mix-note");
+    await sheet.asiaMode("flock");
+    await expect(note).toContainText("No hummingbird track with 6–7 players");
+    const americas = sheet.checklist().locator(".mix-option", { hasText: "Americas" }).locator("input");
+    await expect(americas).toHaveAttribute("aria-describedby", "mix-note-americas");
+    // The note wraps inside the menu, which stays on screen.
+    expect(
+      await sheet.checklist().evaluate(el => {
+        const r = el.getBoundingClientRect();
+        return r.left >= 0 && r.right <= window.innerWidth;
+      })
+    ).toBe(true);
+    await page.keyboard.press("Escape");
+    expect(await sheet.rowLabels()).not.toContain("hummingbirds");
+    expect((await sheet.totals())[0]).toBe("10");
+    await sheet.asiaMode("standard");
+    await expect(note).toHaveCount(0);
+    await page.keyboard.press("Escape");
+    row = (await sheet.rowLabels()).indexOf("hummingbirds");
+    await expect(sheet.cell(row, 0)).toHaveValue("4");
+    expect((await sheet.totals())[0]).toBe("14");
+  });
+
+  test("a Flock game saved with a hidden hummingbird score keeps its total when edited", async ({ page }) => {
+    const sheet = await openApp(page);
+    await sheet.expansions(["Americas"]);
+    const row = (await sheet.rowLabels()).indexOf("hummingbirds");
+    await sheet.cell(row, 0).fill("9");
+    await sheet.expansions(["Americas", "Asia"], { close: false });
+    await sheet.asiaMode("flock");
+    await page.keyboard.press("Escape");
+    for (let c = 0; c < 6; c++) await sheet.fillEvery(c, 10 + c);
+    expect((await sheet.totals())[0]).toBe("60");
+    await sheet.endButton().click();
+    const [saved] = await readStorage(page, KEYS.history);
+    expect(saved.players[0].total).toBe(60);
+    await sheet.pastButton().click();
+    await page.locator("button.past-slip").click();
+    await page.locator(".past-actions").getByRole("button", { name: "Edit" }).click();
+    expect(
+      await page.locator(".past-drawer .row-label").allTextContents()
+    ).not.toContain("Hummingbirds");
+    await page.locator("#past-cell-0-0").fill("11");
+    await page.getByRole("button", { name: "Save changes" }).click();
+    const [edited] = await readStorage(page, KEYS.history);
+    expect(edited.players[0].total).toBe(61);
+    expect(edited.players[0].breakdown.hummingbirds).toBeUndefined();
+  });
+
   test("a lone minus counts as blank", async ({ page }) => {
     const sheet = await openApp(page);
     await sheet.expansions(["Americas"]);
