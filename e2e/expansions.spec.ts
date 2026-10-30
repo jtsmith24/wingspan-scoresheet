@@ -1,4 +1,4 @@
-import { expect, noDialog, openApp, playQuickGame, readStorage, respond, test, KEYS } from "./helpers";
+import { expect, noDialog, openApp, readStorage, respond, test, KEYS } from "./helpers";
 
 const BASE_ROWS = 6;
 
