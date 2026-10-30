@@ -16,7 +16,7 @@ A fan-made score sheet for the board game Wingspan. Players type their scores in
 - **The winner, by the rules:** the most points wins. A tie goes to whoever has the most unused food, and if that's tied too, the players share the win.
 - **End game:** saves the game to Past games and starts a fresh sheet with the same players. Undo puts it back.
 - **Past games:** open any game to see the full sheet, fix a score, delete it, or play again with the same players.
-- **Kept between visits:** everything is saved in the browser, so closing the tab loses nothing. With two tabs open, neither can overwrite the other's newer work.
+- **Kept between visits:** the sheet and past games save automatically in the browser, and the app says so if the browser won't let it save. Two open tabs stay in step, with checks against a stale question or a past-game edit undoing the other tab's changes.
 - **Made for phones:** big touch targets, the number pad for scores, and five players fit on a 360px screen.
 - **Each expansion's colours:** the page takes on the colours of the expansions in play, mixing them when there are several.
 
@@ -28,7 +28,7 @@ Next.js 16 (App Router), React 19, TypeScript and Tailwind CSS 4. Scores and his
 
 - **Unit tests (Vitest)** cover the scoring rules: expansions, nectar majorities, tie-breaks and saving.
 - **Browser tests (Playwright)** run real games in Chrome at desktop and phone sizes. These include layout checks, two tabs open at once, and storage that's full or blocked.
-- **CI (GitHub Actions)** runs lint, type checks, both test suites and a dependency audit on every pull request. `master` only accepts changes that pass, and Vercel deploys `master` to the live site.
+- **CI (GitHub Actions)** runs lint, type checks, both test suites and a dependency audit on every pull request that's ready for review, and on every push to `master`. `master` only accepts changes that pass, and Vercel deploys `master` to the live site.
 - **Independent review:** every change was reviewed in rounds by a second AI model (OpenAI's Codex) until no issues remained. The app was designed and built with Claude Code.
 
 ## Running it locally
@@ -48,7 +48,7 @@ Then open http://localhost:3000.
 |---|---|
 | `npm run check` | Lint, type check and unit tests |
 | `npm run build` | Production build |
-| `npm run test:e2e` | Browser tests against a production build (uses your installed Chrome) |
+| `npm run test:e2e` | Browser tests against the production build; run `npm run build` first. Needs Google Chrome installed. |
 
 ## History
 
