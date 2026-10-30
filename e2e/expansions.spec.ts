@@ -221,21 +221,13 @@ test.describe("Americas", () => {
     await sheet.cell(row, 0).fill("4");
     await sheet.cell(0, 0).fill("10");
     expect((await sheet.totals())[0]).toBe("14");
-    const note = sheet.checklist().locator(".mix-note");
+    const note = page.locator(".sheet-footnote");
+    await expect(note).toHaveCount(0);
     await sheet.asiaMode("flock");
-    await expect(note).toContainText("No hummingbird track with 6–7 players");
-    const americas = sheet.checklist().locator(".mix-option", { hasText: "Americas" }).locator("input");
-    await expect(americas).toHaveAttribute("aria-describedby", "mix-note-americas");
-    // The note wraps inside the menu, which stays on screen.
-    expect(
-      await sheet.checklist().evaluate(el => {
-        const r = el.getBoundingClientRect();
-        return r.left >= 0 && r.right <= window.innerWidth;
-      })
-    ).toBe(true);
     await page.keyboard.press("Escape");
     expect(await sheet.rowLabels()).not.toContain("hummingbirds");
     expect((await sheet.totals())[0]).toBe("10");
+    await expect(note).toHaveText("* No hummingbird track with 6–7 players (Flock). Americas birds still play.");
     await sheet.asiaMode("standard");
     await expect(note).toHaveCount(0);
     await page.keyboard.press("Escape");

@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { AsiaMode, GameConfig, hummingbirdsInPlay } from "@/lib/rules";
+import { AsiaMode, GameConfig } from "@/lib/rules";
 import { Edition } from "@/lib/theme";
 
 export type Expansion = Exclude<Edition, "base">;
@@ -190,37 +190,22 @@ export const ExpansionTabs = ({
       {open && (
         <div ref={popoverRef} className="mix-popover" style={{ left }}>
           <p className="mix-hint">Which expansions are you playing?</p>
-          {EXPANSIONS.map(e => {
-            // Americas in Flock mode: its birds play, its hummingbirds don't.
-            const note =
-              e.id === "americas" &&
-              config.americas &&
-              !hummingbirdsInPlay(config)
-                ? "No hummingbird track with 6–7 players (Flock). Americas birds still play."
-                : null;
-            return (
-              <div key={e.id} className="mix-row">
-                <label className="mix-option">
-                  <input
-                    type="checkbox"
-                    checked={isOn(config, e.id)}
-                    onChange={() => onToggle(e.id)}
-                    aria-describedby={note ? "mix-note-americas" : undefined}
-                  />
-                  <span className={`mix-swatch tab-${e.id}`} />
-                  {e.label}
-                </label>
-                {e.id === "asia" && isOn(config, "asia") && (
-                  <AsiaModeSelect mode={config.asia} onChange={onAsiaMode} />
-                )}
-                {note && (
-                  <p id="mix-note-americas" className="mix-note">
-                    {note}
-                  </p>
-                )}
-              </div>
-            );
-          })}
+          {EXPANSIONS.map(e => (
+            <div key={e.id} className="mix-row">
+              <label className="mix-option">
+                <input
+                  type="checkbox"
+                  checked={isOn(config, e.id)}
+                  onChange={() => onToggle(e.id)}
+                />
+                <span className={`mix-swatch tab-${e.id}`} />
+                {e.label}
+              </label>
+              {e.id === "asia" && isOn(config, "asia") && (
+                <AsiaModeSelect mode={config.asia} onChange={onAsiaMode} />
+              )}
+            </div>
+          ))}
           <div className="mix-footer">
             {EXPANSIONS.some(e => isOn(config, e.id)) && (
               <button type="button" className="text-link" onClick={onBase}>

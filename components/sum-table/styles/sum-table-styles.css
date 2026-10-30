@@ -649,6 +649,17 @@ button.past-slip:hover {
   color: var(--pen);
 }
 
+/* A footnote under the sheet about how this setup is played. */
+.sheet-footnote {
+  max-width: 30rem;
+  margin: -0.4rem 0 0;
+  padding: 0 0.5rem;
+  text-align: center;
+  text-wrap: balance;
+  font-size: 0.9rem;
+  opacity: 0.7;
+}
+
 /* After End game: where the last game went, with a way back. */
 .last-game {
   margin: 0 0 0.6rem;
@@ -937,20 +948,8 @@ button.past-slip:hover {
 
 .mix-row {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   gap: 0.6rem;
-}
-
-/* A line under an expansion about how it plays in this setup. It wraps to
-   the menu's width rather than widening the menu off a phone screen. */
-.mix-note {
-  flex-basis: 100%;
-  contain: inline-size;
-  margin: -0.3rem 0 0 1.6rem;
-  font-size: 0.85rem;
-  line-height: 1.2;
-  opacity: 0.7;
 }
 
 .mix-footer {
