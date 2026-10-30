@@ -175,16 +175,15 @@ const SumTable = ({
       focus(`name-${col}`);
   };
 
-  // Enter closes the name box; Down moves into that player's scores.
+  // Enter moves across the names, then into the first score; Down moves
+  // into that player's scores.
   const handleNameKeyDown = (
     e: React.KeyboardEvent<HTMLInputElement>,
     col: number
   ) => {
     if (e.key === "Enter") {
-      // Names go across: on to the next player, or done after the last.
       e.preventDefault();
-      if (col < players.length - 1) focus(`name-${col + 1}`);
-      else e.currentTarget.blur();
+      focus(col < players.length - 1 ? `name-${col + 1}` : "cell-0-0");
     } else if (e.key === "ArrowDown") {
       e.preventDefault();
       focus(`cell-0-${col}`);
@@ -334,7 +333,7 @@ const SumTable = ({
                     maxLength={MAX_NAME_LENGTH}
                     autoComplete="off"
                     autoCapitalize="words"
-                    enterKeyHint={col < players.length - 1 ? "next" : "done"}
+                    enterKeyHint="next"
                     aria-label={`Player ${col + 1} name`}
                   />
                   {onRemovePlayer && (

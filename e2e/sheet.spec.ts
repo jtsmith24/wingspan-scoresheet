@@ -65,19 +65,17 @@ test.describe("names", () => {
     await expect(sheet.name(0)).toHaveValue("Jordan");
   });
 
-  test("Enter moves on to the next player's name; after the last it's done", async ({ page }) => {
+  test("Enter moves on to the next player's name, then to the first score", async ({ page }) => {
     const sheet = await openApp(page);
     await sheet.addPlayer().click();
-    await expect(sheet.name(0)).toHaveAttribute("enterkeyhint", "next");
-    await expect(sheet.name(2)).toHaveAttribute("enterkeyhint", "done");
+    await expect(sheet.name(2)).toHaveAttribute("enterkeyhint", "next");
     await sheet.name(0).click();
     for (const [i, name] of ["Jordan", "Sam", "Alex"].entries()) {
       await expect(sheet.name(i)).toBeFocused();
       await sheet.name(i).pressSequentially(name, { delay: 30 });
       await sheet.name(i).press("Enter");
     }
-    // After the last player, Enter leaves no box open (checked before codes(), which blurs).
-    expect(await page.evaluate(() => document.activeElement?.tagName)).not.toBe("INPUT");
+    await expect(sheet.cell(0, 0)).toBeFocused();
     expect(await sheet.codes()).toEqual(["JOR", "SAM", "ALE"]);
   });
 
