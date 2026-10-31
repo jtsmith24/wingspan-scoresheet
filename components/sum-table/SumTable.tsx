@@ -151,6 +151,10 @@ const SumTable = ({
     );
   };
 
+  // When an ended game's scores lift off, they go row by row, top to bottom.
+  const liftDelay = (row: number) =>
+    ({ "--lift-delay": `${(row / rows.length) * 0.25}s` }) as React.CSSProperties;
+
   const focus = (id: string) =>
     (document.getElementById(idPrefix + id) as HTMLInputElement | null)?.focus();
 
@@ -366,7 +370,11 @@ const SumTable = ({
               const startsGroup =
                 rowIndex === 0 || rows[rowIndex - 1].group !== row.group;
               return (
-                <tr key={row.key} className={startsGroup ? "group-start" : ""}>
+                <tr
+                  key={row.key}
+                  className={startsGroup ? "group-start" : ""}
+                  style={liftDelay(rowIndex)}
+                >
                   {startsGroup && (
                     <th
                       rowSpan={rows.filter(r => r.group === row.group).length}
@@ -402,7 +410,7 @@ const SumTable = ({
                 </tr>
               );
             })}
-            <tr className="total-row">
+            <tr className="total-row" style={liftDelay(rows.length)}>
               <th colSpan={2} scope="row" className="hand-caps">
                 Total
               </th>
@@ -418,7 +426,7 @@ const SumTable = ({
               {onAddPlayer && <td className="add-cell" />}
             </tr>
             {showTiebreak && (
-              <tr className="tiebreak-row">
+              <tr className="tiebreak-row" style={liftDelay(rows.length)}>
                 <th colSpan={2} scope="row" className="row-label hand-caps">
                   <span>Unused food</span>
                   <small>Tiebreak</small>
@@ -441,20 +449,22 @@ const SumTable = ({
           </tbody>
         </table>
       </div>
-      {outcome.decision !== "none" && !finished && (
-        <p className="sheet-result sheet-pending" aria-live="polite">
-          {missing} {missing === 1 ? "box" : "boxes"} left to fill
-        </p>
-      )}
-      {outcome.decision !== "none" && finished && (
-        <p className="sheet-result" aria-live="polite">
-          {result}
-          {outcome.decision === "needs-food" && (
-            <span> · enter unused food to break the tie</span>
-          )}
-          {detail && <span className="sheet-result-detail">{detail}</span>}
-        </p>
-      )}
+      <div className="sheet-result-wrap">
+        {outcome.decision !== "none" && !finished && (
+          <p className="sheet-result sheet-pending" aria-live="polite">
+            {missing} {missing === 1 ? "box" : "boxes"} left to fill
+          </p>
+        )}
+        {outcome.decision !== "none" && finished && (
+          <p className="sheet-result" aria-live="polite">
+            {result}
+            {outcome.decision === "needs-food" && (
+              <span> · enter unused food to break the tie</span>
+            )}
+            {detail && <span className="sheet-result-detail">{detail}</span>}
+          </p>
+        )}
+      </div>
     </div>
   );
 };

@@ -586,10 +586,13 @@ test.describe("with motion", () => {
     await expect(sheet.lastGame()).toBeVisible();
     await expect(sheet.cell(0, 0)).toHaveValue("");
     await expect(stamp).toHaveCount(0);
-    // Undo still puts the game back.
+    // Undo puts the game back at once, then plays the ending backwards.
     await sheet.undo().click();
     await expect(sheet.cell(0, 0)).not.toHaveValue("");
     expect(await history(page)).toHaveLength(0);
+    await expect(page.locator(".scorepad")).toHaveAttribute("inert");
+    await expect(page.locator(".scorepad")).not.toHaveAttribute("inert");
+    await expect(sheet.lastGame()).toHaveCount(0);
   });
 
   test("the sheet can't be typed on while it clears", async ({ page }) => {
