@@ -1,17 +1,30 @@
 "use client";
 import React, { useRef, useState } from "react";
 import "./styles/sum-table-styles.css";
-import { CurrentGame, missingScores, playerHasData } from "@/lib/game";
+import {
+  automaOf,
+  CurrentGame,
+  missingScores,
+  playerHasData,
+} from "@/lib/game";
 import { Move, nextCell } from "@/lib/gridNavigation";
 import { codeFor, MAX_NAME_LENGTH, withCodes } from "@/lib/names";
 import {
+  automaTokensInPlay,
   categoriesFor,
   GROUP_LABELS,
   HABITAT_LABELS,
   HABITATS,
+  scoredBy,
+  tokensPerEgg,
   usesFriendlyNectarTies,
 } from "@/lib/rules";
 import {
+  AUTOMA_NAME,
+  AutomaInput,
+  automaHasData,
+  AutomaSheet,
+  automaTiebreak,
   describeTiebreak,
   displayName,
   isValidScoreInput,
@@ -22,6 +35,12 @@ import {
   summarize,
 } from "@/lib/scoring";
 
+/** One box's value in a column, and how typing changes it. */
+interface Field<T> {
+  value: (sheet: T) => string;
+  update: (sheet: T, value: string) => T;
+}
+
 /** One row of inputs on the sheet: a scoring category or a nectar habitat. */
 interface InputRow {
   key: string;
@@ -29,11 +48,18 @@ interface InputRow {
   hint: string;
   group: string;
   allowsNegative?: boolean;
-  value: (p: PlayerSheet) => string;
-  update: (p: PlayerSheet, value: string) => PlayerSheet;
+  /** The players' box, unless only the Automa has one (its tokens). */
+  player?: Field<PlayerSheet>;
+  /** The Automa's box, if it scores this row. */
+  automa?: Field<AutomaSheet>;
   /** Nectar points earned in this habitat, shown beside the count. */
   points?: number[];
 }
+
+const scoreField = (key: AutomaInput): Field<AutomaSheet> => ({
+  value: a => a.scores[key] ?? "",
+  update: (a, v) => ({ ...a, scores: { ...a.scores, [key]: v } }),
+});
 
 const KEY_MOVES: Record<string, Move> = {
   ArrowUp: "up",
@@ -46,6 +72,7 @@ export const sheetTitle = ({
   config,
   players,
 }: Pick<CurrentGame, "config"> & { players: unknown[] }) => {
+  if (config.automa) return config.asia === "duet" ? "Duet · Automa" : "Automa";
   if (config.asia === "duet") return "Duet";
   if (config.asia === "flock") return "Flock";
   return players.length === 1 ? "Solo" : "Multiplayer";
@@ -54,12 +81,17 @@ export const sheetTitle = ({
 const SumTable = ({
   game,
   onPlayersChange,
+  onAutomaChange,
   onAddPlayer,
   onRemovePlayer,
+  title,
   idPrefix = "",
 }: {
-  game: Pick<CurrentGame, "config" | "players">;
+  game: Pick<CurrentGame, "config" | "players" | "automa">;
   onPlayersChange: (players: PlayerSheet[]) => void;
+  onAutomaChange?: (automa: AutomaSheet) => void;
+  /** In place of the mode named in the corner: the menu to change it. */
+  title?: React.ReactNode;
   /** When set, the sheet gets a "+ Player" column. */
   onAddPlayer?: () => void;
   /** When set, each name gets a remove button. */
@@ -68,8 +100,13 @@ const SumTable = ({
   idPrefix?: string;
 }) => {
   const { config, players } = game;
-  const { totals, outcome } = scoreGame(config, players);
-  const names = players.map(displayName);
+  // Against the Automa, its column comes after the player's.
+  const automa = automaOf(game);
+  const automaCol = players.length;
+  const cols = players.length + (automa ? 1 : 0);
+  const { totals, outcome } = scoreGame(config, players, automa);
+  const names = [...players.map(displayName), AUTOMA_NAME];
+  const columnName = (col: number) => (col === automaCol ? "Automa" : names[col]);
   const codes = withCodes(players);
   // The name being typed shows in full; every other header shows its code.
   const [editing, setEditing] = useState<number | null>(null);
@@ -98,8 +135,16 @@ const SumTable = ({
       hint: c.hint,
       group: GROUP_LABELS[c.group],
       allowsNegative: c.allowsNegative,
-      value: p => p.scores[c.id] ?? "",
-      update: (p, v) => ({ ...p, scores: { ...p.scores, [c.id]: v } }),
+      player: scoredBy(c.id, "player")
+        ? {
+            value: p => p.scores[c.id] ?? "",
+            update: (p, v) => ({ ...p, scores: { ...p.scores, [c.id]: v } }),
+          }
+        : undefined,
+      // Its birds row is face-up points here; the face-down count is extra.
+      automa: scoredBy(c.id, "automa")
+        ? scoreField(c.id === "cache" ? "tokens" : c.id)
+        : undefined,
     }));
 
   if (config.oceania) {
@@ -109,13 +154,24 @@ const SumTable = ({
         label: HABITAT_LABELS[habitat],
         hint: `Nectar spent in the ${HABITAT_LABELS[habitat].toLowerCase()}`,
         group: `Nectar ${GROUP_LABELS.majority}`,
-        value: p => p.nectarSpent[habitat] ?? "",
-        update: (p, v) => ({
-          ...p,
-          nectarSpent: { ...p.nectarSpent, [habitat]: v },
-        }),
+        player: {
+          value: p => p.nectarSpent[habitat] ?? "",
+          update: (p, v) => ({
+            ...p,
+            nectarSpent: { ...p.nectarSpent, [habitat]: v },
+          }),
+        },
+        automa: {
+          value: a => a.nectarSpent[habitat] ?? "",
+          update: (a, v) => ({
+            ...a,
+            nectarSpent: { ...a.nectarSpent, [habitat]: v },
+          }),
+        },
         points: scoreNectarHabitat(
-          players.map(p => parseScore(p.nectarSpent[habitat])),
+          [...players, ...(automa ? [automa] : [])].map(p =>
+            parseScore(p.nectarSpent[habitat])
+          ),
           usesFriendlyNectarTies(config)
         ),
       });
@@ -129,26 +185,41 @@ const SumTable = ({
   const showTiebreak = finished && outcome.leaders.length > 1;
   const tiebreakRow = rows.length;
   const rowCount = showTiebreak ? rows.length + 1 : rows.length;
+  // Shaded boxes (rows a side doesn't score) and food for players who
+  // aren't tied can't be typed in. The Automa's tie-break is worked out.
   const isEnabled = (row: number, col: number) =>
-    row < tiebreakRow || outcome.leaders.includes(col);
+    row < tiebreakRow
+      ? !!(col === automaCol ? rows[row].automa : rows[row].player)
+      : col !== automaCol && outcome.leaders.includes(col);
 
   const setPlayer = (col: number, next: PlayerSheet) =>
     onPlayersChange(players.map((p, i) => (i === col ? next : p)));
+
+  const birdsRow = rows.findIndex(r => r.key === "birds");
+  const faceDown = scoreField("faceDown");
+  // The Automa's birds box holds two inputs: face-down count, then points.
+  const isAutomaBirds = (row: number, col: number) =>
+    !!automa && col === automaCol && row === birdsRow;
 
   const handleCellChange = (
     value: string,
     row: number,
     col: number,
-    allowsNegative = false
+    allowsNegative = false,
+    second = false
   ) => {
     if (!isValidScoreInput(value, allowsNegative)) return;
+    if (col === automaCol) {
+      if (!automa) return;
+      const field =
+        isAutomaBirds(row, col) && !second ? faceDown : rows[row].automa;
+      if (field) onAutomaChange?.(field.update(automa, value));
+      return;
+    }
     const player = players[col];
-    setPlayer(
-      col,
-      row === tiebreakRow
-        ? { ...player, unusedFood: value }
-        : rows[row].update(player, value)
-    );
+    const field = rows[row]?.player;
+    if (row === tiebreakRow) setPlayer(col, { ...player, unusedFood: value });
+    else if (field) setPlayer(col, field.update(player, value));
   };
 
   // When an ended game's scores lift off, they go row by row, top to bottom.
@@ -161,7 +232,8 @@ const SumTable = ({
   const handleCellKeyDown = (
     e: React.KeyboardEvent,
     row: number,
-    col: number
+    col: number,
+    second = false
   ) => {
     const move: Move | undefined =
       e.key === "Enter"
@@ -171,12 +243,23 @@ const SumTable = ({
         : KEY_MOVES[e.key];
     if (!move) return;
     e.preventDefault();
-    const next = nextCell({ row, col }, move, rowCount, players.length, c =>
+    const up = move === "up" || move === "up-wrap";
+    // Within the Automa's birds box: face-down count above, points below.
+    const vertical = move !== "left" && move !== "right";
+    if (isAutomaBirds(row, col) && vertical && second === up) {
+      focus(`cell-${row}-${col}${second ? "" : "-up"}`);
+      return;
+    }
+    const next = nextCell({ row, col }, move, rowCount, cols, c =>
       isEnabled(c.row, c.col)
     );
-    if (next) focus(`cell-${next.row}-${next.col}`);
-    else if (row === 0 && (move === "up" || move === "up-wrap"))
-      focus(`name-${col}`);
+    if (next)
+      focus(
+        `cell-${next.row}-${next.col}${
+          up && isAutomaBirds(next.row, next.col) ? "-up" : ""
+        }`
+      );
+    else if (row === 0 && up && col !== automaCol) focus(`name-${col}`);
   };
 
   // Enter moves across the names, then into the first score; Down moves
@@ -206,10 +289,12 @@ const SumTable = ({
     row: number,
     col: number,
     label: string,
-    allowsNegative?: boolean
+    allowsNegative?: boolean,
+    second = false,
+    placeholder?: string
   ) => {
     const negative = !!allowsNegative && value.startsWith("-");
-    const id = `${idPrefix}cell-${row}-${col}`;
+    const id = `${idPrefix}cell-${row}-${col}${second ? "-up" : ""}`;
     const input = (
       <input
         className={`score-input${negative ? " is-negative" : ""}`}
@@ -220,20 +305,21 @@ const SumTable = ({
           // A typed or pasted "-7" sets the sign itself.
           const next =
             negative && !typed.startsWith("-") ? `-${typed}` : typed;
-          handleCellChange(next, row, col, allowsNegative);
+          handleCellChange(next, row, col, allowsNegative, second);
         }}
         onKeyDown={e => {
           if (allowsNegative && e.key === "-") {
             e.preventDefault();
             handleCellChange(flipSign(value), row, col, true);
           }
-          handleCellKeyDown(e, row, col);
+          handleCellKeyDown(e, row, col, second);
         }}
         onFocus={e => e.target.select()}
+        placeholder={placeholder}
         inputMode="numeric"
         id={id}
         // The box shows only digits, so say the sign.
-        aria-label={`${label}, ${names[col]}${negative ? ", minus" : ""}`}
+        aria-label={`${label}, ${columnName(col)}${negative ? ", minus" : ""}`}
         aria-keyshortcuts={allowsNegative ? "-" : undefined}
         disabled={!isEnabled(row, col)}
       />
@@ -245,7 +331,7 @@ const SumTable = ({
           type="button"
           className={`sign-tab${negative ? " is-negative" : ""}`}
           tabIndex={-1}
-          aria-label={`${label}, ${names[col]}: ${negative ? "minus" : "plus"}. Switch sign`}
+          aria-label={`${label}, ${columnName(col)}: ${negative ? "minus" : "plus"}. Switch sign`}
           aria-pressed={negative}
           // Pressing leaves focus where it is, so nothing moves mid-tap (a
           // keyboard closing under the finger made phones drop the tap).
@@ -268,12 +354,84 @@ const SumTable = ({
     );
   };
 
-  const result = summarize(outcome, names);
+  const automaFood = automa ? automaTiebreak(config, automa) : 0;
+  const result = summarize(outcome, names, automa ? automaCol : undefined);
   const detail = describeTiebreak(
     outcome,
     names,
-    players.map(p => p.unusedFood)
+    [...players.map(p => p.unusedFood), String(automaFood)],
+    automa ? automaCol : undefined,
+    automaTokensInPlay(config)
   );
+  const difficulty = config.automa?.difficulty ?? 4;
+
+  // The Automa's box in a row: shaded where it doesn't score; two inputs
+  // for its birds; its tokens show the eggs they make.
+  const automaCell = (row: InputRow, rowIndex: number) => {
+    if (!automa) return null;
+    const field = row.automa;
+    if (!field) return <td key="automa" className="score-cell is-blank" />;
+    const tokens = row.key === "cache" ? parseScore(field.value(automa)) : 0;
+    const eggs = Math.floor(tokens / tokensPerEgg(difficulty));
+    return (
+      <td key="automa" className="score-cell automa-cell">
+        {row.key === "birds" ? (
+          <div className="automa-birds">
+            <span className="face-down">
+              {renderInput(
+                faceDown.value(automa),
+                rowIndex,
+                automaCol,
+                "Face-down birds",
+                false,
+                false,
+                "face-down"
+              )}
+              <span aria-hidden="true">×{difficulty}</span>
+            </span>
+            {renderInput(
+              field.value(automa),
+              rowIndex,
+              automaCol,
+              "Face-up bird points",
+              false,
+              true,
+              "face-up"
+            )}
+          </div>
+        ) : row.key === "cache" ? (
+          // Tokens as counted, before they become eggs.
+          renderInput(
+            field.value(automa),
+            rowIndex,
+            automaCol,
+            "Cache/hoard tokens",
+            false,
+            false,
+            "tokens"
+          )
+        ) : (
+          renderInput(
+            field.value(automa),
+            rowIndex,
+            automaCol,
+            row.label,
+            row.allowsNegative
+          )
+        )}
+        {row.key === "cache" && field.value(automa) !== "" && (
+          <span className="cache-eggs">
+            = {eggs} {eggs === 1 ? "egg" : "eggs"}
+          </span>
+        )}
+        {row.points && row.points[automaCol] > 0 && (
+          <span className="nectar-points" aria-hidden="true">
+            +{row.points[automaCol]}
+          </span>
+        )}
+      </td>
+    );
+  };
   const circled =
     !finished ||
     outcome.decision === "needs-food" ||
@@ -287,7 +445,7 @@ const SumTable = ({
         <table
           id="sum-table"
           className={onAddPlayer ? "has-add" : undefined}
-          style={{ "--players": players.length } as React.CSSProperties}
+          style={{ "--players": cols } as React.CSSProperties}
         >
           <colgroup>
             <col className="group-col" />
@@ -295,12 +453,13 @@ const SumTable = ({
             {players.map(p => (
               <col key={p.id} />
             ))}
+            {automa && <col />}
             {onAddPlayer && <col className="add-col" />}
           </colgroup>
           <thead>
             <tr>
               <th colSpan={2} className="sheet-title hand-caps">
-                {sheetTitle(game)}
+                {title ?? sheetTitle(game)}
               </th>
               {players.map((player, col) => (
                 <th key={player.id} className="player-cell">
@@ -352,6 +511,9 @@ const SumTable = ({
                   )}
                 </th>
               ))}
+              {automa && (
+                <th className="player-cell automa-head hand-caps">Automa</th>
+              )}
               {onAddPlayer && (
                 <th className="add-cell">
                   <button
@@ -390,22 +552,27 @@ const SumTable = ({
                   >
                     <span>{row.label}</span>
                   </th>
-                  {players.map((player, col) => (
-                    <td key={player.id} className="score-cell">
-                      {renderInput(
-                        row.value(player),
-                        rowIndex,
-                        col,
-                        row.label,
-                        row.allowsNegative
-                      )}
-                      {row.points && row.points[col] > 0 && (
-                        <span className="nectar-points" aria-hidden="true">
-                          +{row.points[col]}
-                        </span>
-                      )}
-                    </td>
-                  ))}
+                  {players.map((player, col) =>
+                    row.player ? (
+                      <td key={player.id} className="score-cell">
+                        {renderInput(
+                          row.player.value(player),
+                          rowIndex,
+                          col,
+                          row.label,
+                          row.allowsNegative
+                        )}
+                        {row.points && row.points[col] > 0 && (
+                          <span className="nectar-points" aria-hidden="true">
+                            +{row.points[col]}
+                          </span>
+                        )}
+                      </td>
+                    ) : (
+                      <td key={player.id} className="score-cell is-blank" />
+                    )
+                  )}
+                  {automaCell(row, rowIndex)}
                   {onAddPlayer && <td className="add-cell" />}
                 </tr>
               );
@@ -415,8 +582,10 @@ const SumTable = ({
                 Total
               </th>
               {totals.map((total, col) => (
-                <td key={players[col].id}>
-                  {playerHasData(players[col], config) && (
+                <td key={col === automaCol ? "automa" : players[col].id}>
+                  {(col === automaCol
+                    ? !!automa && automaHasData(automa, config)
+                    : playerHasData(players[col], config)) && (
                     <span className={circled.includes(col) ? "leader" : ""}>
                       {total}
                     </span>
@@ -443,6 +612,20 @@ const SumTable = ({
                     )}
                   </td>
                 ))}
+                {automa && (
+                  <td className="score-cell automa-tiebreak">
+                    <span>
+                      {automaFood}
+                      <small>
+                        {automaTokensInPlay(config)
+                          ? automaFood === 1
+                            ? "token left"
+                            : "tokens left"
+                          : "food"}
+                      </small>
+                    </span>
+                  </td>
+                )}
                 {onAddPlayer && <td className="add-cell" />}
               </tr>
             )}

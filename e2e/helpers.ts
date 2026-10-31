@@ -69,7 +69,26 @@ export class Sheet {
   pastButton = () => this.page.locator(".history-link");
   baseTab = () => this.page.locator(".expansion-tab.tab-base");
   expansionsTab = () => this.page.locator(".expansion-tab").nth(1);
-  checklist = () => this.page.locator(".mix-popover");
+  checklist = () => this.page.locator(".mix-popover:not(.mode-popover)");
+  modeButton = () => this.page.locator(".mode-button");
+  modeMenu = () => this.page.locator(".mode-popover");
+  automaHead = () => this.page.locator("#sum-table .automa-head");
+  /** The Automa's birds box: face-down count, then face-up points. */
+  faceDown = () => this.page.locator("#cell-0-1");
+  faceUp = () => this.page.locator("#cell-0-1-up");
+
+  /** Picks a mode in the corner menu, and a difficulty for the Automa. */
+  async mode(
+    mode: "Multiplayer" | "Solo" | "Automa",
+    difficulty?: "Eaglet" | "Eagle" | "Eagle-eyed Eagle"
+  ) {
+    if (!(await this.modeMenu().isVisible())) await this.modeButton().click();
+    await this.modeMenu().getByRole("radio", { name: mode, exact: true }).check();
+    if (difficulty)
+      await this.modeMenu().getByRole("radio", { name: difficulty, exact: true }).check();
+    if (await this.modeMenu().isVisible())
+      await this.modeMenu().getByRole("button", { name: "Done" }).click();
+  }
 
   async setName(col: number, name: string) {
     await this.name(col).click();

@@ -1,6 +1,13 @@
 "use client";
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { AsiaMode, GameConfig, hummingbirdsInPlay } from "@/lib/rules";
+import {
+  AsiaMode,
+  AUTOMA_DIFFICULTIES,
+  AutomaDifficulty,
+  AutomaSettings,
+  GameConfig,
+  hummingbirdsInPlay,
+} from "@/lib/rules";
 import { Edition } from "@/lib/theme";
 
 export type Expansion = Exclude<Edition, "base">;
@@ -239,5 +246,154 @@ export const ExpansionTabs = ({
         </div>
       )}
     </div>
+  );
+};
+
+export type Mode = "multiplayer" | "solo" | "automa";
+
+const MODES: { id: Mode; label: string }[] = [
+  { id: "multiplayer", label: "Multiplayer" },
+  { id: "automa", label: "Automa" },
+  { id: "solo", label: "Solo" },
+];
+
+export const modeOf = (config: GameConfig, players: number): Mode =>
+  config.automa ? "automa" : players === 1 ? "solo" : "multiplayer";
+
+/**
+ * The sheet's corner: names the mode, and opens a menu to switch between
+ * Multiplayer, the Automa and Solo, with the Automa's difficulty.
+ */
+export const ModeMenu = ({
+  config,
+  players,
+  title,
+  onMode,
+  onAutoma,
+}: {
+  config: GameConfig;
+  players: number;
+  title: string;
+  onMode: (mode: Mode, difficulty: AutomaDifficulty) => void;
+  onAutoma: (settings: AutomaSettings) => void;
+}) => {
+  const [open, setOpen] = useState(false);
+  // The sheet scrolls sideways, which would clip a menu inside it, so the
+  // menu is placed on the page under the button, and closes when the page
+  // scrolls (but not when the menu itself does, on a short screen).
+  const [at, setAt] = useState({ top: 0, left: 0 });
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: Event) => {
+      const inside =
+        e.target instanceof Node && popoverRef.current?.contains(e.target);
+      if (!inside) setOpen(false);
+    };
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    return () => {
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+    };
+  }, [open]);
+  // Switching the Automa off and on again keeps its last difficulty,
+  // however it was set (here, Play again, or another tab).
+  const current = config.automa?.difficulty;
+  const [difficulty, setDifficulty] = useState<AutomaDifficulty>(current ?? 4);
+  if (current && current !== difficulty) setDifficulty(current);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  useDismiss([buttonRef, popoverRef], open, () => setOpen(false));
+  const mode = modeOf(config, players);
+  const automa = config.automa;
+  // Asia and Americas bring the cache; otherwise the Hoard variant is a choice.
+  const offersHoard = config.asia === "off" && !config.americas;
+
+  return (
+    <span className="mode-menu">
+      <button
+        ref={buttonRef}
+        type="button"
+        className="mode-button hand-caps"
+        aria-expanded={open}
+        aria-label={`Mode: ${title}. Change`}
+        onClick={() => {
+          const r = buttonRef.current?.getBoundingClientRect();
+          if (r) setAt({ top: r.bottom + 6, left: Math.max(8, r.left - 6) });
+          setOpen(o => !o);
+        }}
+      >
+        {title}
+      </button>
+      {open && (
+        <div
+          ref={popoverRef}
+          className="mix-popover mode-popover"
+          style={
+            {
+              top: at.top,
+              maxHeight: `calc(100dvh - ${at.top + 8}px)`,
+              "--left": `${at.left}px`,
+            } as React.CSSProperties
+          }
+        >
+          <p className="mix-hint">Who are you playing?</p>
+          <div role="radiogroup" aria-label="Mode" className="mode-options">
+            {MODES.map(m => (
+              <label key={m.id} className="mix-option">
+                <input
+                  type="radio"
+                  name="mode"
+                  checked={mode === m.id}
+                  onChange={() => onMode(m.id, difficulty)}
+                />
+                {m.label}
+              </label>
+            ))}
+          </div>
+          {automa && (
+            <>
+              <p className="mix-hint mode-subhint">Difficulty</p>
+              <div
+                role="radiogroup"
+                aria-label="Difficulty"
+                className="mode-options"
+              >
+                {AUTOMA_DIFFICULTIES.map(d => (
+                  <label key={d.id} className="mix-option">
+                    <input
+                      type="radio"
+                      name="difficulty"
+                      checked={automa.difficulty === d.id}
+                      onChange={() => onAutoma({ ...automa, difficulty: d.id })}
+                    />
+                    {d.label}
+                  </label>
+                ))}
+              </div>
+              {offersHoard && (
+                <label className="mix-option mode-hoard">
+                  <input
+                    type="checkbox"
+                    checked={automa.hoard}
+                    onChange={() => onAutoma({ ...automa, hoard: !automa.hoard })}
+                  />
+                  Hoard
+                </label>
+              )}
+            </>
+          )}
+          <div className="mix-footer">
+            <button
+              type="button"
+              className="text-link mix-done"
+              onClick={() => setOpen(false)}
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      )}
+    </span>
   );
 };

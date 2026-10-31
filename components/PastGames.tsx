@@ -3,10 +3,16 @@ import React, { useEffect, useRef, useState } from "react";
 import { Ask } from "./ConfirmDialog";
 import { SavedStamp } from "./SavedStamp";
 import SumTable, { sheetTitle } from "./sum-table/SumTable";
-import { playerHasData, SavedGame } from "@/lib/game";
+import { editBase, playerHasData, SavedGame } from "@/lib/game";
 import { withCodes } from "@/lib/names";
-import { categoriesFor, describeConfig, GROUP_LABELS } from "@/lib/rules";
-import { PlayerSheet } from "@/lib/scoring";
+import {
+  automaTokensInPlay,
+  categoriesFor,
+  describeConfig,
+  GROUP_LABELS,
+  scoredBy,
+} from "@/lib/rules";
+import { automaHasData, AutomaSheet, PlayerSheet } from "@/lib/scoring";
 
 const formatDay = (iso: string) =>
   new Date(iso).toLocaleDateString(undefined, {
@@ -18,7 +24,10 @@ const formatDay = (iso: string) =>
 // Unnamed players were saved as "Player 2" and so on.
 const isPlaceholder = (name: string) => /^Player \d+$/.test(name);
 
-/** Header codes for a saved game, with P1, P2… for unnamed players. */
+/**
+ * Header codes for a saved game, with P1, P2… for unnamed players, and the
+ * Automa last when it played.
+ */
 const codesFor = (game: SavedGame) => {
   const codes = withCodes(
     game.players.map(p => ({
@@ -26,8 +35,26 @@ const codesFor = (game: SavedGame) => {
       code: p.code,
     }))
   );
-  return codes.map((c, i) => c || `P${i + 1}`);
+  return [
+    ...codes.map((c, i) => c || `P${i + 1}`),
+    ...(game.automa ? ["Automa"] : []),
+  ];
 };
+
+/** Each column of a saved game: its players, then the Automa. */
+const columnsOf = (game: SavedGame) => [
+  ...game.players.map(p => ({ ...p, side: "player" as const })),
+  ...(game.automa
+    ? [
+        {
+          ...game.automa,
+          name: "Automa",
+          unusedFood: game.automa.tiebreak,
+          side: "automa" as const,
+        },
+      ]
+    : []),
+];
 
 // A confirmation on top owns the keyboard: Escape and Tab are its, not ours.
 const dialogOpen = () => !!document.querySelector("dialog[open]");
@@ -49,17 +76,26 @@ const SlipHead = ({ game, open }: { game: SavedGame; open: boolean }) => (
 const TILTS = [-0.6, 0.5, -0.3, 0.7, -0.45, 0.35];
 
 // A tie still waiting on unused food has no winner to circle yet.
-const Total = ({ game, col }: { game: SavedGame; col: number }) =>
+const Total = ({
+  game,
+  col,
+  total,
+}: {
+  game: SavedGame;
+  col: number;
+  total: number;
+}) =>
   game.decision !== "needs-food" && game.winners.includes(col) ? (
-    <span className="leader">{game.players[col].total}</span>
+    <span className="leader">{total}</span>
   ) : (
-    <>{game.players[col].total}</>
+    <>{total}</>
   );
 
 /** Unfolded slip: the saved game's full sheet, read-only. */
 const FullSheet = ({ game }: { game: SavedGame }) => {
   const categories = categoriesFor(game.config);
   const codes = codesFor(game);
+  const columns = columnsOf(game);
   // Tapping a code shows that player's full name in its place.
   const [peek, setPeek] = useState<number | null>(null);
   const tiebreak = game.decision === "food" || game.decision === "shared";
@@ -69,12 +105,12 @@ const FullSheet = ({ game }: { game: SavedGame }) => {
         <table
           id="sum-table"
           className="past-sheet"
-          style={{ "--players": game.players.length } as React.CSSProperties}
+          style={{ "--players": columns.length } as React.CSSProperties}
         >
           <colgroup>
             <col className="group-col" />
             <col className="label-col" />
-            {game.players.map((_, i) => (
+            {columns.map((_, i) => (
               <col key={i} />
             ))}
           </colgroup>
@@ -84,9 +120,14 @@ const FullSheet = ({ game }: { game: SavedGame }) => {
                 {sheetTitle(game)}
               </th>
               {codes.map((code, i) => {
-                const { name } = game.players[i];
+                const { name, side } = columns[i];
                 return (
-                  <th key={i} className="player-cell past-name">
+                  <th
+                    key={i}
+                    className={`player-cell past-name${
+                      side === "automa" ? " automa-head" : ""
+                    }`}
+                  >
                     {isPlaceholder(name) || name === code ? (
                       code
                     ) : (
@@ -125,11 +166,15 @@ const FullSheet = ({ game }: { game: SavedGame }) => {
                   <th scope="row" className="row-label hand-caps">
                     <span>{c.label}</span>
                   </th>
-                  {game.players.map((p, i) => (
-                    <td key={i} className="past-cell">
-                      {p.breakdown[c.id] ?? 0}
-                    </td>
-                  ))}
+                  {columns.map((p, i) =>
+                    scoredBy(c.id, p.side) ? (
+                      <td key={i} className="past-cell">
+                        {p.breakdown[c.id] ?? 0}
+                      </td>
+                    ) : (
+                      <td key={i} className="past-cell is-blank" />
+                    )
+                  )}
                 </tr>
               );
             })}
@@ -137,9 +182,9 @@ const FullSheet = ({ game }: { game: SavedGame }) => {
               <th colSpan={2} scope="row" className="hand-caps">
                 Total
               </th>
-              {game.players.map((_, i) => (
+              {columns.map((c, i) => (
                 <td key={i}>
-                  <Total game={game} col={i} />
+                  <Total game={game} col={i} total={c.total} />
                 </td>
               ))}
             </tr>
@@ -148,9 +193,14 @@ const FullSheet = ({ game }: { game: SavedGame }) => {
                 <th colSpan={2} scope="row" className="row-label hand-caps">
                   <span>Unused food</span>
                 </th>
-                {game.players.map((p, i) => (
+                {columns.map((p, i) => (
                   <td key={i} className="past-cell">
                     {p.unusedFood ?? "–"}
+                    {p.side === "automa" && (
+                      <small className="past-unit">
+                        {automaTokensInPlay(game.config) ? "tokens left" : "food"}
+                      </small>
+                    )}
                   </td>
                 ))}
               </tr>
@@ -177,7 +227,12 @@ export const PastGames = ({
   onClose: () => void;
   onDelete: (id: string) => void;
   /** False if the game changed since `base` and wasn't saved over. */
-  onEdit: (id: string, players: PlayerSheet[], base: string) => boolean;
+  onEdit: (
+    id: string,
+    players: PlayerSheet[],
+    automa: AutomaSheet | undefined,
+    base: string
+  ) => boolean;
   onPlayAgain: (game: SavedGame) => void;
   ask: Ask;
 }) => {
@@ -189,23 +244,26 @@ export const PastGames = ({
     id: string;
     base: string;
     players: PlayerSheet[];
+    automa?: AutomaSheet;
   }>();
   // Bumped each time an edit is saved, to replay the stamp.
   const [stamp, setStamp] = useState(0);
   const open = history.find(g => g.id === openId);
   // A draft only belongs to the game it was started on: if that game is
   // deleted elsewhere, or another one is opened, it's dropped.
-  const draft = open && editDraft?.id === open.id ? editDraft.players : undefined;
-  const changedElsewhere =
-    !!open && !!draft && JSON.stringify(open.sheet) !== editDraft?.base;
+  const draft = open && editDraft?.id === open.id ? editDraft : undefined;
+  const changedElsewhere = !!open && !!draft && editBase(open) !== draft.base;
   const startEdit = (game: SavedGame) =>
     setEditDraft({
       id: game.id,
-      base: JSON.stringify(game.sheet),
+      base: editBase(game),
       players: game.sheet,
+      automa: game.automa?.sheet,
     });
   const setDraft = (players: PlayerSheet[]) =>
     setEditDraft(d => d && { ...d, players });
+  const setDraftAutoma = (automa: AutomaSheet) =>
+    setEditDraft(d => d && { ...d, automa });
   const fold = () => {
     setEditDraft(undefined);
     setStamp(0);
@@ -317,8 +375,13 @@ export const PastGames = ({
             {draft ? (
               <>
                 <SumTable
-                  game={{ config: open.config, players: draft }}
+                  game={{
+                    config: open.config,
+                    players: draft.players,
+                    automa: draft.automa,
+                  }}
                   onPlayersChange={setDraft}
+                  onAutomaChange={setDraftAutoma}
                   idPrefix="past-"
                 />
                 {changedElsewhere && (
@@ -346,10 +409,19 @@ export const PastGames = ({
                     className="ink-button ink-button-primary"
                     disabled={
                       changedElsewhere ||
-                      !draft.some(p => playerHasData(p, open.config))
+                      !(
+                        draft.players.some(p =>
+                          playerHasData(p, open.config)
+                        ) ||
+                        (!!draft.automa &&
+                          automaHasData(draft.automa, open.config))
+                      )
                     }
                     onClick={() => {
-                      if (!onEdit(open.id, draft, editDraft!.base)) return;
+                      if (
+                        !onEdit(open.id, draft.players, draft.automa, draft.base)
+                      )
+                        return;
                       setEditDraft(undefined);
                       setStamp(s => s + 1);
                     }}
@@ -414,7 +486,11 @@ export const PastGames = ({
                   <div key={col}>
                     <span className="hand-caps">{code}</span>
                     <span className="past-total">
-                      <Total game={g} col={col} />
+                      <Total
+                        game={g}
+                        col={col}
+                        total={columnsOf(g)[col].total}
+                      />
                     </span>
                   </div>
                 ))}

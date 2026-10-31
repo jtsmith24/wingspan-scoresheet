@@ -7,16 +7,24 @@ import React, {
   useState,
   useSyncExternalStore,
 } from "react";
-import SumTable from "./sum-table/SumTable";
-import { Expansion, ExpansionTabs } from "./GameSetup";
+import SumTable, { sheetTitle } from "./sum-table/SumTable";
+import {
+  Expansion,
+  ExpansionTabs,
+  Mode,
+  ModeMenu,
+  modeOf,
+} from "./GameSetup";
 import { PastGames } from "./PastGames";
 import { Ask, useDialog } from "./ConfirmDialog";
 import { SavedStamp } from "./SavedStamp";
 import {
   addToHistory,
+  automaOf,
   CurrentGame,
+  editBase,
+  emptyAutoma,
   emptyPlayer,
-  fitPlayers,
   hasAnyScore,
   missingScores,
   newGame,
@@ -35,12 +43,19 @@ import {
 import { STORAGE_KEYS } from "@/lib/storage";
 import { withCodes } from "@/lib/names";
 import {
+  AutomaDifficulty,
   GameConfig,
   hummingbirdsInPlay,
   playerLimits,
   sameConfig,
 } from "@/lib/rules";
-import { displayName, PlayerSheet, scoreGame } from "@/lib/scoring";
+import {
+  automaHasData,
+  AutomaSheet,
+  displayName,
+  PlayerSheet,
+  scoreGame,
+} from "@/lib/scoring";
 import { applyPalette, paletteFor, PALETTE_KEY } from "@/lib/theme";
 
 const subscribeNever = () => () => {};
@@ -135,21 +150,71 @@ const LoadedScorepad = () => {
   const edit = (changes: Partial<CurrentGame>) =>
     setGame({ ...game, ...changes, lastGame: undefined });
 
-  const setConfig = async (config: GameConfig) => {
-    // Re-picking the tab that's already open isn't a change.
-    if (sameConfig(config, game.config)) return;
-    const { max } = playerLimits(config);
-    const dropped = game.players.slice(max);
+  // Puts the sheet in a new setup with `count` players (fitted to it), and
+  // the Automa's column there or not. Asks first if any scores would go,
+  // including the Automa's in rows the setup hides.
+  const reshape = async (config: GameConfig, count = game.players.length) => {
+    const { min, max } = playerLimits(config);
+    const n = Math.min(max, Math.max(min, count));
+    const dropsPlayers = game.players
+      .slice(n)
+      .some(
+        p =>
+          Object.values(p.scores).some(v => /\d/.test(v ?? "")) ||
+          Object.values(p.nectarSpent).some(Boolean)
+      );
+    const dropsAutoma =
+      !config.automa &&
+      !!game.automa &&
+      automaHasData(game.automa, game.config, true);
     if (
-      dropped.some(p => playerHasData(p, game.config)) &&
+      (dropsPlayers || dropsAutoma) &&
       !(await ask({
-        message: `This mode is for up to ${max} players. Remove the extra columns and their scores?`,
+        message: dropsAutoma
+          ? "Remove the Automa's column and its scores?"
+          : max === 1
+            ? "This mode is for one player. Remove the other columns and their scores?"
+            : `This mode is for up to ${max} players. Remove the extra columns and their scores?`,
         confirm: "Remove columns",
         danger: true,
       }))
     )
       return;
-    edit({ config, players: fitPlayers(game.players, config) });
+    const players = game.players.slice(0, n);
+    while (players.length < n) players.push(emptyPlayer());
+    edit({
+      config,
+      players,
+      automa: config.automa ? (game.automa ?? emptyAutoma()) : undefined,
+    });
+  };
+
+  const setConfig = (config: GameConfig) => {
+    // Re-picking the tab that's already open isn't a change.
+    if (sameConfig(config, game.config)) return;
+    // The Automa doesn't play Flock: picking Flock ends the Automa game.
+    reshape(
+      config.asia === "flock" ? { ...config, automa: undefined } : config
+    );
+  };
+
+  // The corner menu. Solo leaves Duet and Flock (two and 6-7 players); the
+  // Automa leaves Flock but plays Duet.
+  const setMode = (mode: Mode, difficulty: AutomaDifficulty) => {
+    const { config } = game;
+    if (mode === modeOf(config, game.players.length)) return;
+    const asia =
+      (mode === "solo" && config.asia === "duet") ||
+      (mode !== "multiplayer" && config.asia === "flock")
+        ? "standard"
+        : config.asia;
+    if (mode === "automa")
+      reshape({ ...config, asia, automa: { difficulty, hoard: false } }, 1);
+    else
+      reshape(
+        { ...config, asia, automa: undefined },
+        mode === "solo" ? 1 : Math.max(2, game.players.length)
+      );
   };
 
   const setPlayerCount = async (count: number) => {
@@ -192,12 +257,14 @@ const LoadedScorepad = () => {
     );
   };
 
+  // The Automa stays: it's who you're playing, not an expansion.
   const baseOnly = () =>
     setConfig({
       european: false,
       oceania: false,
       americas: false,
       asia: "off",
+      automa: game.config.automa,
     });
 
   // History is re-read before every change so a second open tab can't
@@ -214,7 +281,7 @@ const LoadedScorepad = () => {
   // same players. A part-filled sheet or an unsettled tie asks first.
   const endGame = async () => {
     const missing = missingScores(game);
-    const { outcome } = scoreGame(game.config, game.players);
+    const { outcome } = scoreGame(game.config, game.players, automaOf(game));
     const question =
       missing > 0
         ? {
@@ -238,7 +305,12 @@ const LoadedScorepad = () => {
         game.players.map(p => p.name),
         codes.map(c => c || undefined)
       ),
-      lastGame: { id: saved.id, config: game.config, players: game.players },
+      lastGame: {
+        id: saved.id,
+        config: game.config,
+        players: game.players,
+        automa: game.automa,
+      },
     };
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
       setGame(next);
@@ -260,7 +332,11 @@ const LoadedScorepad = () => {
     if (!matchMedia("(prefers-reduced-motion: reduce)").matches)
       setUndoing(history.find(g => g.id === last.id));
     writeHistory(h => removeFromHistory(h, last.id));
-    setGame({ config: last.config, players: last.players });
+    setGame({
+      config: last.config,
+      players: last.players,
+      automa: last.automa,
+    });
   };
 
   // A blank table without keeping the game; the expansions stay.
@@ -275,7 +351,8 @@ const LoadedScorepad = () => {
       }))
     )
       return;
-    edit({ players: newGame(game.config).players });
+    const { players, automa } = newGame(game.config);
+    edit({ players, automa });
   };
 
   const closePast = useCallback(() => setPastOpen(false), []);
@@ -285,16 +362,21 @@ const LoadedScorepad = () => {
 
   // A fix to a past game keeps its place and its date.
   // Not if it was deleted or changed in another tab since editing began.
-  const editGame = (id: string, players: PlayerSheet[], base: string) => {
+  const editGame = (
+    id: string,
+    players: PlayerSheet[],
+    automa: AutomaSheet | undefined,
+    base: string
+  ) => {
     const old = loadHistory().find(g => g.id === id);
-    if (!old || JSON.stringify(old.sheet) !== base) {
+    if (!old || editBase(old) !== base) {
       setHistory(loadHistory());
       return false;
     }
     writeHistory(h =>
       addToHistory(
         h,
-        toSavedGame({ config: old.config, players }, new Date(), id)
+        toSavedGame({ config: old.config, players, automa }, new Date(), id)
       )
     );
     return true;
@@ -346,6 +428,16 @@ const LoadedScorepad = () => {
         <SumTable
           game={game}
           onPlayersChange={next => edit({ players: next })}
+          onAutomaChange={automa => edit({ automa })}
+          title={
+            <ModeMenu
+              config={config}
+              players={players.length}
+              title={sheetTitle(game)}
+              onMode={setMode}
+              onAutoma={automa => setConfig({ ...config, automa })}
+            />
+          }
           onAddPlayer={
             players.length < limits.max
               ? () => setPlayerCount(players.length + 1)
