@@ -1,6 +1,9 @@
 import {
+  automaTokensInPlay,
   categoriesFor,
   HABITATS,
+  scoredBy,
+  tokensPerEgg,
   usesFriendlyNectarTies,
   type CategoryId,
   type GameConfig,
@@ -18,6 +21,16 @@ export interface PlayerSheet {
   nectarSpent: Partial<Record<Habitat, string>>;
   /** Tie-breaker only: food tokens left in the player's supply. Never scored. */
   unusedFood: string;
+}
+
+/**
+ * The Automa's column, as typed. `birds` is its face-up birds' points;
+ * `faceDown` counts its face-down birds; `tokens` is its cache/hoard tokens
+ * before they turn into eggs.
+ */
+export interface AutomaSheet {
+  scores: Partial<Record<CategoryId | "faceDown" | "tokens", string>>;
+  nectarSpent: Partial<Record<Habitat, string>>;
 }
 
 export const MAX_INPUT_LENGTH = 3;
@@ -73,7 +86,10 @@ export function scoreNectarHabitat(spent: number[], friendlyTies = false): numbe
 }
 
 /** Total nectar points per player across all three habitats. */
-export function scoreNectar(players: PlayerSheet[], friendlyTies = false): number[] {
+export function scoreNectar(
+  players: Pick<PlayerSheet, "nectarSpent">[],
+  friendlyTies = false,
+): number[] {
   const totals = players.map(() => 0);
   for (const habitat of HABITATS) {
     const spent = players.map((p) => parseScore(p.nectarSpent[habitat]));
@@ -92,7 +108,9 @@ export function scoreNectar(players: PlayerSheet[], friendlyTies = false): numbe
  */
 export function playerHasData(p: PlayerSheet, config: GameConfig): boolean {
   return (
-    categoriesFor(config).some((c) => c.id !== "nectar" && /\d/.test(p.scores[c.id] ?? "")) ||
+    categoriesFor(config).some(
+      (c) => c.id !== "nectar" && scoredBy(c.id, "player") && /\d/.test(p.scores[c.id] ?? ""),
+    ) ||
     (config.oceania && Object.values(p.nectarSpent).some(Boolean))
   );
 }
@@ -104,17 +122,78 @@ export function inGame(p: PlayerSheet, config: GameConfig): boolean {
 
 export type Breakdown = Partial<Record<CategoryId, number>>;
 
-/** Per-category points for every player. Nectar is computed, everything else is typed in. */
-export function scoreBreakdowns(config: GameConfig, players: PlayerSheet[]): Breakdown[] {
-  const categories = categoriesFor(config);
-  const nectar = config.oceania ? scoreNectar(players, usesFriendlyNectarTies(config)) : null;
-  return players.map((player, i) => {
+export type AutomaInput = keyof AutomaSheet["scores"];
+
+/** The Automa's boxes for a setup: both bird boxes, and tokens for its cache eggs. */
+export function automaInputs(config: GameConfig): AutomaInput[] {
+  return categoriesFor(config).flatMap(({ id }): AutomaInput[] =>
+    id === "nectar" || !scoredBy(id, "automa")
+      ? []
+      : id === "birds"
+        ? ["faceDown", "birds"]
+        : id === "cache"
+          ? ["tokens"]
+          : [id],
+  );
+}
+
+/** Anything typed in the Automa's boxes for this setup (or in any box, with `anywhere`). */
+export function automaHasData(a: AutomaSheet, config: GameConfig, anywhere = false): boolean {
+  const boxes = anywhere ? (Object.keys(a.scores) as AutomaInput[]) : automaInputs(config);
+  return (
+    boxes.some((k) => /\d/.test(a.scores[k] ?? "")) ||
+    ((anywhere || config.oceania) && Object.values(a.nectarSpent).some(Boolean))
+  );
+}
+
+/** The Automa's points: 3/4/5 per face-down bird, and 1 egg per 5/4/3 tokens. */
+function automaBreakdown(config: GameConfig, a: AutomaSheet, nectar: number): Breakdown {
+  const difficulty = config.automa?.difficulty ?? 4;
+  const row: Breakdown = {};
+  for (const { id, allowsNegative } of categoriesFor(config)) {
+    if (!scoredBy(id, "automa")) continue;
+    row[id] =
+      id === "nectar"
+        ? nectar
+        : id === "birds"
+          ? parseScore(a.scores.birds) + parseScore(a.scores.faceDown) * difficulty
+          : id === "cache"
+            ? Math.floor(parseScore(a.scores.tokens) / tokensPerEgg(difficulty))
+            : parseScore(a.scores[id], allowsNegative);
+  }
+  return row;
+}
+
+/**
+ * The Automa's side of a tie-break: its tokens left after making eggs, or
+ * without cache/hoard, the 2 food the base Automa rules give it.
+ */
+export function automaTiebreak(config: GameConfig, a: AutomaSheet): number {
+  if (!automaTokensInPlay(config) || !config.automa) return 2;
+  return parseScore(a.scores.tokens) % tokensPerEgg(config.automa.difficulty);
+}
+
+/**
+ * Per-category points for every player, then the Automa when it plays.
+ * Nectar is computed (the Automa competes for it too); the rest is typed in.
+ */
+export function scoreBreakdowns(
+  config: GameConfig,
+  players: PlayerSheet[],
+  automa?: AutomaSheet,
+): Breakdown[] {
+  const nectar = config.oceania
+    ? scoreNectar(automa ? [...players, automa] : players, usesFriendlyNectarTies(config))
+    : null;
+  const rows = players.map((player, i) => {
     const row: Breakdown = {};
-    for (const { id, allowsNegative } of categories) {
+    for (const { id, allowsNegative } of categoriesFor(config)) {
+      if (!scoredBy(id, "player")) continue;
       row[id] = id === "nectar" ? (nectar?.[i] ?? 0) : parseScore(player.scores[id], allowsNegative);
     }
     return row;
   });
+  return automa ? [...rows, automaBreakdown(config, automa, nectar?.[players.length] ?? 0)] : rows;
 }
 
 export function sumBreakdown(breakdown: Breakdown): number {
@@ -175,9 +254,22 @@ export function decideOutcome(
   return { totals, leaders, winners, decision: winners.length === 1 ? "food" : "shared" };
 }
 
-export function scoreGame(config: GameConfig, players: PlayerSheet[]) {
-  const breakdowns = scoreBreakdowns(config, players);
+/**
+ * Breakdowns, totals and the result. Against the Automa its column comes
+ * last (index `players.length`), and both sides are always in the game.
+ */
+export function scoreGame(config: GameConfig, players: PlayerSheet[], automa?: AutomaSheet) {
+  const vsAutoma = config.automa ? automa : undefined;
+  const breakdowns = scoreBreakdowns(config, players, vsAutoma);
   const totals = breakdowns.map(sumBreakdown);
+  if (vsAutoma) {
+    const outcome = decideOutcome(
+      totals,
+      [...players.map((p) => p.unusedFood), String(automaTiebreak(config, vsAutoma))],
+      players.some((p) => playerHasData(p, config)) || automaHasData(vsAutoma, config),
+    );
+    return { breakdowns, totals, outcome };
+  }
   // Only players in the game can win: a blank column's 0 can't beat a
   // negative total or tie a real 0. Indexes stay the sheet's columns.
   const taking = players.flatMap((p, i) => (inGame(p, config) ? [i] : []));
@@ -209,9 +301,28 @@ export function joinNames(names: string[]): string {
  * Second line explaining a tie, e.g. "Tied with Sam at 87, won on unused food 3 to 1".
  * Null when there was no tie at the top.
  */
-export function describeTiebreak(outcome: Outcome, names: string[], unusedFood: string[]): string | null {
+export function describeTiebreak(
+  outcome: Outcome,
+  names: string[],
+  unusedFood: string[],
+  automaCol?: number,
+  /** Whether the Automa's count is leftover cache/hoard tokens (else its 2 food). */
+  automaTokens = false,
+): string | null {
   const { decision, leaders, winners, totals } = outcome;
   const score = totals[leaders[0]];
+  // The Automa's count is its tokens left (or the 2 food it's given), not food.
+  if (automaCol !== undefined && (decision === "food" || decision === "shared")) {
+    const theirs = parseScore(unusedFood[automaCol]);
+    const yours = parseScore(unusedFood[leaders.find((i) => i !== automaCol) ?? 0]);
+    const tally = `${yours} unused food to the Automa's ${theirs} ${
+      automaTokens ? (theirs === 1 ? "token" : "tokens") : "food"
+    }`;
+    if (decision === "shared") return `Tied at ${score}, and on the tiebreak: ${tally}`;
+    return winners[0] === automaCol
+      ? `Tied at ${score}; the Automa won the tiebreak, ${tally}`
+      : `Tied at ${score}; won on the tiebreak, ${tally}`;
+  }
   if (decision === "food") {
     const others = leaders.filter((i) => !winners.includes(i));
     const theirs = Math.max(...others.map((i) => parseScore(unusedFood[i])));
@@ -225,11 +336,26 @@ export function describeTiebreak(outcome: Outcome, names: string[], unusedFood: 
   return null;
 }
 
-/** One-line result, e.g. "Jordan won with 94". */
-export function summarize(outcome: Outcome, names: string[]): string {
+/** In results the Automa is "the Automa", or "The Automa" to start a sentence. */
+export const AUTOMA_NAME = "the Automa";
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+/**
+ * One-line result, e.g. "Jordan won with 94". Against the Automa (its column
+ * is `automaCol`), a win says who was beaten: "Jordan beat the Automa, 76 to 66".
+ */
+export function summarize(outcome: Outcome, names: string[], automaCol?: number): string {
+  return capitalize(summary(outcome, names, automaCol));
+}
+
+function summary(outcome: Outcome, names: string[], automaCol?: number): string {
   const { decision, winners, totals } = outcome;
   const who = joinNames(winners.map((i) => names[i]));
   const score = winners.length ? totals[winners[0]] : 0;
+  if (automaCol !== undefined && winners[0] !== automaCol) {
+    if (decision === "points") return `${who} beat ${names[automaCol]}, ${score} to ${totals[automaCol]}`;
+    if (decision === "food") return `${who} beat ${names[automaCol]} on the tiebreak`;
+  }
   switch (decision) {
     case "none":
       return "No scores yet";

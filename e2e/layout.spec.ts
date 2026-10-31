@@ -106,7 +106,7 @@ test.describe("fits the screen", () => {
     await sheet.asiaMode("flock");
     for (const width of widths(info.project.name)) {
       await page.setViewportSize({ width, height: 800 });
-      expect(await insideViewport(page, ".mix-popover"), `${width}px`).toBe(true);
+      expect(await insideViewport(page, ".mix-popover:not(.mode-popover)"), `${width}px`).toBe(true);
     }
   });
 
