@@ -1115,7 +1115,7 @@ select:not(:disabled),
 }
 
 /* Saved: a stamp settles over the sheet and fades, while an ended game's
-   scores lift off underneath it. */
+   scores lift off underneath it, row by row from the top. */
 .saved-stamp {
   position: absolute;
   top: 50%;
@@ -1151,14 +1151,18 @@ select:not(:disabled),
   }
 }
 .is-ending .score-input,
-.is-ending .nectar-points {
-  color: transparent;
-  transition: color 0.3s ease-in 0.2s;
+.is-ending .nectar-points,
+.is-ending .total-row td > * {
+  animation: saved-lift 0.3s ease-in calc(0.2s + var(--lift-delay, 0s)) both;
 }
-.is-ending .total-row td > *,
 .is-ending .sheet-result {
-  opacity: 0;
-  transition: opacity 0.3s ease-in 0.2s;
+  animation: saved-lift 0.3s ease-in 0.38s both;
+}
+@keyframes saved-lift {
+  to {
+    opacity: 0;
+    translate: 0 -0.4rem;
+  }
 }
 .just-ended {
   animation: just-ended 0.35s ease-out both;

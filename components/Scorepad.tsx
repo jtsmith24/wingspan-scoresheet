@@ -109,7 +109,7 @@ const LoadedScorepad = () => {
     const swap = setTimeout(() => {
       setGameState(ending);
       setEnding(undefined);
-    }, 550);
+    }, 700);
     return () => clearTimeout(swap);
   }, [ending]);
 

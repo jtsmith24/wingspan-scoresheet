@@ -151,6 +151,10 @@ const SumTable = ({
     );
   };
 
+  // When an ended game's scores lift off, they go row by row, top to bottom.
+  const liftDelay = (row: number) =>
+    ({ "--lift-delay": `${(row / rows.length) * 0.18}s` }) as React.CSSProperties;
+
   const focus = (id: string) =>
     (document.getElementById(idPrefix + id) as HTMLInputElement | null)?.focus();
 
@@ -366,7 +370,11 @@ const SumTable = ({
               const startsGroup =
                 rowIndex === 0 || rows[rowIndex - 1].group !== row.group;
               return (
-                <tr key={row.key} className={startsGroup ? "group-start" : ""}>
+                <tr
+                  key={row.key}
+                  className={startsGroup ? "group-start" : ""}
+                  style={liftDelay(rowIndex)}
+                >
                   {startsGroup && (
                     <th
                       rowSpan={rows.filter(r => r.group === row.group).length}
@@ -402,7 +410,7 @@ const SumTable = ({
                 </tr>
               );
             })}
-            <tr className="total-row">
+            <tr className="total-row" style={liftDelay(rows.length)}>
               <th colSpan={2} scope="row" className="hand-caps">
                 Total
               </th>
