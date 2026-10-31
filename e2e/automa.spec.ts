@@ -73,12 +73,27 @@ test.describe("the corner menu", () => {
     const sheet = await automaGame(page);
     await sheet.modeButton().click();
     await sheet.modeMenu().getByRole("radio", { name: "Multiplayer" }).click();
-    await respond(page, "Remove the Automa's column and its scores?", "Cancel");
+    await respond(page, "Switch from Automa to Multiplayer? The Automa's scores will be cleared.", "Cancel");
     await expect(sheet.faceUp()).toHaveValue("21");
     await sheet.modeMenu().getByRole("radio", { name: "Solo" }).click();
-    await respond(page, "Remove the Automa's column and its scores?", "Remove columns");
+    await respond(page, "Switch from Automa to Solo? The Automa's scores will be cleared.", "Switch to Solo");
     await expect(sheet.automaHead()).toHaveCount(0);
     await expect(sheet.cell(0, 0)).toHaveValue("38");
+  });
+
+  test("Multiplayer from Duet against the Automa is Duet", async ({ page }) => {
+    const sheet = await openApp(page);
+    await sheet.expansions(["Asia"], { close: false });
+    await sheet.asiaMode("duet");
+    await sheet.checklist().getByRole("button", { name: "Done" }).click();
+    await sheet.mode("Automa");
+    await sheet.faceUp().fill("21");
+    await sheet.modeButton().click();
+    await sheet.modeMenu().getByRole("radio", { name: "Multiplayer" }).click();
+    await respond(page, "Switch from Automa to Duet? The Automa's scores will be cleared.", "Switch to Duet");
+    await sheet.modeMenu().getByRole("button", { name: "Done" }).click();
+    await expect(sheet.title()).toHaveText("Duet");
+    await expect(sheet.players()).toHaveCount(2);
   });
 
   test("asks before players with scores go", async ({ page }) => {
@@ -86,7 +101,7 @@ test.describe("the corner menu", () => {
     await sheet.cell(0, 1).fill("5");
     await sheet.modeButton().click();
     await sheet.modeMenu().getByRole("radio", { name: "Automa" }).click();
-    await respond(page, /one player/, "Remove columns");
+    await respond(page, "Switch from Multiplayer to Automa? Player 2's scores will be cleared.", "Switch to Automa");
     await expect(sheet.players()).toHaveCount(1);
     await expect(sheet.automaHead()).toBeVisible();
   });
@@ -99,7 +114,7 @@ test.describe("the corner menu", () => {
     await sheet.expansions([]);
     await sheet.modeButton().click();
     await sheet.modeMenu().getByRole("radio", { name: "Solo" }).click();
-    await respond(page, "Remove the Automa's column and its scores?", "Remove columns");
+    await respond(page, "Switch from Automa to Solo? The Automa's scores will be cleared.", "Switch to Solo");
     await expect(sheet.automaHead()).toHaveCount(0);
   });
 
@@ -111,7 +126,7 @@ test.describe("the corner menu", () => {
     await sheet.expansions([]);
     await sheet.modeButton().click();
     await sheet.modeMenu().getByRole("radio", { name: "Automa" }).click();
-    await respond(page, /one player/, "Cancel");
+    await respond(page, "Switch from Multiplayer to Automa? Player 2's scores will be cleared.", "Cancel");
     await expect(sheet.players()).toHaveCount(2);
   });
 
@@ -240,8 +255,14 @@ test.describe("an Automa game", () => {
     await sheet.expansions(["Oceania"]);
     await sheet.baseTab().locator("button").click();
     await expect(sheet.automaHead()).toBeVisible();
+    await sheet.faceUp().fill("21");
     await sheet.expansions(["Asia"], { close: false });
     await sheet.asiaMode("flock");
+    await respond(
+      page,
+      "Switch from Automa to Flock? Flock doesn't use the Automa, so its scores will be cleared.",
+      "Switch to Flock"
+    );
     await expect(sheet.automaHead()).toHaveCount(0);
     await expect(sheet.players()).toHaveCount(6);
   });

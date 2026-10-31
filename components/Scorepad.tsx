@@ -53,12 +53,25 @@ import {
   automaHasData,
   AutomaSheet,
   displayName,
+  joinNames,
   PlayerSheet,
   scoreGame,
 } from "@/lib/scoring";
 import { applyPalette, paletteFor, PALETTE_KEY } from "@/lib/theme";
 
 const subscribeNever = () => () => {};
+
+/** What a switch is from and to, as in "Switch from Automa to Solo?". */
+const modeName = (config: GameConfig, players: number) =>
+  config.automa
+    ? "Automa"
+    : config.asia === "duet"
+      ? "Duet"
+      : config.asia === "flock"
+        ? "Flock"
+        : players === 1
+          ? "Solo"
+          : "Multiplayer";
 
 /** Saved games live in browser storage, so the sheet only renders there. */
 export const Scorepad = () => {
@@ -156,32 +169,36 @@ const LoadedScorepad = () => {
   const reshape = async (config: GameConfig, count = game.players.length) => {
     const { min, max } = playerLimits(config);
     const n = Math.min(max, Math.max(min, count));
-    const dropsPlayers = game.players
-      .slice(n)
-      .some(
-        p =>
-          Object.values(p.scores).some(v => /\d/.test(v ?? "")) ||
-          Object.values(p.nectarSpent).some(Boolean)
-      );
+    // Players losing a score, even one in a row the setup hides now.
+    const dropped = game.players.flatMap((p, i) =>
+      i >= n &&
+      (Object.values(p.scores).some(v => /\d/.test(v ?? "")) ||
+        Object.values(p.nectarSpent).some(Boolean))
+        ? [`${displayName(p, i)}'s`]
+        : []
+    );
     const dropsAutoma =
       !config.automa &&
       !!game.automa &&
       automaHasData(game.automa, game.config, true);
+    const players = game.players.slice(0, n);
+    while (players.length < n) players.push(emptyPlayer());
+    const to = modeName(config, n);
     if (
-      (dropsPlayers || dropsAutoma) &&
+      (dropped.length > 0 || dropsAutoma) &&
       !(await ask({
-        message: dropsAutoma
-          ? "Remove the Automa's column and its scores?"
-          : max === 1
-            ? "This mode is for one player. Remove the other columns and their scores?"
-            : `This mode is for up to ${max} players. Remove the extra columns and their scores?`,
-        confirm: "Remove columns",
+        message: `Switch from ${modeName(game.config, game.players.length)} to ${to}? ${
+          !dropsAutoma
+            ? `${joinNames(dropped)} scores will be cleared.`
+            : config.asia === "flock"
+              ? "Flock doesn't use the Automa, so its scores will be cleared."
+              : "The Automa's scores will be cleared."
+        }`,
+        confirm: `Switch to ${to}`,
         danger: true,
       }))
     )
       return;
-    const players = game.players.slice(0, n);
-    while (players.length < n) players.push(emptyPlayer());
     edit({
       config,
       players,
