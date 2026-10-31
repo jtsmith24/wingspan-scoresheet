@@ -38,7 +38,7 @@ async function automaGame(page: Page) {
 }
 
 test.describe("the corner menu", () => {
-  test("switches between Multiplayer, Solo and the Automa", async ({ page }) => {
+  test("switches between Multiplayer, the Automa and Solo", async ({ page }) => {
     const sheet = await openApp(page);
     await expect(sheet.title()).toHaveText("Multiplayer");
     await sheet.mode("Automa");

@@ -153,7 +153,9 @@ export const hummingbirdsInPlay = (config: GameConfig) =>
 
 /**
  * The Automa's cache (standard in the Asia and Americas Automa rules) or
- * hoard (an optional variant otherwise): tokens that become eggs at the end.
+ * hoard (an optional variant with any expansions): tokens that become eggs at
+ * the end. Both score the same, so the Hoard choice only matters without
+ * Asia or Americas.
  */
 export const automaTokensInPlay = (config: GameConfig) =>
   !!config.automa &&

@@ -253,8 +253,8 @@ export type Mode = "multiplayer" | "solo" | "automa";
 
 const MODES: { id: Mode; label: string }[] = [
   { id: "multiplayer", label: "Multiplayer" },
-  { id: "solo", label: "Solo" },
   { id: "automa", label: "Automa" },
+  { id: "solo", label: "Solo" },
 ];
 
 export const modeOf = (config: GameConfig, players: number): Mode =>
@@ -262,7 +262,7 @@ export const modeOf = (config: GameConfig, players: number): Mode =>
 
 /**
  * The sheet's corner: names the mode, and opens a menu to switch between
- * Multiplayer, Solo and the Automa, with the Automa's difficulty.
+ * Multiplayer, the Automa and Solo, with the Automa's difficulty.
  */
 export const ModeMenu = ({
   config,
