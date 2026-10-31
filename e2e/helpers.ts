@@ -77,7 +77,9 @@ export class Sheet {
     await this.name(col).press("Enter");
   }
 
+  /** The code each header shows. A name box being typed in shows the full name, so leave it first. */
   async codes() {
+    await this.page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
     return this.players().evaluateAll(els =>
       els.map(e => (e as HTMLInputElement).value)
     );
