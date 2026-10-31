@@ -426,7 +426,7 @@ const SumTable = ({
               {onAddPlayer && <td className="add-cell" />}
             </tr>
             {showTiebreak && (
-              <tr className="tiebreak-row">
+              <tr className="tiebreak-row" style={liftDelay(rows.length)}>
                 <th colSpan={2} scope="row" className="row-label hand-caps">
                   <span>Unused food</span>
                   <small>Tiebreak</small>
