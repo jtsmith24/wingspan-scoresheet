@@ -66,8 +66,6 @@ const LoadedScorepad = () => {
   const [ending, setEnding] = useState<CurrentGame>();
   // Bumped each time a game ends, to replay the Saved stamp.
   const [stamp, setStamp] = useState(0);
-  // The last-game note opening out under the sheet as a game ends.
-  const [noteOpening, setNoteOpening] = useState(false);
 
   const palette = paletteFor(game.config);
   const paletteKey = palette.join("+");
@@ -111,7 +109,7 @@ const LoadedScorepad = () => {
     const swap = setTimeout(() => {
       setGameState(ending);
       setEnding(undefined);
-    }, 1000);
+    }, 1050);
     return () => clearTimeout(swap);
   }, [ending]);
 
@@ -243,7 +241,6 @@ const LoadedScorepad = () => {
     setCanPersist(getStore().persistent);
     setEnding(next);
     setStamp(s => s + 1);
-    setNoteOpening(true);
   };
 
   // Puts the last game back on the sheet, exactly as it was.
@@ -353,10 +350,7 @@ const LoadedScorepad = () => {
         </p>
       )}
       {last && (
-        <div
-          className={`last-game-wrap${noteOpening ? " is-opening" : ""}`}
-          onAnimationEnd={() => setNoteOpening(false)}
-        >
+        <div className={`last-game-wrap${ending ? " is-opening" : ""}`}>
           <p className="last-game hand-caps">
             ✓ Last game:{" "}
             <button
