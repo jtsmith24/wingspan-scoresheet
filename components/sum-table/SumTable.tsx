@@ -153,7 +153,7 @@ const SumTable = ({
 
   // When an ended game's scores lift off, they go row by row, top to bottom.
   const liftDelay = (row: number) =>
-    ({ "--lift-delay": `${(row / rows.length) * 0.18}s` }) as React.CSSProperties;
+    ({ "--lift-delay": `${(row / rows.length) * 0.25}s` }) as React.CSSProperties;
 
   const focus = (id: string) =>
     (document.getElementById(idPrefix + id) as HTMLInputElement | null)?.focus();
@@ -449,20 +449,22 @@ const SumTable = ({
           </tbody>
         </table>
       </div>
-      {outcome.decision !== "none" && !finished && (
-        <p className="sheet-result sheet-pending" aria-live="polite">
-          {missing} {missing === 1 ? "box" : "boxes"} left to fill
-        </p>
-      )}
-      {outcome.decision !== "none" && finished && (
-        <p className="sheet-result" aria-live="polite">
-          {result}
-          {outcome.decision === "needs-food" && (
-            <span> · enter unused food to break the tie</span>
-          )}
-          {detail && <span className="sheet-result-detail">{detail}</span>}
-        </p>
-      )}
+      <div className="sheet-result-wrap">
+        {outcome.decision !== "none" && !finished && (
+          <p className="sheet-result sheet-pending" aria-live="polite">
+            {missing} {missing === 1 ? "box" : "boxes"} left to fill
+          </p>
+        )}
+        {outcome.decision !== "none" && finished && (
+          <p className="sheet-result" aria-live="polite">
+            {result}
+            {outcome.decision === "needs-food" && (
+              <span> · enter unused food to break the tie</span>
+            )}
+            {detail && <span className="sheet-result-detail">{detail}</span>}
+          </p>
+        )}
+      </div>
     </div>
   );
 };

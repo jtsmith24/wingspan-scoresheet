@@ -344,7 +344,8 @@ tr.group-start:not(:first-child) > * {
 
 .sheet-result {
   position: relative;
-  margin: 0.6rem 0.4rem 0.1rem;
+  margin: 0;
+  padding: 0.6rem 0.4rem 0.1rem;
   font-family: var(--font-hand);
   font-size: 1.25rem;
   color: var(--pen);
@@ -668,7 +669,8 @@ button.past-slip:hover {
 
 /* After End game: where the last game went, with a way back. */
 .last-game {
-  margin: 0 0 0.6rem;
+  margin: 0;
+  padding-bottom: 0.6rem;
   text-align: center;
   font-size: 0.95rem;
   opacity: 0.8;
@@ -1153,10 +1155,7 @@ select:not(:disabled),
 .is-ending .score-input,
 .is-ending .nectar-points,
 .is-ending .total-row td > * {
-  animation: saved-lift 0.3s ease-in calc(0.2s + var(--lift-delay, 0s)) both;
-}
-.is-ending .sheet-result {
-  animation: saved-lift 0.3s ease-in 0.38s both;
+  animation: saved-lift 0.35s ease-in calc(0.2s + var(--lift-delay, 0s)) both;
 }
 @keyframes saved-lift {
   to {
@@ -1164,21 +1163,56 @@ select:not(:disabled),
     translate: 0 -0.4rem;
   }
 }
-.just-ended {
-  animation: just-ended 0.35s ease-out both;
+/* The result lifts off last, then its line closes up as the last-game note
+   opens out below. */
+.sheet-result-wrap,
+.last-game-wrap {
+  display: grid;
+  grid-template-rows: 1fr;
 }
-@keyframes just-ended {
+.sheet-result-wrap > p,
+.last-game-wrap > p {
+  min-height: 0;
+  overflow: hidden;
+}
+.is-ending .sheet-result-wrap {
+  animation: saved-close 0.3s ease-in-out 0.7s both;
+}
+.is-ending .sheet-result-wrap > p {
+  animation:
+    saved-lift 0.35s ease-in 0.5s both,
+    saved-close 0.3s ease-in-out 0.7s both;
+}
+@keyframes saved-close {
+  to {
+    grid-template-rows: 0fr;
+    padding-block: 0;
+  }
+}
+.last-game-wrap.is-opening {
+  /* The scorepad's gap opens with it. */
+  animation:
+    note-open 0.3s ease-in-out 0.7s both,
+    note-gap 0.3s ease-in-out 0.7s both;
+}
+.last-game-wrap.is-opening > p {
+  animation: note-open 0.3s ease-in-out 0.7s both;
+}
+@keyframes note-open {
   from {
+    grid-template-rows: 0fr;
+    padding-block: 0;
     opacity: 0;
-    translate: 0 0.3rem;
+  }
+}
+@keyframes note-gap {
+  from {
+    margin-top: -1rem;
   }
 }
 @media (prefers-reduced-motion: reduce) {
   .saved-stamp {
     display: none;
-  }
-  .just-ended {
-    animation: none;
   }
 }
 

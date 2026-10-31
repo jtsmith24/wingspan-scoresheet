@@ -66,6 +66,8 @@ const LoadedScorepad = () => {
   const [ending, setEnding] = useState<CurrentGame>();
   // Bumped each time a game ends, to replay the Saved stamp.
   const [stamp, setStamp] = useState(0);
+  // The last-game note opening out under the sheet as a game ends.
+  const [noteOpening, setNoteOpening] = useState(false);
 
   const palette = paletteFor(game.config);
   const paletteKey = palette.join("+");
@@ -109,7 +111,7 @@ const LoadedScorepad = () => {
     const swap = setTimeout(() => {
       setGameState(ending);
       setEnding(undefined);
-    }, 700);
+    }, 1000);
     return () => clearTimeout(swap);
   }, [ending]);
 
@@ -241,6 +243,7 @@ const LoadedScorepad = () => {
     setCanPersist(getStore().persistent);
     setEnding(next);
     setStamp(s => s + 1);
+    setNoteOpening(true);
   };
 
   // Puts the last game back on the sheet, exactly as it was.
@@ -314,7 +317,9 @@ const LoadedScorepad = () => {
   const { config, players } = game;
   const limits = playerLimits(config);
   const scored = hasAnyScore(game);
-  const last = game.lastGame && history.find(g => g.id === game.lastGame?.id);
+  // While the sheet clears, the note already shows the game just ended.
+  const lastGame = (ending ?? game).lastGame;
+  const last = lastGame && history.find(g => g.id === lastGame.id);
 
   return (
     <div className="scorepad" inert={!!ending}>
@@ -348,20 +353,25 @@ const LoadedScorepad = () => {
         </p>
       )}
       {last && (
-        <p className={`last-game hand-caps${stamp > 0 ? " just-ended" : ""}`}>
-          ✓ Last game:{" "}
-          <button
-            type="button"
-            className="text-link"
-            onClick={() => setPastOpen(last.id)}
-          >
-            {last.summary}
-          </button>{" "}
-          ·{" "}
-          <button type="button" className="text-link" onClick={undoEnd}>
-            Undo
-          </button>
-        </p>
+        <div
+          className={`last-game-wrap${noteOpening ? " is-opening" : ""}`}
+          onAnimationEnd={() => setNoteOpening(false)}
+        >
+          <p className="last-game hand-caps">
+            ✓ Last game:{" "}
+            <button
+              type="button"
+              className="text-link"
+              onClick={() => setPastOpen(last.id)}
+            >
+              {last.summary}
+            </button>{" "}
+            ·{" "}
+            <button type="button" className="text-link" onClick={undoEnd}>
+              Undo
+            </button>
+          </p>
+        </div>
       )}
       {/* End game comes last, on the right, nearer a right thumb. */}
       <div className="sheet-actions hand-caps">
