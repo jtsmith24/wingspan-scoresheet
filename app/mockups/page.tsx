@@ -107,27 +107,73 @@ const Sheet = ({
   );
 };
 
-const DifficultyPicker = ({
+/** The three difficulties as themed radio rows, like the expansion checklist. */
+const DifficultyOptions = ({
+  name,
   value,
   onChange,
 }: {
+  name: string;
   value: Difficulty;
   onChange: (d: Difficulty) => void;
 }) => (
-  <label className="mk-difficulty hand-caps">
-    Difficulty
-    <select
-      value={value}
-      onChange={e => onChange(Number(e.target.value) as Difficulty)}
-    >
-      {DIFFICULTIES.map(([d, name]) => (
-        <option key={d} value={d}>
-          {name} · face-down birds {d}
-        </option>
-      ))}
-    </select>
-  </label>
+  <div className="mk-difficulties" role="radiogroup" aria-label="Difficulty">
+    {DIFFICULTIES.map(([d, label]) => (
+      <label key={d} className="mix-option mk-difficulty-option">
+        <input
+          type="radio"
+          name={name}
+          checked={value === d}
+          onChange={() => onChange(d)}
+        />
+        <span>
+          {label}
+          <small>Face-down birds {d}</small>
+        </span>
+      </label>
+    ))}
+  </div>
 );
+
+/** Under the sheet: names the difficulty, and opens the options on a tap. */
+const DifficultyPicker = ({
+  name,
+  value,
+  onChange,
+}: {
+  name: string;
+  value: Difficulty;
+  onChange: (d: Difficulty) => void;
+}) => {
+  const [open, setOpen] = useState(false);
+  const label = DIFFICULTIES.find(([d]) => d === value)?.[1];
+  return (
+    <div className="mk-anchor hand-caps">
+      <button
+        type="button"
+        className="mk-difficulty-button"
+        aria-expanded={open}
+        onClick={() => setOpen(o => !o)}
+      >
+        Automa difficulty: <span className="text-link">{label}</span>{" "}
+        {open ? "▴" : "▾"}
+      </button>
+      {open && (
+        <div className="mix-popover mk-difficulty-popover">
+          <p className="mix-hint">How tough is the Automa?</p>
+          <DifficultyOptions
+            name={name}
+            value={value}
+            onChange={d => {
+              onChange(d);
+              setOpen(false);
+            }}
+          />
+        </div>
+      )}
+    </div>
+  );
+};
 
 const Tabs = ({ extra }: { extra?: React.ReactNode }) => (
   <div className="mk-tabs hand-caps">
@@ -142,7 +188,7 @@ const Corner = () => {
   const [mode, setMode] = useState<"solo" | "automa">("solo");
   const [open, setOpen] = useState(false);
   const [difficulty, setDifficulty] = useState<Difficulty>(4);
-  const title = mode === "automa" ? "vs Automa" : "Solo";
+  const title = mode === "automa" ? "Automa" : "Solo";
   return (
     <div className="mk-phone">
       <Tabs />
@@ -163,14 +209,15 @@ const Corner = () => {
           }
         />
         {open && (
-          <div className="mk-popover">
+          <div className="mix-popover mk-corner-popover hand-caps">
+            <p className="mix-hint">Who are you playing?</p>
             {(
               [
                 ["solo", "Solo", "Just your score"],
-                ["automa", "Solo vs Automa", "Play against the Automa"],
+                ["automa", "Automa", "Play against the Automa"],
               ] as const
             ).map(([m, label, hint]) => (
-              <label key={m} className="mk-option-row">
+              <label key={m} className="mix-option mk-difficulty-option">
                 <input
                   type="radio"
                   name="corner-mode"
@@ -178,21 +225,30 @@ const Corner = () => {
                   onChange={() => setMode(m)}
                 />
                 <span>
-                  <span className="hand-caps">{label}</span>
+                  {label}
                   <small>{hint}</small>
                 </span>
               </label>
             ))}
             {mode === "automa" && (
-              <DifficultyPicker value={difficulty} onChange={setDifficulty} />
+              <>
+                <p className="mix-hint mk-subhint">Difficulty</p>
+                <DifficultyOptions
+                  name="corner-difficulty"
+                  value={difficulty}
+                  onChange={setDifficulty}
+                />
+              </>
             )}
-            <button
-              type="button"
-              className="ink-button ink-button-primary mk-done"
-              onClick={() => setOpen(false)}
-            >
-              Done
-            </button>
+            <div className="mix-footer">
+              <button
+                type="button"
+                className="text-link mix-done"
+                onClick={() => setOpen(false)}
+              >
+                Done
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -210,7 +266,7 @@ const AddColumn = () => {
       <Tabs />
       <div className="mk-anchor">
         <Sheet
-          title={automa ? "vs Automa" : "Solo"}
+          title={automa ? "Automa" : "Solo"}
           automa={automa}
           difficulty={difficulty}
           automaHeader={
@@ -253,12 +309,12 @@ const AddColumn = () => {
               }}
             >
               Add the Automa
-              <small>Solo against the Automa</small>
+              <small>Play solo against it</small>
             </button>
           </div>
         )}
       </div>
-      {automa && <DifficultyPicker value={difficulty} onChange={setDifficulty} />}
+      {automa && <DifficultyPicker name="add-difficulty" value={difficulty} onChange={setDifficulty} />}
     </div>
   );
 };
@@ -277,12 +333,12 @@ const Tab = () => {
             aria-pressed={automa}
             onClick={() => setAutoma(a => !a)}
           >
-            {automa ? "✓ " : ""}vs Automa
+            {automa ? "✓ " : ""}Automa
           </button>
         }
       />
-      <Sheet title={automa ? "vs Automa" : "Solo"} automa={automa} difficulty={difficulty} />
-      {automa && <DifficultyPicker value={difficulty} onChange={setDifficulty} />}
+      <Sheet title={automa ? "Automa" : "Solo"} automa={automa} difficulty={difficulty} />
+      {automa && <DifficultyPicker name="tab-difficulty" value={difficulty} onChange={setDifficulty} />}
     </div>
   );
 };
@@ -302,7 +358,7 @@ export default function Mockups() {
         <h2 className="hand-caps">A · The corner is the switch</h2>
         <p className="mk-note">
           The sheet&apos;s corner already names the mode. Tap it for Solo or
-          Solo vs Automa, with the difficulty right there. Only offered with
+          Automa, with the difficulty right there. Only offered with
           one player.
         </p>
         <Corner />
@@ -321,7 +377,7 @@ export default function Mockups() {
       <section className="mk-option">
         <h2 className="hand-caps">C · A tab, like an expansion</h2>
         <p className="mk-note">
-          A vs Automa tab beside Base and Expansions turns it on and off. The
+          An Automa tab beside Base and Expansions turns it on and off. The
           difficulty sits under the sheet.
         </p>
         <Tab />

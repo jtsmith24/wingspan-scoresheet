@@ -247,3 +247,52 @@
   font-family: var(--font-label);
   color: var(--ink);
 }
+
+/* Themed difficulty choices, in the expansion checklist's style. */
+.mk-difficulties {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.mk-difficulty-option {
+  align-items: flex-start;
+}
+.mk-difficulty-option input {
+  margin-top: 0.3rem;
+}
+.mk-difficulty-option small {
+  display: block;
+  font-family: var(--font-label);
+  font-size: 0.8rem;
+  opacity: 0.65;
+  text-transform: none;
+}
+.mk-subhint {
+  margin-top: 0.3rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed var(--rule);
+}
+.mix-popover.mk-corner-popover {
+  top: 2.9rem;
+  left: 0.3rem !important;
+  right: auto;
+  text-align: left;
+}
+.mix-popover.mk-difficulty-popover {
+  top: auto;
+  bottom: 2rem;
+  left: 0 !important;
+  right: auto;
+  text-align: left;
+}
+.mk-difficulty-button {
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--ink);
+  cursor: pointer;
+}
+.mk-difficulty-button .text-link {
+  margin-left: 0.2rem;
+}
