@@ -20,6 +20,7 @@ const ROWS = [
   "Tucked cards",
 ];
 const YOU = [38, 7, 12, 9, 4, 6];
+const RIVAL = [31, 9, 10, 7, 5, 8];
 // The Automa scores birds, goals and eggs only.
 const AUTOMA_ROWS = new Set([0, 2, 3]);
 const AUTOMA = { faceUp: 21, faceDown: 5, goals: 14, eggs: 11 };
@@ -32,6 +33,7 @@ const Sheet = ({
   title,
   titleSlot,
   automa,
+  rival,
   difficulty,
   automaHeader,
   addSlot,
@@ -39,12 +41,15 @@ const Sheet = ({
   title: string;
   titleSlot?: React.ReactNode;
   automa: boolean;
+  rival?: boolean;
   difficulty: Difficulty;
   automaHeader?: React.ReactNode;
   addSlot?: React.ReactNode;
 }) => {
   const you = YOU.reduce((a, b) => a + b, 0);
-  const them = automaTotal(difficulty);
+  const them = rival
+    ? RIVAL.reduce((a, b) => a + b, 0)
+    : automaTotal(difficulty);
   const automaCell = (row: number) => {
     if (!AUTOMA_ROWS.has(row)) return <td className="mk-blank" />;
     if (row === 0)
@@ -61,11 +66,12 @@ const Sheet = ({
   return (
     <>
       <div className="mk-sheet">
-        <table className="mk-table">
+        <table className={`mk-table${automa ? " has-automa" : ""}`}>
           <thead>
             <tr>
               <th className="mk-title hand-caps">{titleSlot ?? title}</th>
               <th className="hand-caps">JOR</th>
+              {rival && <th className="hand-caps">ANN</th>}
               {automa && (
                 <th className="hand-caps mk-automa-head">
                   {automaHeader ?? "Automa"}
@@ -79,15 +85,24 @@ const Sheet = ({
               <tr key={label}>
                 <th className="hand-caps">{label}</th>
                 <td>{YOU[row]}</td>
+                {rival && <td>{RIVAL[row]}</td>}
                 {automa && automaCell(row)}
                 {addSlot !== undefined && <td className="mk-add" />}
               </tr>
             ))}
             <tr className="mk-total">
               <th className="hand-caps">Total</th>
-              <td>{automa && you < them ? you : <span className="leader">{you}</span>}</td>
-              {automa && (
-                <td>{you < them ? <span className="leader">{them}</span> : them}</td>
+              <td>
+                {(automa || rival) && you < them ? (
+                  you
+                ) : (
+                  <span className="leader">{you}</span>
+                )}
+              </td>
+              {(automa || rival) && (
+                <td>
+                  {you < them ? <span className="leader">{them}</span> : them}
+                </td>
               )}
               {addSlot !== undefined && <td className="mk-add" />}
             </tr>
@@ -95,13 +110,15 @@ const Sheet = ({
         </table>
       </div>
       <p className="sheet-result mk-result">
-        {!automa
-          ? `Jordan scored ${you}`
-          : you > them
-            ? `Jordan beat the Automa, ${you} to ${them}`
-            : you < them
-              ? `The Automa won with ${them}`
-              : `Tied at ${you}: the Automa has 2 unused food`}
+        {rival
+          ? `Jordan won with ${you}`
+          : !automa
+            ? `Jordan scored ${you}`
+            : you > them
+              ? `Jordan beat the Automa, ${you} to ${them}`
+              : you < them
+                ? `The Automa won with ${them}`
+                : `Tied at ${you}: the Automa has 2 unused food`}
       </p>
     </>
   );
@@ -119,17 +136,14 @@ const DifficultyOptions = ({
 }) => (
   <div className="mk-difficulties" role="radiogroup" aria-label="Difficulty">
     {DIFFICULTIES.map(([d, label]) => (
-      <label key={d} className="mix-option mk-difficulty-option">
+      <label key={d} className="mix-option">
         <input
           type="radio"
           name={name}
           checked={value === d}
           onChange={() => onChange(d)}
         />
-        <span>
-          {label}
-          <small>Face-down birds {d}</small>
-        </span>
+        <span>{label}</span>
       </label>
     ))}
   </div>
@@ -153,7 +167,7 @@ const DifficultyPicker = ({
         type="button"
         className="mk-difficulty-button"
         aria-expanded={open}
-        onClick={() => setOpen(o => !o)}
+        onClick={() => setOpen((o) => !o)}
       >
         Automa difficulty: <span className="text-link">{label}</span>{" "}
         {open ? "▴" : "▾"}
@@ -164,7 +178,7 @@ const DifficultyPicker = ({
           <DifficultyOptions
             name={name}
             value={value}
-            onChange={d => {
+            onChange={(d) => {
               onChange(d);
               setOpen(false);
             }}
@@ -185,10 +199,12 @@ const Tabs = ({ extra }: { extra?: React.ReactNode }) => (
 
 /** A: the corner title opens a short menu of modes. */
 const Corner = () => {
-  const [mode, setMode] = useState<"solo" | "automa">("solo");
+  const [mode, setMode] = useState<"multiplayer" | "solo" | "automa">("solo");
   const [open, setOpen] = useState(false);
   const [difficulty, setDifficulty] = useState<Difficulty>(4);
-  const title = mode === "automa" ? "Automa" : "Solo";
+  const title = { multiplayer: "Multiplayer", solo: "Solo", automa: "Automa" }[
+    mode
+  ];
   return (
     <div className="mk-phone">
       <Tabs />
@@ -196,13 +212,14 @@ const Corner = () => {
         <Sheet
           title={title}
           automa={mode === "automa"}
+          rival={mode === "multiplayer"}
           difficulty={difficulty}
           titleSlot={
             <button
               type="button"
               className="mk-corner hand-caps"
               aria-expanded={open}
-              onClick={() => setOpen(o => !o)}
+              onClick={() => setOpen((o) => !o)}
             >
               {title} ▾
             </button>
@@ -213,21 +230,19 @@ const Corner = () => {
             <p className="mix-hint">Who are you playing?</p>
             {(
               [
-                ["solo", "Solo", "Just your score"],
-                ["automa", "Automa", "Play against the Automa"],
+                ["multiplayer", "Multiplayer"],
+                ["solo", "Solo"],
+                ["automa", "Automa"],
               ] as const
-            ).map(([m, label, hint]) => (
-              <label key={m} className="mix-option mk-difficulty-option">
+            ).map(([m, label]) => (
+              <label key={m} className="mix-option">
                 <input
                   type="radio"
                   name="corner-mode"
                   checked={mode === m}
                   onChange={() => setMode(m)}
                 />
-                <span>
-                  {label}
-                  <small>{hint}</small>
-                </span>
+                <span>{label}</span>
               </label>
             ))}
             {mode === "automa" && (
@@ -288,7 +303,7 @@ const AddColumn = () => {
                 type="button"
                 className="mk-plus"
                 aria-expanded={open}
-                onClick={() => setOpen(o => !o)}
+                onClick={() => setOpen((o) => !o)}
               >
                 +
               </button>
@@ -297,7 +312,11 @@ const AddColumn = () => {
         />
         {open && !automa && (
           <div className="mk-popover mk-popover-right">
-            <button type="button" className="mk-choice hand-caps" onClick={() => setOpen(false)}>
+            <button
+              type="button"
+              className="mk-choice hand-caps"
+              onClick={() => setOpen(false)}
+            >
               Add a player
             </button>
             <button
@@ -309,12 +328,17 @@ const AddColumn = () => {
               }}
             >
               Add the Automa
-              <small>Play solo against it</small>
             </button>
           </div>
         )}
       </div>
-      {automa && <DifficultyPicker name="add-difficulty" value={difficulty} onChange={setDifficulty} />}
+      {automa && (
+        <DifficultyPicker
+          name="add-difficulty"
+          value={difficulty}
+          onChange={setDifficulty}
+        />
+      )}
     </div>
   );
 };
@@ -331,14 +355,24 @@ const Tab = () => {
             type="button"
             className={`mk-tab mk-tab-automa${automa ? " is-on" : ""}`}
             aria-pressed={automa}
-            onClick={() => setAutoma(a => !a)}
+            onClick={() => setAutoma((a) => !a)}
           >
             {automa ? "✓ " : ""}Automa
           </button>
         }
       />
-      <Sheet title={automa ? "Automa" : "Solo"} automa={automa} difficulty={difficulty} />
-      {automa && <DifficultyPicker name="tab-difficulty" value={difficulty} onChange={setDifficulty} />}
+      <Sheet
+        title={automa ? "Automa" : "Solo"}
+        automa={automa}
+        difficulty={difficulty}
+      />
+      {automa && (
+        <DifficultyPicker
+          name="tab-difficulty"
+          value={difficulty}
+          onChange={setDifficulty}
+        />
+      )}
     </div>
   );
 };
@@ -347,19 +381,18 @@ export default function Mockups() {
   return (
     <main className="mk">
       <p className="mk-intro">
-        Three ways to switch a solo game to playing against the Automa. Each
-        phone works: switch the Automa on and off, and change its difficulty.
-        The Automa scores only birds, end-of-round goals and eggs; its
-        face-down birds are worth 3, 4 or 5 by difficulty. The scores are
-        made up.
+        Three ways to switch a solo game to playing against the Automa (A also
+        offers Multiplayer). Each phone works: switch the Automa on and off, and
+        change its difficulty. The Automa scores only birds, end-of-round goals
+        and eggs; its face-down birds are worth 3, 4 or 5 by difficulty. The
+        scores are made up.
       </p>
 
       <section className="mk-option">
         <h2 className="hand-caps">A · The corner is the switch</h2>
         <p className="mk-note">
           The sheet&apos;s corner already names the mode. Tap it for Solo or
-          Automa, with the difficulty right there. Only offered with
-          one player.
+          Automa, with the difficulty right there. Only offered with one player.
         </p>
         <Corner />
       </section>
