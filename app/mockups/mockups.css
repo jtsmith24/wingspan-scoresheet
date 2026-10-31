@@ -1,0 +1,285 @@
+.mk {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2.5rem;
+  padding: 2rem 1rem 4rem;
+}
+.mk-intro,
+.mk-note {
+  max-width: 34rem;
+  font-family: var(--font-label);
+  opacity: 0.75;
+}
+.mk-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+}
+.mk-option h2 {
+  font-size: 1.5rem;
+}
+
+/* A phone-width frame. */
+.mk-phone {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  width: min(360px, calc(100vw - 2rem));
+  min-height: 520px;
+  padding: 1rem 0.75rem;
+  border-radius: 1.4rem;
+  border: 6px solid #2b2420;
+  background: var(--paper);
+}
+.mk-anchor {
+  position: relative;
+}
+
+/* Tabs above the sheet. */
+.mk-tabs {
+  display: flex;
+  gap: 0.3rem;
+  margin-bottom: -0.6rem;
+}
+.mk-tab {
+  padding: 0.25rem 0.7rem 0.6rem;
+  border: 0;
+  border-radius: 0.45rem 0.45rem 0 0;
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--rule) 25%, var(--paper));
+  opacity: 0.75;
+  translate: 0 0.3rem;
+}
+.mk-tab.is-on {
+  background: var(--wash-1);
+  opacity: 1;
+  translate: none;
+}
+.mk-tab-automa {
+  margin-left: auto;
+  cursor: pointer;
+}
+.mk-tab-automa.is-on {
+  background: color-mix(in srgb, var(--pen) 22%, var(--paper));
+}
+
+/* The sheet. */
+.mk-sheet {
+  position: relative;
+  border: 1.5px solid var(--ink);
+  background: var(--paper);
+}
+.mk-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+.mk-table th,
+.mk-table td {
+  height: 2.7rem;
+  border: 1px solid var(--rule);
+  text-align: center;
+}
+.mk-table thead th {
+  font-size: 1.05rem;
+  color: var(--pen);
+}
+.mk-table tbody th {
+  width: 38%;
+  padding-left: 0.5rem;
+  text-align: left;
+  font-size: 0.9rem;
+  line-height: 1.1;
+}
+.mk-table td {
+  font-family: var(--font-hand);
+  font-size: 1.3rem;
+  color: var(--pen);
+}
+.mk-total th,
+.mk-total td {
+  border-top: 1.5px solid var(--ink);
+}
+.mk-title {
+  font-size: 0.85rem !important;
+  color: var(--ink) !important;
+}
+.mk-result {
+  margin: 0;
+  text-align: center;
+}
+
+/* The Automa's column: its own tint, and blank where it doesn't score. */
+.mk-automa-head,
+.mk-table.has-automa td:nth-child(3):not(.mk-add) {
+  background: color-mix(in srgb, var(--pen) 7%, transparent);
+}
+.mk-table td.mk-blank {
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent 0 5px,
+    color-mix(in srgb, var(--rule) 22%, transparent) 5px 6px
+  );
+}
+.mk-birds {
+  line-height: 1;
+}
+.mk-birds small {
+  display: block;
+  font-family: var(--font-label);
+  font-size: 0.62rem;
+  opacity: 0.75;
+}
+.mk-automa-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+.mk-remove {
+  border: 0;
+  background: none;
+  font-size: 1rem;
+  color: var(--ink);
+  opacity: 0.55;
+  cursor: pointer;
+}
+
+/* A: the corner title as a button. */
+.mk-corner {
+  border: 0;
+  border-bottom: 1.5px dashed var(--rule);
+  background: none;
+  font: inherit;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+/* B: the + column. */
+.mk-table .mk-add {
+  width: 2.2rem;
+  border-style: dashed;
+}
+.mk-plus {
+  width: 100%;
+  border: 0;
+  background: none;
+  font-size: 1.3rem;
+  color: var(--ink);
+  opacity: 0.6;
+  cursor: pointer;
+}
+
+/* Menus that open over the sheet. */
+.mk-popover {
+  position: absolute;
+  top: 2.9rem;
+  left: 0.3rem;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 15rem;
+  padding: 0.8rem;
+  text-align: left;
+  border: 1.5px solid var(--ink);
+  border-radius: 0.5rem;
+  background: var(--paper);
+  box-shadow: 0 10px 24px -8px rgba(60, 45, 30, 0.45);
+}
+.mk-popover-right {
+  left: auto;
+  right: 0.3rem;
+  width: 12.5rem;
+}
+.mk-option-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  cursor: pointer;
+}
+.mk-option-row input {
+  flex: none;
+  width: 1.1rem;
+  height: 1.1rem;
+  margin: 0.15rem 0 0;
+}
+.mk-option-row > span {
+  flex: 1;
+}
+.mk-option-row small,
+.mk-choice small {
+  display: block;
+  font-family: var(--font-label);
+  font-size: 0.8rem;
+  opacity: 0.7;
+  text-transform: none;
+}
+.mk-choice {
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--rule);
+  border-radius: 0.4rem;
+  background: none;
+  font: inherit;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+.mk-done {
+  align-self: flex-end;
+}
+
+.mk-difficulty {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.85rem;
+}
+.mk-difficulty select {
+  padding: 0.3rem;
+  border: 1px solid var(--rule);
+  border-radius: 0.3rem;
+  background: var(--paper);
+  font-family: var(--font-label);
+  color: var(--ink);
+}
+
+/* Themed difficulty choices, in the expansion checklist's style. */
+.mk-difficulties {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.mk-subhint {
+  margin-top: 0.3rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed var(--rule);
+}
+.mix-popover.mk-corner-popover {
+  top: 2.9rem;
+  left: 0.3rem !important;
+  right: auto;
+  text-align: left;
+}
+.mix-popover.mk-difficulty-popover {
+  top: auto;
+  bottom: 2rem;
+  left: 0 !important;
+  right: auto;
+  text-align: left;
+}
+.mk-difficulty-button {
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--ink);
+  cursor: pointer;
+}
+.mk-difficulty-button .text-link {
+  margin-left: 0.2rem;
+}
