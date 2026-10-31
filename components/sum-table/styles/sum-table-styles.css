@@ -1210,6 +1210,30 @@ select:not(:disabled),
     margin-top: -1rem;
   }
 }
+/* Undo plays it backwards: the note closes as the result's line opens, then
+   the scores drop back in from the totals up. */
+.last-game-wrap.is-closing {
+  animation:
+    note-open 0.3s ease-in-out reverse both,
+    note-gap 0.3s ease-in-out reverse both;
+}
+.last-game-wrap.is-closing > p {
+  animation: note-open 0.3s ease-in-out reverse both;
+}
+.is-undoing .sheet-result-wrap {
+  animation: saved-close 0.3s ease-in-out reverse both;
+}
+.is-undoing .sheet-result-wrap > p {
+  animation:
+    saved-lift 0.35s ease-in 0.15s reverse both,
+    saved-close 0.3s ease-in-out reverse both;
+}
+.is-undoing .score-input,
+.is-undoing .nectar-points,
+.is-undoing .total-row td > * {
+  animation: saved-lift 0.35s ease-in calc(0.45s - var(--lift-delay, 0s))
+    reverse both;
+}
 @media (prefers-reduced-motion: reduce) {
   .saved-stamp {
     display: none;

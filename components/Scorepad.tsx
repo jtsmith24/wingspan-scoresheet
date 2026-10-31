@@ -66,6 +66,8 @@ const LoadedScorepad = () => {
   const [ending, setEnding] = useState<CurrentGame>();
   // Bumped each time a game ends, to replay the Saved stamp.
   const [stamp, setStamp] = useState(0);
+  // The game Undo just put back, its note closing while the scores return.
+  const [undoing, setUndoing] = useState<SavedGame>();
 
   const palette = paletteFor(game.config);
   const paletteKey = palette.join("+");
@@ -97,6 +99,7 @@ const LoadedScorepad = () => {
       if (e.key === STORAGE_KEYS.history) setHistory(loadHistory());
       if (e.key === STORAGE_KEYS.current) {
         setEnding(undefined);
+        setUndoing(undefined);
         setGameState(loadCurrentGame());
       }
     };
@@ -112,6 +115,12 @@ const LoadedScorepad = () => {
     }, 1050);
     return () => clearTimeout(swap);
   }, [ending]);
+
+  useEffect(() => {
+    if (!undoing) return;
+    const done = setTimeout(() => setUndoing(undefined), 1000);
+    return () => clearTimeout(done);
+  }, [undoing]);
 
   // Every change is saved straight away so a closed tab loses nothing.
   // Once any write has failed (say, history no longer fits), the store stays
@@ -243,10 +252,13 @@ const LoadedScorepad = () => {
     setStamp(s => s + 1);
   };
 
-  // Puts the last game back on the sheet, exactly as it was.
+  // Puts the last game back on the sheet, exactly as it was: the ending
+  // plays backwards, without the stamp.
   const undoEnd = () => {
     const last = game.lastGame;
     if (!last) return;
+    if (!matchMedia("(prefers-reduced-motion: reduce)").matches)
+      setUndoing(history.find(g => g.id === last.id));
     writeHistory(h => removeFromHistory(h, last.id));
     setGame({ config: last.config, players: last.players });
   };
@@ -316,11 +328,14 @@ const LoadedScorepad = () => {
   const scored = hasAnyScore(game);
   // While the sheet clears, the note already shows the game just ended.
   const lastGame = (ending ?? game).lastGame;
-  const last = lastGame && history.find(g => g.id === lastGame.id);
+  const last =
+    undoing ?? (lastGame && history.find(g => g.id === lastGame.id));
 
   return (
-    <div className="scorepad" inert={!!ending}>
-      <div className={`sheet-with-tabs${ending ? " is-ending" : ""}`}>
+    <div className="scorepad" inert={!!ending || !!undoing}>
+      <div
+        className={`sheet-with-tabs${ending ? " is-ending" : ""}${undoing ? " is-undoing" : ""}`}
+      >
         <ExpansionTabs
           config={config}
           palette={palette}
@@ -350,7 +365,9 @@ const LoadedScorepad = () => {
         </p>
       )}
       {last && (
-        <div className={`last-game-wrap${ending ? " is-opening" : ""}`}>
+        <div
+          className={`last-game-wrap${ending ? " is-opening" : ""}${undoing ? " is-closing" : ""}`}
+        >
           <p className="last-game hand-caps">
             ✓ Last game:{" "}
             <button
