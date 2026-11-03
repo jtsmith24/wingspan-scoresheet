@@ -385,13 +385,13 @@ test.describe("an ended Automa game", () => {
     await expect(full(page).locator(".sheet-result")).toHaveText("Jordan beat the Automa, 76 to 56");
   });
 
-  test("an edit to the Automa's column in another tab blocks saving over it", async ({ page, context }) => {
+  test("an edit to the Automa's column in another tab blocks saving over it", async ({ page }) => {
     const sheet = await automaGame(page);
     await sheet.endButton().click();
     await sheet.pastButton().click();
     await page.locator("button.past-slip").first().click();
     await full(page).getByRole("button", { name: "Edit" }).click();
-    const other = await openOtherTab(context);
+    const other = await openOtherTab(page);
     await other.locator(".history-link").click();
     await other.locator("button.past-slip").first().click();
     await other.locator(".past-slip-full").getByRole("button", { name: "Edit" }).click();

@@ -321,15 +321,10 @@ export const PastGames = ({
     )?.focus();
   }, [openId]);
 
-  // Escape and the back button leave an edit first, then the drawer. Back
-  // leaves a confirmation on top to answer, with the drawer still under it.
+  // Escape and the back button leave an edit first, then the drawer.
   const editing = !!draft;
-  useBackButton(() => {
-    if (dialogOpen()) return false;
-    if (!editing) return onClose();
-    setEditDraft(undefined);
-    return false;
-  });
+  useBackButton(onClose);
+  useBackButton(() => setEditDraft(undefined), editing);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape" || dialogOpen()) return;
