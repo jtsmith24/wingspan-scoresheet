@@ -10,6 +10,10 @@
  *  - Asia (Flock mode, 6-7 players): same rows, but nectar ties are "friendly".
  *  - Americas Expansion: adds the hummingbird track, scored at game end from
  *    each token's position. It can be negative.
+ *  - Automa (solo opponent; official Automa scoresheet and rulebooks): scores
+ *    birds (face-up points plus 3/4/5 per face-down bird by difficulty),
+ *    goals, eggs, eggs from cache/hoard tokens, Duet tokens, nectar and the
+ *    hummingbird track. No bonus cards, food on cards or tucked cards.
  */
 
 export type CategoryId =
@@ -17,6 +21,7 @@ export type CategoryId =
   | "bonus"
   | "goals"
   | "eggs"
+  | "cache"
   | "food"
   | "tucked"
   | "duet"
@@ -39,11 +44,28 @@ export interface Category {
 /** "standard" is a normal 1-5 player game with Asia cards: no scoring changes. */
 export type AsiaMode = "off" | "standard" | "duet" | "flock";
 
+/** Eaglet, Eagle or Eagle-eyed Eagle: what each face-down bird is worth. */
+export type AutomaDifficulty = 3 | 4 | 5;
+
+export const AUTOMA_DIFFICULTIES: { id: AutomaDifficulty; label: string }[] = [
+  { id: 3, label: "Eaglet" },
+  { id: 4, label: "Eagle" },
+  { id: 5, label: "Eagle-eyed Eagle" },
+];
+
+export interface AutomaSettings {
+  difficulty: AutomaDifficulty;
+  /** The optional Hoard variant (Oceania Automa rules): tokens without Asia or Americas. */
+  hoard: boolean;
+}
+
 export interface GameConfig {
   european: boolean;
   oceania: boolean;
   asia: AsiaMode;
   americas: boolean;
+  /** Playing solo against the Automa. Never with Flock. */
+  automa?: AutomaSettings;
 }
 
 export const DEFAULT_CONFIG: GameConfig = {
@@ -79,6 +101,12 @@ const BASE_CATEGORIES: Category[] = [
     hint: "Points from the goal board",
   },
   { id: "eggs", label: "Eggs", group: "each", hint: "1 point per egg" },
+  {
+    id: "cache",
+    label: "Eggs from cache/hoard",
+    group: "each",
+    hint: "The Automa's cache/hoard tokens, before they become eggs (1 egg per 5, 4 or 3 tokens by difficulty). Leave these eggs out of its Eggs row",
+  },
   { id: "food", label: "Food on cards", group: "each", hint: "1 point per cached food" },
   { id: "tucked", label: "Tucked cards", group: "each", hint: "1 point per tucked card" },
 ];
@@ -111,7 +139,9 @@ const NECTAR_CATEGORY: Category = {
  * doesn't scale to 6-7 players, though the Americas birds still play.
  */
 export function categoriesFor(config: GameConfig): Category[] {
-  const rows = [...BASE_CATEGORIES];
+  const rows = BASE_CATEGORIES.filter(
+    c => c.id !== "cache" || automaTokensInPlay(config)
+  );
   if (config.asia === "duet") rows.push(DUET_CATEGORY);
   if (hummingbirdsInPlay(config)) rows.push(HUMMINGBIRD_CATEGORY);
   if (config.oceania) rows.push(NECTAR_CATEGORY);
@@ -121,6 +151,31 @@ export function categoriesFor(config: GameConfig): Category[] {
 export const hummingbirdsInPlay = (config: GameConfig) =>
   config.americas && config.asia !== "flock";
 
+/**
+ * The Automa's cache (standard in the Asia and Americas Automa rules) or
+ * hoard (an optional variant with any expansions): tokens that become eggs at
+ * the end. Both score the same, so the Hoard choice only matters without
+ * Asia or Americas.
+ */
+export const automaTokensInPlay = (config: GameConfig) =>
+  !!config.automa &&
+  (config.asia !== "off" || config.americas || config.automa.hoard);
+
+/** Cache/hoard tokens per egg: 5, 4 or 3 by difficulty. */
+export const tokensPerEgg = (difficulty: AutomaDifficulty) => 8 - difficulty;
+
+/**
+ * Whether a row has a box to fill in. The Automa has no bonus cards, cached
+ * food or tucked cards; only the Automa has cache/hoard tokens.
+ */
+export const scoredBy = (id: CategoryId, side: "player" | "automa") =>
+  side === "automa"
+    ? id !== "bonus" && id !== "food" && id !== "tucked"
+    : id !== "cache";
+
+export const difficultyLabel = (difficulty: AutomaDifficulty) =>
+  AUTOMA_DIFFICULTIES.find(d => d.id === difficulty)?.label ?? "";
+
 export interface PlayerLimits {
   min: number;
   max: number;
@@ -128,6 +183,7 @@ export interface PlayerLimits {
 
 /** Player counts allowed by each mode. Base game is 1-5 (1 = solo vs. Automa). */
 export function playerLimits(config: GameConfig): PlayerLimits {
+  if (config.automa) return { min: 1, max: 1 };
   if (config.asia === "duet") return { min: 2, max: 2 };
   if (config.asia === "flock") return { min: 6, max: 7 };
   return { min: 1, max: 5 };
@@ -143,7 +199,9 @@ export function sameConfig(a: GameConfig, b: GameConfig): boolean {
     a.european === b.european &&
     a.oceania === b.oceania &&
     a.asia === b.asia &&
-    a.americas === b.americas
+    a.americas === b.americas &&
+    a.automa?.difficulty === b.automa?.difficulty &&
+    a.automa?.hoard === b.automa?.hoard
   );
 }
 
@@ -155,5 +213,11 @@ export function describeConfig(config: GameConfig): string {
   if (config.asia === "duet") parts.push("Asia (Duet)");
   if (config.asia === "flock") parts.push("Asia (Flock)");
   if (config.americas) parts.push("Americas");
-  return parts.join(" + ");
+  const text = parts.join(" + ");
+  if (!config.automa) return text;
+  const hoard =
+    config.automa.hoard && config.asia === "off" && !config.americas
+      ? " + Hoard"
+      : "";
+  return `${text} · vs Automa (${difficultyLabel(config.automa.difficulty)}${hoard})`;
 }

@@ -37,6 +37,33 @@ test.describe("fits the screen", () => {
     }
   });
 
+  test("the Automa's birds and cache boxes fit their cells", async ({ page }, info) => {
+    const sheet = await openApp(page);
+    await sheet.mode("Automa");
+    await sheet.expansions(["Asia", "Americas"]);
+    await sheet.faceDown().fill("12");
+    await sheet.faceUp().fill("123");
+    const cache = (await sheet.rowLabels()).indexOf("eggs from cache/hoard");
+    await sheet.cell(cache, 1).fill("17");
+    for (const width of widths(info.project.name)) {
+      await page.setViewportSize({ width, height: 800 });
+      const fits = await page.evaluate(c => {
+        const inCell = (el: Element | null) => {
+          const cell = el!.closest("td")!.getBoundingClientRect();
+          const r = el!.getBoundingClientRect();
+          return r.left >= cell.left - 0.5 && r.right <= cell.right + 0.5 && r.top >= cell.top - 0.5 && r.bottom <= cell.bottom + 0.5;
+        };
+        const boxes = ["#cell-0-1", "#cell-0-1-up", `#cell-${c}-1`].map(s => document.querySelector<HTMLInputElement>(s)!);
+        return [
+          ...boxes.map(i => i.scrollWidth <= i.clientWidth && inCell(i)),
+          inCell(document.querySelector(".cache-eggs")),
+        ];
+      }, cache);
+      expect(fits, `${width}px`).toEqual([true, true, true, true]);
+      expect(await pageOverflows(page), `${width}px`).toBe(false);
+    }
+  });
+
   test("Past games keeps its width with a game open, and five players fit", async ({ page }, info) => {
     const sheet = await openApp(page);
     for (let i = 0; i < 3; i++) await sheet.addPlayer().click();
@@ -106,7 +133,7 @@ test.describe("fits the screen", () => {
     await sheet.asiaMode("flock");
     for (const width of widths(info.project.name)) {
       await page.setViewportSize({ width, height: 800 });
-      expect(await insideViewport(page, ".mix-popover"), `${width}px`).toBe(true);
+      expect(await insideViewport(page, ".mix-popover:not(.mode-popover)"), `${width}px`).toBe(true);
     }
   });
 

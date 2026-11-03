@@ -340,7 +340,8 @@ test.describe("Asia modes", () => {
     const sheet = await openApp(page);
     await sheet.expansions(["Asia"], { close: false });
     await sheet.asiaMode("duet");
-    await expect(sheet.title()).toHaveText("Duet");
+    await expect(sheet.title()).toHaveText("Multiplayer");
+    await expect(sheet.expansionsTab()).toContainText("Duet");
     await expect(sheet.players()).toHaveCount(2);
     expect(await sheet.rowLabels()).toContain("duet tokens");
     await expect(sheet.addPlayer()).toHaveCount(0);
@@ -354,11 +355,11 @@ test.describe("Asia modes", () => {
     for (let c = 0; c < 4; c++) await sheet.cell(0, c).fill(String(c + 1));
     await sheet.expansions(["Asia"], { close: false });
     await sheet.asiaMode("duet");
-    await respond(page, "This mode is for up to 2 players. Remove the extra columns and their scores?", "Cancel");
+    await respond(page, "Switch from Multiplayer to Duet? Player 3's and Player 4's scores will be cleared.", "Cancel");
     await expect(sheet.players()).toHaveCount(4);
     await expect(sheet.checklist().locator("select")).toHaveValue("standard");
     await sheet.asiaMode("duet");
-    await respond(page, /up to 2 players/, "Remove columns");
+    await respond(page, /^Switch from Multiplayer to Duet\?/, "Switch to Duet");
     await expect(sheet.players()).toHaveCount(2);
     await expect(sheet.cell(0, 1)).toHaveValue("2");
   });
@@ -378,7 +379,8 @@ test.describe("Asia modes", () => {
     await sheet.expansions(["Asia"], { close: false });
     await sheet.asiaMode("flock");
     await sheet.checklist().getByRole("button", { name: "Done" }).click();
-    await expect(sheet.title()).toHaveText("Flock");
+    await expect(sheet.title()).toHaveText("Multiplayer");
+    await expect(sheet.expansionsTab()).toContainText("Flock");
     await expect(sheet.players()).toHaveCount(6);
     await expect(sheet.removeButtons()).toHaveCount(0);
     await sheet.addPlayer().click();
@@ -387,7 +389,7 @@ test.describe("Asia modes", () => {
     await expect(sheet.removeButtons()).toHaveCount(7);
     await sheet.cell(0, 6).fill("9");
     await sheet.asiaMode("standard");
-    await respond(page, /up to 5 players/, "Remove columns");
+    await respond(page, "Switch from Flock to Multiplayer? Player 7's scores will be cleared.", "Switch to Multiplayer");
     await expect(sheet.players()).toHaveCount(5);
   });
 

@@ -307,12 +307,148 @@ tr.group-start:not(:first-child) > * {
   cursor: default;
 }
 
-.score-cell:has(.score-input:disabled) {
+.score-cell:has(.score-input:disabled),
+.is-blank {
   background-image: repeating-linear-gradient(
     -45deg,
     transparent 0 6px,
     color-mix(in srgb, var(--rule) 18%, transparent) 6px 7px
   );
+}
+
+/* The Automa's column: a light wash, so it reads as the other side. */
+.automa-head,
+.automa-cell,
+.automa-tiebreak {
+  background-color: color-mix(in srgb, var(--pen) 6%, transparent);
+}
+.automa-head {
+  font-family: var(--font-hand);
+  font-size: 1.2rem;
+  color: var(--pen);
+}
+
+/* Its birds: the face-down count (times the difficulty) over the points. */
+.automa-birds {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.automa-birds .score-input {
+  height: auto;
+  flex: 1;
+  min-height: 0;
+}
+.face-down {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px dashed var(--rule);
+}
+.face-down .score-input {
+  font-size: 1.05rem;
+  height: 1.4rem;
+  flex: 1;
+}
+.face-down > span {
+  padding-right: 0.3rem;
+  font-family: var(--font-label);
+  font-size: 0.75rem;
+  color: var(--ink);
+  opacity: 0.7;
+}
+.automa-birds .score-input::placeholder {
+  font-family: var(--font-label);
+  font-size: 0.7rem;
+  color: var(--ink);
+  opacity: 0.45;
+}
+#sum-table tr:has(.automa-birds) > * {
+  height: 4.25rem;
+}
+
+/* Eggs its tokens make, pencilled under the count. */
+.cache-eggs {
+  position: absolute;
+  bottom: 0.1rem;
+  left: 0;
+  right: 0;
+  font-family: var(--font-label);
+  font-size: 0.7rem;
+  color: var(--ink);
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.automa-tiebreak {
+  font-family: var(--font-hand);
+  font-size: 1.35rem;
+  color: var(--pen);
+  line-height: 1;
+}
+.automa-tiebreak small {
+  display: block;
+  font-family: var(--font-label);
+  font-size: 0.65rem;
+  color: var(--ink);
+  opacity: 0.7;
+}
+.past-unit {
+  display: block;
+  font-family: var(--font-label);
+  font-size: 0.65rem;
+  color: var(--ink);
+  opacity: 0.7;
+}
+
+/* The corner names the mode, and opens the menu to change it. */
+.mode-menu {
+  position: relative;
+  display: inline-block;
+}
+.mode-button {
+  padding: 0.15rem 0;
+  border: 0;
+  border-bottom: 1.5px dashed var(--rule);
+  background: none;
+  font: inherit;
+  color: var(--ink);
+}
+.mix-popover.mode-popover {
+  position: fixed;
+  overflow-y: auto;
+  left: var(--left) !important;
+  right: auto;
+  text-align: left;
+  font-size: 1rem;
+  letter-spacing: normal;
+}
+.mode-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.mode-subhint {
+  margin-top: 0.3rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed var(--rule);
+}
+.mode-hoard {
+  margin-top: 0.2rem;
+}
+/* The caret is drawn, so the button's text is just the mode. */
+.mode-button::after {
+  content: "▾";
+  margin-left: 0.3rem;
+  font-size: 0.75em;
+}
+.mode-button[aria-expanded="true"]::after {
+  content: "▴";
+}
+@media (hover: hover) {
+  .mode-button:hover {
+    color: var(--pen);
+    border-color: var(--pen);
+  }
 }
 
 /* Points earned in a habitat, pencilled in the corner */
@@ -1154,6 +1290,9 @@ select:not(:disabled),
 }
 .is-ending .score-input,
 .is-ending .nectar-points,
+.is-ending .cache-eggs,
+.is-ending .face-down > span,
+.is-ending .automa-tiebreak > span,
 .is-ending .total-row td > * {
   animation: saved-lift 0.35s ease-in calc(0.2s + var(--lift-delay, 0s)) both;
 }
@@ -1230,6 +1369,9 @@ select:not(:disabled),
 }
 .is-undoing .score-input,
 .is-undoing .nectar-points,
+.is-undoing .cache-eggs,
+.is-undoing .face-down > span,
+.is-undoing .automa-tiebreak > span,
 .is-undoing .total-row td > * {
   animation: saved-lift 0.35s ease-in calc(0.45s - var(--lift-delay, 0s))
     reverse both;
