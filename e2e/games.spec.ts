@@ -3,6 +3,7 @@ import {
   KEYS,
   noDialog,
   openApp,
+  openOtherTab,
   playQuickGame,
   readStorage,
   respond,
@@ -216,8 +217,7 @@ test.describe("Undo and the last-game note", () => {
 
   test("Undo in one tab shows in the other", async ({ page, context }) => {
     const a = await openApp(page);
-    const other = await context.newPage();
-    await other.goto("/");
+    const other = await openOtherTab(context);
     const b = new Sheet(other);
     await endQuickGame(a);
     await expect(b.lastGame()).toBeVisible();

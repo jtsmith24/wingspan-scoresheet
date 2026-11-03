@@ -1,4 +1,4 @@
-import { expect, KEYS, openApp, playQuickGame, readStorage, respond, Sheet, test } from "./helpers";
+import { expect, KEYS, openApp, openOtherTab, playQuickGame, readStorage, respond, Sheet, test } from "./helpers";
 
 test.describe("keeping things between visits", () => {
   test("a reload keeps the sheet exactly as it was", async ({ page }) => {
@@ -143,8 +143,7 @@ test.describe("bad or missing storage", () => {
 test.describe("two tabs open", () => {
   test("a game saved in one shows up in the other", async ({ page, context }) => {
     const a = await openApp(page);
-    const other = await context.newPage();
-    await other.goto("/");
+    const other = await openOtherTab(context);
     const b = new Sheet(other);
     await expect(b.pastButton()).toHaveCount(0);
     await playQuickGame(a);
@@ -154,8 +153,7 @@ test.describe("two tabs open", () => {
 
   test("the sheet follows along in the other tab", async ({ page, context }) => {
     const a = await openApp(page);
-    const other = await context.newPage();
-    await other.goto("/");
+    const other = await openOtherTab(context);
     const b = new Sheet(other);
     await a.setName(0, "Jordan");
     await a.cell(0, 0).fill("42");
@@ -171,8 +169,7 @@ test.describe("two tabs open", () => {
 
   test("ending games in both keeps both games", async ({ page, context }) => {
     const a = await openApp(page);
-    const other = await context.newPage();
-    await other.goto("/");
+    const other = await openOtherTab(context);
     const b = new Sheet(other);
     await playQuickGame(a, "Alex", "Blake");
     await a.endButton().click();
@@ -188,8 +185,7 @@ test.describe("two tabs open", () => {
     const a = await openApp(page);
     await playQuickGame(a);
     await a.endButton().click();
-    const other = await context.newPage();
-    await other.goto("/");
+    const other = await openOtherTab(context);
     const b = new Sheet(other);
     await b.pastButton().click();
     await other.locator("button.past-slip").click();
@@ -204,8 +200,7 @@ test.describe("two tabs, changes crossing", () => {
     const a = await openApp(page);
     await a.setName(0, "Jordan");
     await a.cell(0, 0).fill("5");
-    const other = await context.newPage();
-    await other.goto("/");
+    const other = await openOtherTab(context);
     const b = new Sheet(other);
     await a.endButton().click();
     await expect(page.locator("dialog[open]")).toBeVisible();
@@ -227,8 +222,7 @@ test.describe("two tabs, changes crossing", () => {
     await page.locator("button.past-slip").first().click();
     await page.locator(".past-actions").getByRole("button", { name: "Edit" }).click();
     await page.locator("#past-cell-0-0").fill("99");
-    const other = await context.newPage();
-    await other.goto("/");
+    const other = await openOtherTab(context);
     await new Sheet(other).pastButton().click();
     await other.locator("button.past-slip").first().click();
     await other.locator(".past-actions").getByRole("button", { name: "Delete" }).click();
@@ -252,8 +246,7 @@ test.describe("two tabs, changes crossing", () => {
     };
     await openEdit(page);
     await page.locator("#past-cell-0-0").fill("11");
-    const other = await context.newPage();
-    await other.goto("/");
+    const other = await openOtherTab(context);
     await openEdit(other);
     await other.locator("#past-cell-0-1").fill("22");
     await other.getByRole("button", { name: "Save changes" }).click();
@@ -275,8 +268,7 @@ test.describe("two tabs, changes crossing", () => {
 
     test("a change from the other tab while the sheet clears wins", async ({ page, context }) => {
       const a = await openApp(page);
-      const other = await context.newPage();
-      await other.goto("/");
+      const other = await openOtherTab(context);
       await playQuickGame(a);
       await a.endButton().click();
       await other.evaluate(key => {

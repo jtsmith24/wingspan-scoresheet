@@ -3,6 +3,7 @@ import {
   KEYS,
   noDialog,
   openApp,
+  openOtherTab,
   readStorage,
   respond,
   Sheet,
@@ -390,8 +391,7 @@ test.describe("an ended Automa game", () => {
     await sheet.pastButton().click();
     await page.locator("button.past-slip").first().click();
     await full(page).getByRole("button", { name: "Edit" }).click();
-    const other = await context.newPage();
-    await other.goto("/");
+    const other = await openOtherTab(context);
     await other.locator(".history-link").click();
     await other.locator("button.past-slip").first().click();
     await other.locator(".past-slip-full").getByRole("button", { name: "Edit" }).click();

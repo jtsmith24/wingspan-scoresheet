@@ -1,4 +1,4 @@
-import { expect, test as base, type Page } from "@playwright/test";
+import { expect, test as base, type BrowserContext, type Page } from "@playwright/test";
 
 export const KEYS = {
   current: "wingspan-scoresheet:v1:current",
@@ -38,6 +38,17 @@ export async function openApp(
   await page.reload();
   await expect(page.locator("#sum-table")).toBeVisible();
   return new Sheet(page);
+}
+
+/**
+ * A second tab on the app, once its sheet is up and listening for changes
+ * from the first: a change made before then would be missed.
+ */
+export async function openOtherTab(context: BrowserContext) {
+  const other = await context.newPage();
+  await other.goto("/");
+  await expect(other.locator("#sum-table")).toBeVisible();
+  return other;
 }
 
 export const readStorage = (page: Page, key: string) =>
