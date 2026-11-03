@@ -2,6 +2,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Ask } from "./ConfirmDialog";
 import { SavedStamp } from "./SavedStamp";
+import { useBackButton } from "./useBackButton";
 import SumTable, { sheetTitle } from "./sum-table/SumTable";
 import { editBase, playerHasData, SavedGame } from "@/lib/game";
 import { withCodes } from "@/lib/names";
@@ -319,6 +320,8 @@ export const PastGames = ({
       ) ?? drawer?.querySelector<HTMLElement>("button")
     )?.focus();
   }, [openId]);
+
+  useBackButton(onClose);
 
   // Escape leaves an edit first, then the drawer.
   const editing = !!draft;

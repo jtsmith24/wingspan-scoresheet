@@ -304,6 +304,29 @@ test.describe("Past games", () => {
     }
   });
 
+  test("the back button closes it; closing it another way leaves no step behind", async ({ page }) => {
+    const sheet = await openApp(page);
+    await endQuickGame(sheet);
+    const steps = () => page.evaluate(() => history.length);
+    await sheet.pastButton().click();
+    const open = await steps();
+    await page.goBack();
+    await expect(drawer(page)).toHaveCount(0);
+    await expect(sheet.cell(0, 0)).toBeVisible();
+    // Each way of closing takes the drawer's step back off, so opening it
+    // again doesn't pile up steps for the back button to wade through.
+    await sheet.pastButton().click();
+    await page.keyboard.press("Escape");
+    await sheet.pastButton().click();
+    await page.getByRole("button", { name: "Close ✕" }).click();
+    await sheet.pastButton().click();
+    await expect(drawer(page)).toBeVisible();
+    await expect.poll(steps).toBe(open);
+    await page.goBack();
+    await expect(drawer(page)).toHaveCount(0);
+    await expect(sheet.cell(0, 0)).toBeVisible();
+  });
+
   test("the page behind doesn't scroll while it's open", async ({ page }) => {
     const sheet = await openApp(page);
     await endQuickGame(sheet);
