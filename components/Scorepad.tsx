@@ -11,6 +11,7 @@ import SumTable, { sheetTitle } from "./sum-table/SumTable";
 import {
   Expansion,
   ExpansionTabs,
+  FLOCK_FOOTNOTE,
   Mode,
   ModeMenu,
   modeOf,
@@ -468,7 +469,7 @@ const LoadedScorepad = () => {
       </div>
 
       {config.americas && !hummingbirdsInPlay(config) && (
-        <p className="sheet-footnote hand-caps">
+        <p id={FLOCK_FOOTNOTE} className="sheet-footnote hand-caps">
           * No hummingbird track with 6–7 players (Flock). Americas birds
           still play.
         </p>

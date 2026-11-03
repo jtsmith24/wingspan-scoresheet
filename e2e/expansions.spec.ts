@@ -235,11 +235,16 @@ test.describe("Americas", () => {
       "aria-label",
       "Expansions: Asia · Flock + Americas"
     );
+    // Screen readers hear the footnote instead.
+    const footnote = "* No hummingbird track with 6–7 players (Flock). Americas birds still play.";
+    await expect(sheet.expansionsTab().locator("button")).toHaveAccessibleDescription(footnote);
     await sheet.expansionsTab().locator("button").click();
     await expect(sheet.checklist().locator(".mix-option", { hasText: "Americas" })).toContainText("Americas*");
+    await expect(sheet.checklist().getByRole("checkbox", { name: "Americas" })).toHaveAccessibleDescription(footnote);
     await sheet.asiaMode("standard");
     await expect(note).toHaveCount(0);
     await expect(sheet.checklist().locator(".footnote-mark")).toHaveCount(0);
+    await expect(sheet.checklist().getByRole("checkbox", { name: "Americas" })).not.toHaveAttribute("aria-describedby");
     await page.keyboard.press("Escape");
     row = (await sheet.rowLabels()).indexOf("hummingbirds");
     await expect(sheet.expansionsTab()).not.toContainText("*");
