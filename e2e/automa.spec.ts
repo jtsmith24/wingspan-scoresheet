@@ -58,15 +58,42 @@ test.describe("the corner menu", () => {
     await expect(sheet.players()).toHaveCount(2);
   });
 
-  test("keeps the difficulty when the Automa comes back", async ({ page }) => {
+  test("keeps the difficulty and Hoard when the Automa comes back", async ({ page }) => {
     const sheet = await openApp(page);
     await sheet.mode("Automa", "Eagle-eyed Eagle");
+    await sheet.modeButton().click();
+    await sheet.modeMenu().getByRole("checkbox", { name: "Hoard" }).check();
     await sheet.mode("Solo");
     await sheet.mode("Automa");
     await sheet.modeButton().click();
     await expect(
       sheet.modeMenu().getByRole("radio", { name: "Eagle-eyed Eagle" })
     ).toBeChecked();
+    await expect(sheet.modeMenu().getByRole("checkbox", { name: "Hoard" })).toBeChecked();
+  });
+
+  test("arrow keys move through the modes without switching; Space picks one", async ({ page }) => {
+    const sheet = await openApp(page);
+    await sheet.setName(1, "Sam");
+    await sheet.modeButton().click();
+    const radio = (name: string) => sheet.modeMenu().getByRole("radio", { name, exact: true });
+    await radio("Multiplayer").focus();
+    await page.keyboard.press("ArrowDown");
+    await expect(radio("Automa")).toBeFocused();
+    await page.keyboard.press("ArrowDown");
+    await expect(radio("Solo")).toBeFocused();
+    await expect(radio("Multiplayer")).toBeChecked();
+    await expect(sheet.players()).toHaveCount(2);
+    await page.keyboard.press("ArrowDown");
+    await expect(radio("Multiplayer")).toBeFocused();
+    await page.keyboard.press("ArrowUp");
+    await page.keyboard.press("Space");
+    await expect(radio("Solo")).toBeChecked();
+    await expect(sheet.players()).toHaveCount(1);
+    // Escape closes the menu and puts focus back on its button.
+    await page.keyboard.press("Escape");
+    await expect(sheet.modeMenu()).toHaveCount(0);
+    await expect(sheet.modeButton()).toBeFocused();
   });
 
   test("asks before the Automa's scores go, and Cancel keeps them", async ({ page }) => {
@@ -154,12 +181,17 @@ test.describe("the corner menu", () => {
     await expect(sheet.modeMenu()).toHaveCount(0);
   });
 
-  test("closes when the window is resized", async ({ page }) => {
+  test("stays under its button when the window is resized", async ({ page }) => {
     const sheet = await openApp(page);
     await sheet.modeButton().click();
     await expect(sheet.modeMenu()).toBeVisible();
     await page.setViewportSize({ width: 700, height: 700 });
-    await expect(sheet.modeMenu()).toHaveCount(0);
+    await expect(sheet.modeMenu()).toBeVisible();
+    await expect(async () => {
+      const button = (await sheet.modeButton().boundingBox())!;
+      const menu = (await sheet.modeMenu().boundingBox())!;
+      expect(Math.abs(menu.y - (button.y + button.height + 6))).toBeLessThan(2);
+    }).toPass();
   });
 
   test("offers the Hoard variant only without Asia or Americas", async ({ page }) => {

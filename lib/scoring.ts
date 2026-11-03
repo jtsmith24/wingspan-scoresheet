@@ -345,7 +345,9 @@ const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
  * is `automaCol`), a win says who was beaten: "Jordan beat the Automa, 76 to 66".
  */
 export function summarize(outcome: Outcome, names: string[], automaCol?: number): string {
-  return capitalize(summary(outcome, names, automaCol));
+  const text = summary(outcome, names, automaCol);
+  // Only "the Automa" changes case; names stay as typed.
+  return text.startsWith(AUTOMA_NAME) ? capitalize(text) : text;
 }
 
 function summary(outcome: Outcome, names: string[], automaCol?: number): string {

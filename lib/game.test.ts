@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   addToHistory,
-  fitPlayers,
   missingScores,
   playerHasData,
   isCurrentGame,
@@ -83,12 +82,6 @@ describe("games and history", () => {
 
   it("defaults to two players", () => {
     expect(newGame().players).toHaveLength(2);
-  });
-
-  it("fits players to a mode", () => {
-    const five = newGame(DEFAULT_CONFIG, ["a", "b", "c", "d", "e"]).players;
-    expect(fitPlayers(five, { ...DEFAULT_CONFIG, asia: "duet" }).map((p) => p.name)).toEqual(["a", "b"]);
-    expect(fitPlayers(five, { ...DEFAULT_CONFIG, asia: "flock" })).toHaveLength(6);
   });
 
   it("calls no winner until every box is filled in", () => {

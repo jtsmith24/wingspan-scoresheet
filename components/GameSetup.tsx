@@ -1,9 +1,14 @@
 "use client";
-import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import {
   AsiaMode,
   AUTOMA_DIFFICULTIES,
-  AutomaDifficulty,
   AutomaSettings,
   GameConfig,
   hummingbirdsInPlay,
@@ -32,7 +37,7 @@ const isOn = (config: GameConfig, id: Expansion) =>
 function useDismiss(
   refs: React.RefObject<HTMLElement | null>[],
   open: boolean,
-  close: () => void
+  close: (e: PointerEvent | KeyboardEvent) => void
 ) {
   useEffect(() => {
     if (!open) return;
@@ -45,7 +50,7 @@ function useDismiss(
           ? e.key === "Escape"
           : !refs.some(r => r.current?.contains(e.target as Node))
       )
-        close();
+        close(e);
     };
     document.addEventListener("pointerdown", handle);
     document.addEventListener("keydown", handle);
@@ -257,6 +262,26 @@ const MODES: { id: Mode; label: string }[] = [
   { id: "solo", label: "Solo" },
 ];
 
+const sameAutoma = (a: AutomaSettings, b: AutomaSettings) =>
+  a.difficulty === b.difficulty && a.hoard === b.hoard;
+
+/**
+ * Arrow keys only move between the modes, and Space picks one: a switch can
+ * clear scores, so passing over a mode on the way shouldn't switch to it.
+ */
+const moveFocusOnly = (e: React.KeyboardEvent<HTMLElement>) => {
+  const step = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[
+    e.key
+  ];
+  if (!step) return;
+  e.preventDefault();
+  const radios = [
+    ...e.currentTarget.querySelectorAll<HTMLInputElement>("input"),
+  ];
+  const at = radios.indexOf(e.target as HTMLInputElement);
+  radios[(at + step + radios.length) % radios.length]?.focus();
+};
+
 export const modeOf = (config: GameConfig, players: number): Mode =>
   config.automa ? "automa" : players === 1 ? "solo" : "multiplayer";
 
@@ -274,36 +299,44 @@ export const ModeMenu = ({
   config: GameConfig;
   players: number;
   title: string;
-  onMode: (mode: Mode, difficulty: AutomaDifficulty) => void;
+  onMode: (mode: Mode, automa: AutomaSettings) => void;
   onAutoma: (settings: AutomaSettings) => void;
 }) => {
   const [open, setOpen] = useState(false);
-  // The sheet scrolls sideways, which would clip a menu inside it, so the
-  // menu is placed on the page under the button, and closes when the page
-  // scrolls (but not when the menu itself does, on a short screen).
-  const [at, setAt] = useState({ top: 0, left: 0 });
-  useEffect(() => {
-    if (!open) return;
-    const close = (e: Event) => {
-      const inside =
-        e.target instanceof Node && popoverRef.current?.contains(e.target);
-      if (!inside) setOpen(false);
-    };
-    window.addEventListener("scroll", close, true);
-    window.addEventListener("resize", close);
-    return () => {
-      window.removeEventListener("scroll", close, true);
-      window.removeEventListener("resize", close);
-    };
-  }, [open]);
-  // Switching the Automa off and on again keeps its last difficulty,
-  // however it was set (here, Play again, or another tab).
-  const current = config.automa?.difficulty;
-  const [difficulty, setDifficulty] = useState<AutomaDifficulty>(current ?? 4);
-  if (current && current !== difficulty) setDifficulty(current);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
-  useDismiss([buttonRef, popoverRef], open, () => setOpen(false));
+  // The sheet scrolls sideways, which would clip a menu inside it, so the
+  // menu is placed on the page under the button, and follows it when the
+  // page scrolls or resizes (a phone's keyboard closing does both).
+  const [at, setAt] = useState({ top: 0, left: 0 });
+  const place = useCallback(() => {
+    const r = buttonRef.current?.getBoundingClientRect();
+    if (r) setAt({ top: r.bottom + 6, left: Math.max(8, r.left - 6) });
+  }, []);
+  useEffect(() => {
+    if (!open) return;
+    window.addEventListener("scroll", place, true);
+    window.addEventListener("resize", place);
+    return () => {
+      window.removeEventListener("scroll", place, true);
+      window.removeEventListener("resize", place);
+    };
+  }, [open, place]);
+  // Switching the Automa off and on again keeps its last settings,
+  // however they were set (here, Play again, or another tab).
+  const [remembered, setRemembered] = useState<AutomaSettings>(
+    config.automa ?? { difficulty: 4, hoard: false }
+  );
+  if (config.automa && !sameAutoma(config.automa, remembered))
+    setRemembered(config.automa);
+  // Closing from the keyboard puts focus back on the button.
+  const close = (refocus: boolean) => {
+    setOpen(false);
+    if (refocus) buttonRef.current?.focus();
+  };
+  useDismiss([buttonRef, popoverRef], open, e =>
+    close(e instanceof KeyboardEvent)
+  );
   const mode = modeOf(config, players);
   const automa = config.automa;
   // Asia and Americas bring the cache; otherwise the Hoard variant is a choice.
@@ -318,8 +351,7 @@ export const ModeMenu = ({
         aria-expanded={open}
         aria-label={`Mode: ${title}. Change`}
         onClick={() => {
-          const r = buttonRef.current?.getBoundingClientRect();
-          if (r) setAt({ top: r.bottom + 6, left: Math.max(8, r.left - 6) });
+          place();
           setOpen(o => !o);
         }}
       >
@@ -338,14 +370,19 @@ export const ModeMenu = ({
           }
         >
           <p className="mix-hint">Who are you playing?</p>
-          <div role="radiogroup" aria-label="Mode" className="mode-options">
+          <div
+            role="radiogroup"
+            aria-label="Mode"
+            className="mode-options"
+            onKeyDown={moveFocusOnly}
+          >
             {MODES.map(m => (
               <label key={m.id} className="mix-option">
                 <input
                   type="radio"
                   name="mode"
                   checked={mode === m.id}
-                  onChange={() => onMode(m.id, difficulty)}
+                  onChange={() => onMode(m.id, remembered)}
                 />
                 {m.label}
               </label>
@@ -387,7 +424,7 @@ export const ModeMenu = ({
             <button
               type="button"
               className="text-link mix-done"
-              onClick={() => setOpen(false)}
+              onClick={() => close(true)}
             >
               Done
             </button>

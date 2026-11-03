@@ -43,7 +43,7 @@ import {
 import { STORAGE_KEYS } from "@/lib/storage";
 import { withCodes } from "@/lib/names";
 import {
-  AutomaDifficulty,
+  AutomaSettings,
   GameConfig,
   hummingbirdsInPlay,
   playerLimits,
@@ -217,7 +217,7 @@ const LoadedScorepad = () => {
 
   // The corner menu. Solo leaves Duet and Flock (two and 6-7 players); the
   // Automa leaves Flock but plays Duet.
-  const setMode = (mode: Mode, difficulty: AutomaDifficulty) => {
+  const setMode = (mode: Mode, automa: AutomaSettings) => {
     const { config } = game;
     if (mode === modeOf(config, game.players.length)) return;
     const asia =
@@ -226,7 +226,7 @@ const LoadedScorepad = () => {
         ? "standard"
         : config.asia;
     if (mode === "automa")
-      reshape({ ...config, asia, automa: { difficulty, hoard: false } }, 1);
+      reshape({ ...config, asia, automa }, 1);
     else
       reshape(
         { ...config, asia, automa: undefined },

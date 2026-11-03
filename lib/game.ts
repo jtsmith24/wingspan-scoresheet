@@ -114,17 +114,6 @@ export function newGame(
   };
 }
 
-/** Pads or trims the player list to fit a mode's player count. */
-export function fitPlayers(
-  players: PlayerSheet[],
-  config: GameConfig
-): PlayerSheet[] {
-  const { min, max } = playerLimits(config);
-  const fitted = players.slice(0, max);
-  while (fitted.length < min) fitted.push(emptyPlayer());
-  return fitted;
-}
-
 export { playerHasData };
 
 const blank = (v: string | undefined) => {

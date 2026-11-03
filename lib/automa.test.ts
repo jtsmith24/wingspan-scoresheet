@@ -223,7 +223,9 @@ describe("an Automa game", () => {
     expect(isHistory([{ ...saved, automa: undefined }])).toBe(false);
     expect(isHistory([{ ...saved, winners: [2] }])).toBe(false);
     // Always one player against the Automa, in saved games and Undo too.
-    expect(isHistory([{ ...saved, players: [...saved.players, ...saved.players] }])).toBe(false);
+    const two = { ...saved, players: [...saved.players, ...saved.players], sheet: [...saved.sheet, ...saved.sheet] };
+    expect(isHistory([{ ...two, automa: undefined, config: DEFAULT_CONFIG, winners: [0] }])).toBe(true);
+    expect(isHistory([two])).toBe(false);
     const ended = { id: "x", config: game.config, players: [player(), player()], automa: emptyAutoma() };
     expect(isCurrentGame({ ...game, lastGame: ended })).toBe(false);
     expect(isCurrentGame({ ...game, lastGame: { ...ended, players: [player()] } })).toBe(true);
