@@ -72,9 +72,8 @@ export const sheetTitle = ({
   config,
   players,
 }: Pick<CurrentGame, "config"> & { players: unknown[] }) => {
-  if (config.automa) return config.asia === "duet" ? "Duet · Automa" : "Automa";
-  if (config.asia === "duet") return "Duet";
-  if (config.asia === "flock") return "Flock";
+  // The corner names the mode; Duet and Flock show on the Expansions tab.
+  if (config.automa) return "Automa";
   return players.length === 1 ? "Solo" : "Multiplayer";
 };
 

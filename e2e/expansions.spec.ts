@@ -340,7 +340,8 @@ test.describe("Asia modes", () => {
     const sheet = await openApp(page);
     await sheet.expansions(["Asia"], { close: false });
     await sheet.asiaMode("duet");
-    await expect(sheet.title()).toHaveText("Duet");
+    await expect(sheet.title()).toHaveText("Multiplayer");
+    await expect(sheet.expansionsTab()).toContainText("Duet");
     await expect(sheet.players()).toHaveCount(2);
     expect(await sheet.rowLabels()).toContain("duet tokens");
     await expect(sheet.addPlayer()).toHaveCount(0);
@@ -378,7 +379,8 @@ test.describe("Asia modes", () => {
     await sheet.expansions(["Asia"], { close: false });
     await sheet.asiaMode("flock");
     await sheet.checklist().getByRole("button", { name: "Done" }).click();
-    await expect(sheet.title()).toHaveText("Flock");
+    await expect(sheet.title()).toHaveText("Multiplayer");
+    await expect(sheet.expansionsTab()).toContainText("Flock");
     await expect(sheet.players()).toHaveCount(6);
     await expect(sheet.removeButtons()).toHaveCount(0);
     await sheet.addPlayer().click();

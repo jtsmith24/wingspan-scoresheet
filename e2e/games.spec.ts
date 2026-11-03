@@ -133,7 +133,7 @@ test.describe("ending a game", () => {
     for (let c = 0; c < 6; c++) await sheet.fillEvery(c, c + 1);
     await sheet.endButton().click();
     await expect(sheet.players()).toHaveCount(6);
-    await expect(sheet.title()).toHaveText("Flock");
+    await expect(sheet.expansionsTab()).toContainText("Flock");
   });
 
   test("boxes on the fresh sheet change with no question", async ({ page }) => {

@@ -92,7 +92,8 @@ test.describe("the corner menu", () => {
     await sheet.modeMenu().getByRole("radio", { name: "Multiplayer" }).click();
     await respond(page, "Switch from Automa to Duet? The Automa's scores will be cleared.", "Switch to Duet");
     await sheet.modeMenu().getByRole("button", { name: "Done" }).click();
-    await expect(sheet.title()).toHaveText("Duet");
+    await expect(sheet.title()).toHaveText("Multiplayer");
+    await expect(sheet.expansionsTab()).toContainText("Duet");
     await expect(sheet.players()).toHaveCount(2);
   });
 
@@ -273,7 +274,8 @@ test.describe("an Automa game", () => {
     await sheet.asiaMode("duet");
     await sheet.checklist().getByRole("button", { name: "Done" }).click();
     await sheet.mode("Automa");
-    await expect(sheet.title()).toHaveText("Duet · Automa");
+    await expect(sheet.title()).toHaveText("Automa");
+    await expect(sheet.expansionsTab()).toContainText("Duet");
     expect(await sheet.rowLabels()).toContain("duet tokens");
     await sheet.mode("Solo");
     await expect(sheet.title()).toHaveText("Solo");
