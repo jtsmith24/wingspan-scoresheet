@@ -1,38 +1,39 @@
 import { useEffect, useRef } from "react";
 
-// The open panel's history entry, kept here so it outlives remounts.
-let onEntry = false;
+/** Marks the history entry an open panel sits on. */
+const ENTRY = "panel";
+
+const onEntry = () => !!window.history.state?.[ENTRY];
+// Next.js copies its own state onto the entry, so this one's kept beside it.
+const enter = () => window.history.pushState({ [ENTRY]: true }, "");
+
+// The open panel's back handler; false keeps it open.
+let current: (() => boolean | void) | undefined;
 // A step back off the entry is on its way, after closing some other way.
 let leaving = false;
-let close: (() => void) | undefined;
 let stepBack: ReturnType<typeof setTimeout> | undefined;
 let listening = false;
-
-const enter = () => {
-  window.history.pushState({}, "");
-  onEntry = true;
-};
 
 const onPopState = () => {
   if (leaving) {
     // Our own step back: if the panel reopened meanwhile, it gets its entry now.
     leaving = false;
-    if (close) enter();
-  } else if (onEntry) {
-    onEntry = false;
-    close?.();
+    if (current && !onEntry()) enter();
+  } else if (current && !onEntry() && current() === false) {
+    enter();
   }
 };
 
 /**
- * The phone's back button closes a panel instead of leaving the app: the
+ * The phone's back button goes to a panel instead of leaving the app: the
  * panel opens on a history entry of its own, which closing it any other way
- * takes back off. For one panel at a time.
+ * takes back off. `onBack` returns false to stay open (the entry goes back
+ * on). For one panel at a time.
  */
-export function useBackButton(onClose: () => void) {
-  const onCloseRef = useRef(onClose);
+export function useBackButton(onBack: () => boolean | void) {
+  const onBackRef = useRef(onBack);
   useEffect(() => {
-    onCloseRef.current = onClose;
+    onBackRef.current = onBack;
   });
 
   useEffect(() => {
@@ -41,15 +42,15 @@ export function useBackButton(onClose: () => void) {
       listening = true;
     }
     // A remount straight after unmounting (React's dev double effects)
-    // keeps the entry it already has.
+    // keeps the entry. So does a reload with the panel open: the entry
+    // stays behind, and opening again reuses it.
     clearTimeout(stepBack);
-    close = () => onCloseRef.current();
-    if (!onEntry && !leaving) enter();
+    current = () => onBackRef.current();
+    if (!onEntry() && !leaving) enter();
     return () => {
-      close = undefined;
+      current = undefined;
       stepBack = setTimeout(() => {
-        if (!onEntry) return;
-        onEntry = false;
+        if (!onEntry()) return;
         leaving = true;
         window.history.back();
       });
