@@ -470,8 +470,8 @@ const LoadedScorepad = () => {
 
       {config.americas && !hummingbirdsInPlay(config) && (
         <p id={FLOCK_FOOTNOTE} className="sheet-footnote hand-caps">
-          * No hummingbird track with 6–7 players (Flock). Americas birds
-          still play.
+          <span aria-hidden="true">* </span>No hummingbird track with 6–7
+          players (Flock). Americas birds still play.
         </p>
       )}
       {last && (

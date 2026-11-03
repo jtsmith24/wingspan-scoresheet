@@ -307,12 +307,10 @@ test.describe("Past games", () => {
   test("the back button closes it; closing it another way leaves no step behind", async ({ page }) => {
     const sheet = await openApp(page);
     await endQuickGame(sheet);
-    const steps = () => page.evaluate(() => window.history.length);
     // Whether the drawer's history entry is the one showing.
     const onEntry = () => page.evaluate(() => !!window.history.state?.panel);
     await sheet.pastButton().click();
     await expect.poll(onEntry).toBe(true);
-    const open = await steps();
     await page.goBack();
     await expect(drawer(page)).toHaveCount(0);
     await expect(sheet.cell(0, 0)).toBeVisible();
@@ -327,7 +325,6 @@ test.describe("Past games", () => {
     await expect.poll(onEntry).toBe(false);
     await sheet.pastButton().click();
     await expect.poll(onEntry).toBe(true);
-    expect(await steps()).toBe(open);
     await page.goBack();
     await expect(drawer(page)).toHaveCount(0);
   });
@@ -336,16 +333,38 @@ test.describe("Past games", () => {
     const sheet = await openApp(page);
     await endQuickGame(sheet);
     await sheet.pastButton().click();
-    await page.evaluate(async () => {
+    const steps = await page.evaluate(() => window.history.length);
+    // Open again the moment the step back starts, before it arrives.
+    await page.evaluate(() => {
+      const back = window.history.back.bind(window.history);
+      window.history.back = () => {
+        window.history.back = back;
+        back();
+        document.querySelector<HTMLElement>(".history-link")!.click();
+      };
       document.querySelector<HTMLElement>(".past-drawer .past-close")!.click();
-      // Let the step back start, then open again before it arrives.
-      await new Promise(done => setTimeout(done));
-      document.querySelector<HTMLElement>(".history-link")!.click();
     });
     await expect(drawer(page)).toBeVisible();
     await expect.poll(() => page.evaluate(() => !!window.history.state?.panel)).toBe(true);
+    expect(await page.evaluate(() => window.history.length)).toBe(steps);
     await page.goBack();
     await expect(drawer(page)).toHaveCount(0);
+  });
+
+  test("after a reload with it open, closing it doesn't load the app again", async ({ page }) => {
+    const sheet = await openApp(page);
+    await endQuickGame(sheet);
+    await sheet.pastButton().click();
+    await expect(drawer(page)).toBeVisible();
+    await page.reload();
+    await sheet.pastButton().click();
+    await page.evaluate(() => ((window as unknown as { stayed: boolean }).stayed = true));
+    await page.getByRole("button", { name: "Close ✕" }).click();
+    await expect(drawer(page)).toHaveCount(0);
+    await sheet.pastButton().click();
+    await page.goBack();
+    await expect(drawer(page)).toHaveCount(0);
+    expect(await page.evaluate(() => (window as unknown as { stayed?: boolean }).stayed)).toBe(true);
   });
 
   test("back with a question open leaves it to answer, the drawer still under it", async ({ page }) => {
@@ -356,6 +375,7 @@ test.describe("Past games", () => {
     await expect(page.locator("dialog[open]")).toBeVisible();
     await page.goBack();
     await expect(drawer(page)).toBeVisible();
+    await expect.poll(() => page.evaluate(() => !!window.history.state?.panel)).toBe(true);
     await respond(page, "Delete this game from Past games?", "Cancel");
     await expect(full(page)).toBeVisible();
     await page.goBack();
@@ -522,6 +542,7 @@ test.describe("editing a past game", () => {
     await pastCell(page, 0, 0).fill("99");
     await page.goBack();
     await expect(edit(page)).toBeVisible();
+    await expect.poll(() => page.evaluate(() => !!window.history.state?.panel)).toBe(true);
     await expect(full(page).locator(".sheet-result")).toHaveText("Jordan won with 60");
     await page.goBack();
     await expect(drawer(page)).toHaveCount(0);

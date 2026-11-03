@@ -1,11 +1,16 @@
 import { useEffect, useRef } from "react";
 
-/** Marks the history entry an open panel sits on. */
+/**
+ * Marks the history entry an open panel sits on, for this page load only:
+ * after a reload, an entry left from before belongs to the old page, and
+ * stepping back across it would load the app again.
+ */
 const ENTRY = "panel";
+const PAGE = Math.random();
 
-const onEntry = () => !!window.history.state?.[ENTRY];
+const onEntry = () => window.history.state?.[ENTRY] === PAGE;
 // Next.js copies its own state onto the entry, so this one's kept beside it.
-const enter = () => window.history.pushState({ [ENTRY]: true }, "");
+const enter = () => window.history.pushState({ [ENTRY]: PAGE }, "");
 
 // The open panel's back handler; false keeps it open.
 let current: (() => boolean | void) | undefined;
@@ -42,8 +47,7 @@ export function useBackButton(onBack: () => boolean | void) {
       listening = true;
     }
     // A remount straight after unmounting (React's dev double effects)
-    // keeps the entry. So does a reload with the panel open: the entry
-    // stays behind, and opening again reuses it.
+    // keeps the entry.
     clearTimeout(stepBack);
     current = () => onBackRef.current();
     if (!onEntry() && !leaving) enter();

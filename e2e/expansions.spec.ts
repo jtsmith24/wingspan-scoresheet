@@ -236,7 +236,7 @@ test.describe("Americas", () => {
       "Expansions: Asia · Flock + Americas"
     );
     // Screen readers hear the footnote instead.
-    const footnote = "* No hummingbird track with 6–7 players (Flock). Americas birds still play.";
+    const footnote = "No hummingbird track with 6–7 players (Flock). Americas birds still play.";
     await expect(sheet.expansionsTab().locator("button")).toHaveAccessibleDescription(footnote);
     await sheet.expansionsTab().locator("button").click();
     await expect(sheet.checklist().locator(".mix-option", { hasText: "Americas" })).toContainText("Americas*");
