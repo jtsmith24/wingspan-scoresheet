@@ -174,8 +174,10 @@ test.describe("two tabs open", () => {
     await playQuickGame(a, "Alex", "Blake");
     await a.endButton().click();
     await expect(b.endButton()).toBeDisabled();
+    await other.bringToFront();
     await playQuickGame(b, "Casey", "Drew");
     await b.endButton().click();
+    await page.bringToFront();
     const history = await readStorage(page, KEYS.history);
     expect(history).toHaveLength(2);
     await expect(a.pastButton()).toHaveText("Past games · 2");

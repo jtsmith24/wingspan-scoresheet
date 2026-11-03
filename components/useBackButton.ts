@@ -23,8 +23,8 @@ interface Layer {
 
 // Open layers, innermost last.
 const layers: Layer[] = [];
-// A step back of our own is on its way.
-let stepping = false;
+// The depth a step back of our own is on its way to, if one is.
+let stepping: number | undefined;
 let queued: ReturnType<typeof setTimeout> | undefined;
 let listening = false;
 
@@ -36,11 +36,11 @@ const depth = (): number => {
 
 /** Push an entry for each layer that opened, or step back off closed ones. */
 function sync() {
-  if (stepping) return;
+  if (stepping !== undefined) return;
   const at = depth();
   const open = layers.filter(l => !l.closed).length;
   if (at > open) {
-    stepping = true;
+    stepping = open;
     window.history.go(open - at);
   }
   for (let d = at + 1; d <= open; d++)
@@ -55,8 +55,11 @@ const queueSync = () => {
 };
 
 function onPopState() {
-  if (stepping) {
-    stepping = false;
+  // Our own step, unless it landed somewhere else: then the browser dropped
+  // it for a back press of the user's, handled as one below.
+  const ours = stepping !== undefined && depth() === stepping;
+  stepping = undefined;
+  if (ours) {
     sync();
     return;
   }
