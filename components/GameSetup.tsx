@@ -266,8 +266,9 @@ const sameAutoma = (a: AutomaSettings, b: AutomaSettings) =>
   a.difficulty === b.difficulty && a.hoard === b.hoard;
 
 /**
- * Arrow keys only move between the modes, and Space picks one: a switch can
- * clear scores, so passing over a mode on the way shouldn't switch to it.
+ * Arrow keys only move between the choices, and Space picks one: a switch
+ * can clear scores, and any change drops Undo, so passing over a choice on
+ * the way shouldn't pick it.
  */
 const moveFocusOnly = (e: React.KeyboardEvent<HTMLElement>) => {
   const step = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[
@@ -409,6 +410,7 @@ export const ModeMenu = ({
                 role="radiogroup"
                 aria-label="Difficulty"
                 className="mode-options"
+                onKeyDown={moveFocusOnly}
               >
                 {AUTOMA_DIFFICULTIES.map(d => (
                   <label key={d.id} className="mix-option">

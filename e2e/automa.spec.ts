@@ -90,6 +90,15 @@ test.describe("the corner menu", () => {
     await page.keyboard.press("Space");
     await expect(radio("Solo")).toBeChecked();
     await expect(sheet.players()).toHaveCount(1);
+    // The same for the Automa's difficulty.
+    await radio("Solo").focus();
+    await page.keyboard.press("ArrowUp");
+    await page.keyboard.press("Space");
+    await expect(radio("Automa")).toBeChecked();
+    await radio("Eagle").focus();
+    await page.keyboard.press("ArrowDown");
+    await expect(radio("Eagle-eyed Eagle")).toBeFocused();
+    await expect(radio("Eagle")).toBeChecked();
     // Escape closes the menu and puts focus back on its button.
     await page.keyboard.press("Escape");
     await expect(sheet.modeMenu()).toHaveCount(0);
