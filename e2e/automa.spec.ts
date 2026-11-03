@@ -181,17 +181,34 @@ test.describe("the corner menu", () => {
     await expect(sheet.modeMenu()).toHaveCount(0);
   });
 
-  test("stays under its button when the window is resized", async ({ page }) => {
+  test("stays under its button when the window is resized or scrolled", async ({ page }) => {
     const sheet = await openApp(page);
+    const underButton = () =>
+      expect(async () => {
+        const button = (await sheet.modeButton().boundingBox())!;
+        const menu = (await sheet.modeMenu().boundingBox())!;
+        expect(Math.abs(menu.y - (button.y + button.height + 6))).toBeLessThan(2);
+        expect(Math.abs(menu.x - Math.max(8, button.x - 6))).toBeLessThan(2);
+      }).toPass();
     await sheet.modeButton().click();
-    await expect(sheet.modeMenu()).toBeVisible();
     await page.setViewportSize({ width: 700, height: 700 });
     await expect(sheet.modeMenu()).toBeVisible();
-    await expect(async () => {
-      const button = (await sheet.modeButton().boundingBox())!;
-      const menu = (await sheet.modeMenu().boundingBox())!;
-      expect(Math.abs(menu.y - (button.y + button.height + 6))).toBeLessThan(2);
-    }).toPass();
+    await underButton();
+    // The page scrolling moves the button up; the menu goes with it.
+    await page.setViewportSize({ width: 700, height: 300 });
+    await page.evaluate(() => window.scrollTo(0, 120));
+    expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+    await expect(sheet.modeMenu()).toBeVisible();
+    await underButton();
+  });
+
+  test("Tabbing out of the menu closes it", async ({ page }) => {
+    const sheet = await openApp(page);
+    await sheet.modeButton().click();
+    await sheet.modeMenu().getByRole("button", { name: "Done" }).focus();
+    await page.keyboard.press("Tab");
+    await expect(sheet.modeMenu()).toHaveCount(0);
+    await expect(sheet.modeButton()).not.toBeFocused();
   });
 
   test("offers the Hoard variant only without Asia or Americas", async ({ page }) => {

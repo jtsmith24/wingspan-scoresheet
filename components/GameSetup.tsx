@@ -343,7 +343,21 @@ export const ModeMenu = ({
   const offersHoard = config.asia === "off" && !config.americas;
 
   return (
-    <span className="mode-menu">
+    <span
+      className="mode-menu"
+      // Tabbing out closes it. Not for a question it raises, which takes
+      // focus into a dialog, nor a tap on the menu's own blank space.
+      onBlur={e => {
+        const to = e.relatedTarget;
+        if (
+          open &&
+          to instanceof Node &&
+          !e.currentTarget.contains(to) &&
+          !(to instanceof Element && to.closest("dialog"))
+        )
+          close(false);
+      }}
+    >
       <button
         ref={buttonRef}
         type="button"

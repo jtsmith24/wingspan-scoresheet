@@ -381,7 +381,7 @@ const SumTable = ({
                 faceDown.value(automa),
                 rowIndex,
                 automaCol,
-                "Face-down birds",
+                `Face-down birds (×${difficulty} each)`,
                 false,
                 false,
                 "face-down"

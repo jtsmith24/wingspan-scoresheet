@@ -198,7 +198,11 @@ const FullSheet = ({ game }: { game: SavedGame }) => {
                     {p.unusedFood ?? "–"}
                     {p.side === "automa" && (
                       <small className="past-unit">
-                        {automaTokensInPlay(game.config) ? "tokens left" : "food"}
+                        {!automaTokensInPlay(game.config)
+                          ? "food"
+                          : p.unusedFood === 1
+                            ? "token left"
+                            : "tokens left"}
                       </small>
                     )}
                   </td>
