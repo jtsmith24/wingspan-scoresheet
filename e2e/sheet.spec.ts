@@ -317,6 +317,18 @@ test.describe("keyboard", () => {
     await expect(sheet.name(1)).toBeFocused();
   });
 
+  test("leaving a name box straight away doesn't pull focus back to it", async ({ page }) => {
+    const sheet = await openApp(page);
+    // A name box selects its name a frame after focus; in Safari, select()
+    // takes focus, which used to drag it back from the next box.
+    await page.evaluate(() => {
+      document.getElementById("name-1")!.focus();
+      document.getElementById("cell-0-0")!.focus();
+    });
+    await page.evaluate(() => new Promise(done => requestAnimationFrame(() => requestAnimationFrame(done))));
+    await expect(sheet.cell(0, 0)).toBeFocused();
+  });
+
   test("focusing a box selects what's in it, so typing replaces it", async ({ page }) => {
     const sheet = await openApp(page);
     await sheet.cell(0, 0).fill("45");

@@ -110,6 +110,8 @@ const SumTable = ({
   // The name being typed shows in full; every other header shows its code.
   const [editing, setEditing] = useState<number | null>(null);
   const nameAtFocus = useRef("");
+  // Whether the press on a score box is the one focusing it.
+  const focusingTap = useRef(false);
 
   // A player's code is set once, when they finish entering a new name, and
   // only theirs: nobody else's code shifts while someone types.
@@ -313,7 +315,16 @@ const SumTable = ({
           }
           handleCellKeyDown(e, row, col, second);
         }}
+        // Selected, so typing replaces it. In Safari the tap that focused
+        // it would put a caret down as it lifts, so that lift is cancelled.
         onFocus={e => e.target.select()}
+        onMouseDown={e => {
+          focusingTap.current = document.activeElement !== e.currentTarget;
+        }}
+        onMouseUp={e => {
+          if (focusingTap.current) e.preventDefault();
+          focusingTap.current = false;
+        }}
         placeholder={placeholder}
         inputMode="numeric"
         id={id}
@@ -482,11 +493,13 @@ const SumTable = ({
                       nameAtFocus.current = player.name;
                       // Select the full name once it has replaced the code,
                       // unless typing has already begun: selecting then would
-                      // let the next letter replace the first.
+                      // let the next letter replace the first. Only while it
+                      // still has focus: in Safari, select() takes focus.
                       const input = e.target;
                       const name = player.name;
                       requestAnimationFrame(() => {
-                        if (input.value === name) input.select();
+                        if (document.activeElement === input && input.value === name)
+                          input.select();
                       });
                     }}
                     onBlur={() => finishName(col)}
