@@ -87,6 +87,9 @@ const AsiaModeSelect = ({
 const americasMarked = (config: GameConfig) =>
   config.americas && !hummingbirdsInPlay(config);
 
+/** The footnote's id, so screen readers hear it where the asterisk is. */
+export const FLOCK_FOOTNOTE = "flock-footnote";
+
 /**
  * "European + Oceania"; Asia names its mode unless it's Standard. With
  * `marks`, Americas carries the footnote's asterisk when it applies.
@@ -187,6 +190,7 @@ export const ExpansionTabs = ({
             type="button"
             aria-expanded={open}
             aria-label={any ? `Expansions: ${names}` : "Expansions"}
+            aria-describedby={americasMarked(config) ? FLOCK_FOOTNOTE : undefined}
             onClick={() => {
               setLeft(tabRef.current?.offsetLeft ?? 0);
               setOpen(o => !o);
@@ -220,6 +224,11 @@ export const ExpansionTabs = ({
                   type="checkbox"
                   checked={isOn(config, e.id)}
                   onChange={() => onToggle(e.id)}
+                  aria-describedby={
+                    e.id === "americas" && americasMarked(config)
+                      ? FLOCK_FOOTNOTE
+                      : undefined
+                  }
                 />
                 <span className={`mix-swatch tab-${e.id}`} />
                 {e.label}

@@ -40,6 +40,20 @@ export async function openApp(
   return new Sheet(page);
 }
 
+/**
+ * A second tab on the app, once its sheet is up and listening for changes
+ * from the first: a change made before then would be missed. The first tab
+ * comes back to the front, where tests carry on: Chrome slows tabs in the
+ * background, enough to time out a whole game typed into one.
+ */
+export async function openOtherTab(page: Page) {
+  const other = await page.context().newPage();
+  await other.goto("/");
+  await expect(other.locator("#sum-table")).toBeVisible();
+  await page.bringToFront();
+  return other;
+}
+
 export const readStorage = (page: Page, key: string) =>
   page.evaluate(k => {
     const raw = localStorage.getItem(k);
