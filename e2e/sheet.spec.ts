@@ -320,7 +320,8 @@ test.describe("keyboard", () => {
   test("leaving a name box straight away doesn't pull focus back to it", async ({ page }) => {
     const sheet = await openApp(page);
     // A name box selects its name a frame after focus; in Safari, select()
-    // takes focus, which used to drag it back from the next box.
+    // takes focus, which used to drag it back from the next box. Chrome's
+    // select() doesn't, so only the iPhone (WebKit) run can catch this.
     await page.evaluate(() => {
       document.getElementById("name-1")!.focus();
       document.getElementById("cell-0-0")!.focus();

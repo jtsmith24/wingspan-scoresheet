@@ -462,11 +462,15 @@ test.describe("Past games", () => {
     const sheet = await openApp(page);
     await playQuickGame(sheet);
     await sheet.clear().click();
-    const inDialog = () => page.evaluate(() => !!document.activeElement?.closest("dialog[open]"));
-    for (let i = 0; i < 4; i++) {
-      await page.keyboard.press(i % 2 ? "Shift+Tab" : "Tab");
-      expect(await inDialog()).toBe(true);
-    }
+    const focused = () => page.evaluate(() => document.activeElement?.textContent?.trim());
+    // Cancel first (it's a danger question), then Clear, then round again.
+    expect(await focused()).toBe("Cancel");
+    await page.keyboard.press("Tab");
+    expect(await focused()).toBe("Clear");
+    await page.keyboard.press("Tab");
+    expect(await focused()).toBe("Cancel");
+    await page.keyboard.press("Shift+Tab");
+    expect(await focused()).toBe("Clear");
   });
 
   test("tapping a code on the full sheet shows the full name", async ({ page }) => {

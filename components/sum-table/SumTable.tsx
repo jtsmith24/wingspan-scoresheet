@@ -110,8 +110,8 @@ const SumTable = ({
   // The name being typed shows in full; every other header shows its code.
   const [editing, setEditing] = useState<number | null>(null);
   const nameAtFocus = useRef("");
-  // Whether the press on a score box is the one focusing it.
-  const focusingTap = useRef(false);
+  // The score box a press is focusing, until that press lifts.
+  const focusingTap = useRef<HTMLInputElement | null>(null);
 
   // A player's code is set once, when they finish entering a new name, and
   // only theirs: nobody else's code shifts while someone types.
@@ -320,11 +320,13 @@ const SumTable = ({
         // and the box selected again.
         onFocus={e => e.target.select()}
         onMouseDown={e => {
-          focusingTap.current = document.activeElement !== e.currentTarget;
+          focusingTap.current =
+            document.activeElement !== e.currentTarget ? e.currentTarget : null;
         }}
         onMouseUp={e => {
-          if (!focusingTap.current) return;
-          focusingTap.current = false;
+          const focusing = focusingTap.current === e.currentTarget;
+          focusingTap.current = null;
+          if (!focusing) return;
           e.preventDefault();
           e.currentTarget.select();
         }}
