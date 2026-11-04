@@ -2,6 +2,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Ask } from "./ConfirmDialog";
 import { SavedStamp } from "./SavedStamp";
+import { moveTab } from "./tabOrder";
 import { useBackButton } from "./useBackButton";
 import SumTable, { sheetTitle } from "./sum-table/SumTable";
 import { editBase, playerHasData, SavedGame } from "@/lib/game";
@@ -284,20 +285,7 @@ export const PastGames = ({
     drawerRef.current?.querySelector<HTMLElement>("button")?.focus();
     const trap = (e: KeyboardEvent) => {
       if (e.key !== "Tab" || !drawerRef.current || dialogOpen()) return;
-      const items = [
-        ...drawerRef.current.querySelectorAll<HTMLElement>(
-          "button:not(:disabled), input:not(:disabled)"
-        ),
-      ];
-      const first = items[0];
-      const last = items[items.length - 1];
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault();
-        first.focus();
-      }
+      moveTab(drawerRef.current, e);
     };
     document.addEventListener("keydown", trap);
     return () => {
@@ -325,6 +313,19 @@ export const PastGames = ({
   const editing = !!draft;
   useBackButton(onClose);
   useBackButton(() => setEditDraft(undefined), editing);
+
+  // Edit, Cancel and Save each take their own button away: focus goes to
+  // the first box on the way in, and the game's header on the way out.
+  const wasEditing = useRef(false);
+  useEffect(() => {
+    if (editing === wasEditing.current) return;
+    wasEditing.current = editing;
+    drawerRef.current
+      ?.querySelector<HTMLElement>(
+        editing ? "[id^=\"past-cell-\"]:not(:disabled)" : ".past-slip-toggle"
+      )
+      ?.focus();
+  }, [editing]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape" || dialogOpen()) return;

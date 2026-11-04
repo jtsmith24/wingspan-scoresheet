@@ -429,14 +429,52 @@ test.describe("Past games", () => {
     expect(await page.evaluate(() => document.body.style.overflow)).toBe("");
   });
 
-  test("Tab stays inside the drawer", async ({ page }) => {
+  test("Tab moves through the drawer in order, wrapping both ways", async ({ page }) => {
     const sheet = await openApp(page);
     await endQuickGame(sheet);
     await sheet.pastButton().click();
-    for (let i = 0; i < 6; i++) {
-      await page.keyboard.press("Tab");
-      expect(await page.evaluate(() => !!document.activeElement?.closest(".past-drawer"))).toBe(true);
-    }
+    const focused = () =>
+      page.evaluate(() => {
+        const el = document.activeElement as HTMLElement;
+        return el.id || el.textContent?.trim().slice(0, 16) || el.tagName;
+      });
+    // Close, then the one game: Tab wraps from the last back to the first.
+    const close = await focused();
+    expect(close).toContain("Close");
+    await page.keyboard.press("Tab");
+    const game = await focused();
+    expect(game).not.toBe(close);
+    await page.keyboard.press("Tab");
+    expect(await focused()).toBe(close);
+    await page.keyboard.press("Shift+Tab");
+    expect(await focused()).toBe(game);
+    // In an edit, Tab goes box to box along the row and back again.
+    await slips(page).click();
+    await page.locator(".past-actions").getByRole("button", { name: "Edit" }).click();
+    // Edit takes its own button away, so focus goes to the first box.
+    expect(await focused()).toBe("past-cell-0-0");
+    await page.keyboard.press("Tab");
+    expect(await focused()).toBe("past-cell-0-1");
+    await page.keyboard.press("Shift+Tab");
+    expect(await focused()).toBe("past-cell-0-0");
+    // Cancel does too: focus goes back to the game's header.
+    await full(page).getByRole("button", { name: "Cancel" }).click();
+    await expect(full(page).locator(".past-slip-toggle")).toBeFocused();
+  });
+
+  test("Tab stays inside a question", async ({ page }) => {
+    const sheet = await openApp(page);
+    await playQuickGame(sheet);
+    await sheet.clear().click();
+    const focused = () => page.evaluate(() => document.activeElement?.textContent?.trim());
+    // Cancel first (it's a danger question), then Clear, then round again.
+    expect(await focused()).toBe("Cancel");
+    await page.keyboard.press("Tab");
+    expect(await focused()).toBe("Clear");
+    await page.keyboard.press("Tab");
+    expect(await focused()).toBe("Cancel");
+    await page.keyboard.press("Shift+Tab");
+    expect(await focused()).toBe("Clear");
   });
 
   test("tapping a code on the full sheet shows the full name", async ({ page }) => {

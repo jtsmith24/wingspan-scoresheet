@@ -1,5 +1,6 @@
 "use client";
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { moveTab } from "./tabOrder";
 import { useBackButton } from "./useBackButton";
 
 export interface DialogAction {
@@ -121,6 +122,9 @@ const AppDialog = ({
       onCancel={e => {
         e.preventDefault();
         finish(null);
+      }}
+      onKeyDown={e => {
+        if (e.key === "Tab" && ref.current) moveTab(ref.current, e.nativeEvent);
       }}
       onClick={e => {
         if (e.target === ref.current) finish(null);

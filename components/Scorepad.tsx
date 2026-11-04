@@ -374,6 +374,12 @@ const LoadedScorepad = () => {
   };
 
   const closePast = useCallback(() => setPastOpen(false), []);
+  // Past games hands focus back to what opened it on close. Safari doesn't
+  // focus a button on click, so the button takes it first.
+  const openPast = (e: React.MouseEvent<HTMLElement>, at: true | string) => {
+    e.currentTarget.focus();
+    setPastOpen(at);
+  };
 
   const deleteGame = (id: string) =>
     writeHistory(h => removeFromHistory(h, id));
@@ -483,7 +489,7 @@ const LoadedScorepad = () => {
             <button
               type="button"
               className="text-link"
-              onClick={() => setPastOpen(last.id)}
+              onClick={e => openPast(e, last.id)}
             >
               {last.summary}
             </button>{" "}
@@ -500,7 +506,7 @@ const LoadedScorepad = () => {
           <button
             type="button"
             className="text-link history-link"
-            onClick={() => setPastOpen(true)}
+            onClick={e => openPast(e, true)}
           >
             Past games · {history.length}
           </button>

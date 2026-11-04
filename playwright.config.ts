@@ -3,9 +3,10 @@ import { defineConfig, devices } from "@playwright/test";
 const PORT = 3124;
 
 /**
- * End-to-end journeys against a production build. Runs in the Chrome that's
- * already installed (GitHub's Ubuntu runners have it too), at desktop and
- * phone sizes.
+ * End-to-end journeys against a production build, at desktop and phone
+ * sizes in the Chrome that's already installed (GitHub's Ubuntu runners
+ * have it too), and as an iPhone in WebKit, Safari's engine. WebKit needs
+ * `npx playwright install webkit`; CI runs it on macOS, closest to Safari.
  */
 export default defineConfig({
   testDir: "e2e",
@@ -16,7 +17,6 @@ export default defineConfig({
   reporter: process.env.CI ? [["github"], ["list"]] : "list",
   use: {
     baseURL: `http://127.0.0.1:${PORT}`,
-    channel: "chrome",
     trace: "retain-on-failure",
     // End game clears at once; the "with motion" tests turn the stamp back on.
     reducedMotion: "reduce",
@@ -24,17 +24,22 @@ export default defineConfig({
   projects: [
     {
       name: "desktop",
-      use: { viewport: { width: 1280, height: 800 } },
+      use: { channel: "chrome", viewport: { width: 1280, height: 800 } },
     },
     {
       name: "phone",
       use: {
+        channel: "chrome",
         viewport: { width: 360, height: 740 },
         deviceScaleFactor: 3,
         isMobile: true,
         hasTouch: true,
         userAgent: devices["Pixel 7"].userAgent,
       },
+    },
+    {
+      name: "iphone",
+      use: devices["iPhone 15"],
     },
   ],
   webServer: {
