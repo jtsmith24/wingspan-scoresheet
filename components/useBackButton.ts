@@ -11,9 +11,6 @@ import { useEffect, useRef } from "react";
  */
 
 const ENTRY = "layers";
-// Entries from before a reload belong to the old page: stepping back across
-// them would load the app again, so they don't count as ours.
-const PAGE = Math.random();
 
 interface Layer {
   back: () => void;
@@ -31,7 +28,7 @@ let listening = false;
 /** How many of our entries the history is standing on. */
 const depth = (): number => {
   const entry = window.history.state?.[ENTRY];
-  return entry?.page === PAGE ? entry.depth : 0;
+  return entry?.depth ?? 0;
 };
 
 /** Push an entry for each layer that opened, or step back off closed ones. */
@@ -44,7 +41,7 @@ function sync() {
     window.history.go(open - at);
   }
   for (let d = at + 1; d <= open; d++)
-    window.history.pushState({ [ENTRY]: { page: PAGE, depth: d } }, "");
+    window.history.pushState({ [ENTRY]: { depth: d } }, "");
 }
 
 // After the current render, so a layer that closes and opens again at once
