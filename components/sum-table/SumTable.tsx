@@ -330,8 +330,9 @@ const SumTable = ({
           e.preventDefault();
           e.currentTarget.select();
         }}
-        onBlur={() => {
-          focusingTap.current = null;
+        // Only its own press: tapping the next box blurs this one first.
+        onBlur={e => {
+          if (focusingTap.current === e.currentTarget) focusingTap.current = null;
         }}
         placeholder={placeholder}
         inputMode="numeric"
