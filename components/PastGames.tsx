@@ -299,9 +299,18 @@ export const PastGames = ({
         first.focus();
       }
     };
+    // Safari's Tab skips buttons by default, so it can still leave a drawer
+    // of buttons: focus that lands outside is brought back in.
+    const keepIn = (e: FocusEvent) => {
+      const drawer = drawerRef.current;
+      if (!drawer || dialogOpen() || drawer.contains(e.target as Node)) return;
+      drawer.querySelector<HTMLElement>("button")?.focus();
+    };
     document.addEventListener("keydown", trap);
+    document.addEventListener("focusin", keepIn);
     return () => {
       document.removeEventListener("keydown", trap);
+      document.removeEventListener("focusin", keepIn);
       opener?.focus();
     };
   }, []);
