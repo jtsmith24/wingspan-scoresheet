@@ -2,6 +2,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Ask } from "./ConfirmDialog";
 import { SavedStamp } from "./SavedStamp";
+import { moveTab } from "./tabOrder";
 import { useBackButton } from "./useBackButton";
 import SumTable, { sheetTitle } from "./sum-table/SumTable";
 import { editBase, playerHasData, SavedGame } from "@/lib/game";
@@ -284,20 +285,7 @@ export const PastGames = ({
     drawerRef.current?.querySelector<HTMLElement>("button")?.focus();
     const trap = (e: KeyboardEvent) => {
       if (e.key !== "Tab" || !drawerRef.current || dialogOpen()) return;
-      // What Tab would reach: enabled, shown, and not taken out of the order.
-      const items = [
-        ...drawerRef.current.querySelectorAll<HTMLElement>(
-          "button:not(:disabled), input:not(:disabled)"
-        ),
-      ].filter(el => el.tabIndex >= 0 && el.getClientRects().length > 0);
-      // Tab moves through them here, wrapping at the ends, rather than by
-      // the browser's rules: Safari's skips buttons by default, and this
-      // drawer is mostly buttons.
-      e.preventDefault();
-      const at = items.indexOf(document.activeElement as HTMLElement);
-      const step = e.shiftKey ? -1 : 1;
-      const next = at === -1 ? (e.shiftKey ? items.length - 1 : 0) : at + step;
-      items[(next + items.length) % items.length]?.focus();
+      moveTab(drawerRef.current, e);
     };
     document.addEventListener("keydown", trap);
     return () => {

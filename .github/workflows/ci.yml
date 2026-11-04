@@ -1,6 +1,7 @@
 # CI: the clean-machine gate before anything reaches master, which Vercel
-# deploys to the live site. Both test jobs are required checks on master
-# (branch protection), so a pull request can't merge while either is red.
+# deploys to the live site. The checks and Chrome E2E jobs are required on
+# master (branch protection), so a pull request can't merge while either is
+# red; the iPhone WebKit job isn't required yet.
 #
 # Run economy, after Hymnal's: pull requests and pushes to master only (a
 # branch with a pull request open would otherwise run twice per push), and

@@ -429,13 +429,43 @@ test.describe("Past games", () => {
     expect(await page.evaluate(() => document.body.style.overflow)).toBe("");
   });
 
-  test("Tab stays inside the drawer", async ({ page }) => {
+  test("Tab moves through the drawer in order, wrapping both ways", async ({ page }) => {
     const sheet = await openApp(page);
     await endQuickGame(sheet);
     await sheet.pastButton().click();
-    for (let i = 0; i < 6; i++) {
-      await page.keyboard.press("Tab");
-      expect(await page.evaluate(() => !!document.activeElement?.closest(".past-drawer"))).toBe(true);
+    const focused = () =>
+      page.evaluate(() => {
+        const el = document.activeElement as HTMLElement;
+        return el.id || el.textContent?.trim().slice(0, 16) || el.tagName;
+      });
+    // Close, then the one game: Tab wraps from the last back to the first.
+    const close = await focused();
+    expect(close).toContain("Close");
+    await page.keyboard.press("Tab");
+    const game = await focused();
+    expect(game).not.toBe(close);
+    await page.keyboard.press("Tab");
+    expect(await focused()).toBe(close);
+    await page.keyboard.press("Shift+Tab");
+    expect(await focused()).toBe(game);
+    // In an edit, Tab goes box to box along the row and back again.
+    await slips(page).click();
+    await page.locator(".past-actions").getByRole("button", { name: "Edit" }).click();
+    await page.locator("#past-cell-0-0").focus();
+    await page.keyboard.press("Tab");
+    expect(await focused()).toBe("past-cell-0-1");
+    await page.keyboard.press("Shift+Tab");
+    expect(await focused()).toBe("past-cell-0-0");
+  });
+
+  test("Tab stays inside a question", async ({ page }) => {
+    const sheet = await openApp(page);
+    await playQuickGame(sheet);
+    await sheet.clear().click();
+    const inDialog = () => page.evaluate(() => !!document.activeElement?.closest("dialog[open]"));
+    for (let i = 0; i < 4; i++) {
+      await page.keyboard.press(i % 2 ? "Shift+Tab" : "Tab");
+      expect(await inDialog()).toBe(true);
     }
   });
 

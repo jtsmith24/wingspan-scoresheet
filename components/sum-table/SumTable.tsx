@@ -316,14 +316,17 @@ const SumTable = ({
           handleCellKeyDown(e, row, col, second);
         }}
         // Selected, so typing replaces it. In Safari the tap that focused
-        // it would put a caret down as it lifts, so that lift is cancelled.
+        // it would put a caret down as it lifts, so that lift is cancelled
+        // and the box selected again.
         onFocus={e => e.target.select()}
         onMouseDown={e => {
           focusingTap.current = document.activeElement !== e.currentTarget;
         }}
         onMouseUp={e => {
-          if (focusingTap.current) e.preventDefault();
+          if (!focusingTap.current) return;
           focusingTap.current = false;
+          e.preventDefault();
+          e.currentTarget.select();
         }}
         placeholder={placeholder}
         inputMode="numeric"
