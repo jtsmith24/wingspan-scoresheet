@@ -330,6 +330,9 @@ const SumTable = ({
           e.preventDefault();
           e.currentTarget.select();
         }}
+        onBlur={() => {
+          focusingTap.current = null;
+        }}
         placeholder={placeholder}
         inputMode="numeric"
         id={id}

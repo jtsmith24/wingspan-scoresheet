@@ -451,11 +451,15 @@ test.describe("Past games", () => {
     // In an edit, Tab goes box to box along the row and back again.
     await slips(page).click();
     await page.locator(".past-actions").getByRole("button", { name: "Edit" }).click();
-    await page.locator("#past-cell-0-0").focus();
+    // Edit takes its own button away, so focus goes to the first box.
+    expect(await focused()).toBe("past-cell-0-0");
     await page.keyboard.press("Tab");
     expect(await focused()).toBe("past-cell-0-1");
     await page.keyboard.press("Shift+Tab");
     expect(await focused()).toBe("past-cell-0-0");
+    // Cancel does too: focus goes back to the game's header.
+    await full(page).getByRole("button", { name: "Cancel" }).click();
+    await expect(full(page).locator(".past-slip-toggle")).toBeFocused();
   });
 
   test("Tab stays inside a question", async ({ page }) => {

@@ -313,6 +313,19 @@ export const PastGames = ({
   const editing = !!draft;
   useBackButton(onClose);
   useBackButton(() => setEditDraft(undefined), editing);
+
+  // Edit, Cancel and Save each take their own button away: focus goes to
+  // the first box on the way in, and the game's header on the way out.
+  const wasEditing = useRef(false);
+  useEffect(() => {
+    if (editing === wasEditing.current) return;
+    wasEditing.current = editing;
+    drawerRef.current
+      ?.querySelector<HTMLElement>(
+        editing ? "[id^=\"past-cell-\"]:not(:disabled)" : ".past-slip-toggle"
+      )
+      ?.focus();
+  }, [editing]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape" || dialogOpen()) return;
