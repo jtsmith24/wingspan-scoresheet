@@ -15,11 +15,11 @@ const insideViewport = (page: Page, selector: string) =>
 
 test.describe("fits the screen", () => {
   test.beforeEach(({}, info) => {
-    // Phone widths need the phone's viewport handling; wide ones a desktop's.
-    test.skip(info.project.name !== "phone" && info.project.name !== "desktop");
+    // Phone widths need a phone's viewport handling; wide ones a desktop's.
+    test.skip(!["phone", "iphone", "desktop"].includes(info.project.name));
   });
 
-  const widths = (project: string) => (project === "phone" ? PHONE_WIDTHS : WIDE_WIDTHS);
+  const widths = (project: string) => (project === "desktop" ? WIDE_WIDTHS : PHONE_WIDTHS);
 
   test("five players: three-digit hummingbird scores fit beside the sign tab", async ({ page }, info) => {
     const sheet = await openApp(page);

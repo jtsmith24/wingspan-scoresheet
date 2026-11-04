@@ -292,7 +292,7 @@ test.describe("Americas", () => {
     await tab.dispatchEvent("pointerdown", { button: 0, pointerType: "touch", isPrimary: true });
     expect(await focusedInput()).toBe("cell-0-0");
     // The whole tap (a real touch on the phone run) flips it, then no box keeps the keyboard.
-    if (info.project.name === "phone") await tab.tap();
+    if (info.project.name !== "desktop") await tab.tap();
     else await tab.click();
     await expect(tab).toHaveText("−");
     expect(await focusedInput()).toBeNull();

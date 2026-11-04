@@ -54,11 +54,35 @@ jobs:
       - run: npm ci
       - run: npm run build
       # The tests run in the Google Chrome that ships on GitHub's Ubuntu images.
-      - run: npm run test:e2e
+      - run: npm run test:e2e -- --project=desktop --project=phone
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: playwright-traces
+          path: test-results/
+          retention-days: 7
+
+  # The iPhone run, in WebKit (Safari's engine) on macOS, the closest a test
+  # can get to Safari without an Apple device.
+  e2e-webkit:
+    name: E2E (iPhone, WebKit)
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: macos-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install webkit
+      - run: npm run build
+      - run: npm run test:e2e -- --project=iphone
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-traces-webkit
           path: test-results/
           retention-days: 7
 
@@ -69,7 +93,7 @@ jobs:
   notify:
     name: File an issue when master fails
     # Only the jobs listed here are watched: add any new job.
-    needs: [checks, e2e]
+    needs: [checks, e2e, e2e-webkit]
     if: always() && !cancelled() && github.event_name == 'push' && contains(needs.*.result, 'failure')
     runs-on: ubuntu-latest
     timeout-minutes: 5
