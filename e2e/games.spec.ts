@@ -3,6 +3,7 @@ import {
   KEYS,
   noDialog,
   openApp,
+  openOtherTab,
   playQuickGame,
   readStorage,
   respond,
@@ -15,6 +16,8 @@ const history = (page: Page) =>
   readStorage(page, KEYS.history).then(h => h ?? []);
 
 const drawer = (page: Page) => page.locator(".past-drawer");
+/** How many back steps the app's open layers hold (drawer, edit, question). */
+const depth = (page: Page) => page.evaluate(() => window.history.state?.layers?.depth ?? 0);
 const slips = (page: Page) => page.locator("button.past-slip");
 const full = (page: Page) => page.locator(".past-slip-full");
 
@@ -214,14 +217,16 @@ test.describe("Undo and the last-game note", () => {
     await expect(sheet.lastGame()).toHaveCount(0);
   });
 
-  test("Undo in one tab shows in the other", async ({ page, context }) => {
+  test("Undo in one tab shows in the other", async ({ page }) => {
     const a = await openApp(page);
-    const other = await context.newPage();
-    await other.goto("/");
+    const other = await openOtherTab(page);
     const b = new Sheet(other);
     await endQuickGame(a);
+    // Look at each tab as a person would: Chrome slows the one behind.
+    await other.bringToFront();
     await expect(b.lastGame()).toBeVisible();
     await b.undo().click();
+    await page.bringToFront();
     await expect(a.cell(0, 0)).toHaveValue("10");
     await expect(a.lastGame()).toHaveCount(0);
     await expect(a.pastButton()).toHaveCount(0);
@@ -230,6 +235,18 @@ test.describe("Undo and the last-game note", () => {
 
 test.describe("Clear", () => {
   const question = "Clear the sheet? Names and scores will be erased, and this game won't be saved.";
+
+  test("the back button cancels the question and stays on the sheet", async ({ page }) => {
+    const sheet = await openApp(page);
+    await playQuickGame(sheet);
+    await sheet.clear().click();
+    await expect(page.locator("dialog[open]")).toBeVisible();
+    await expect.poll(() => depth(page)).toBe(1);
+    await page.goBack();
+    await noDialog(page);
+    await expect(sheet.cell(0, 0)).not.toHaveValue("");
+    await expect.poll(() => depth(page)).toBe(0);
+  });
 
   test("asks, then blanks the whole table; the expansions stay and nothing is saved", async ({ page }) => {
     const sheet = await openApp(page);
@@ -302,6 +319,105 @@ test.describe("Past games", () => {
       await page.mouse.click(5, 5);
       await expect(drawer(page)).toHaveCount(0);
     }
+  });
+
+  test("the back button closes it; closing it another way leaves no step behind", async ({ page }) => {
+    const sheet = await openApp(page);
+    await endQuickGame(sheet);
+    const onEntry = async () => (await depth(page)) === 1;
+    const steps = () => page.evaluate(() => window.history.length);
+    await sheet.pastButton().click();
+    await expect.poll(onEntry).toBe(true);
+    const length = await steps();
+    await page.goBack();
+    await expect(drawer(page)).toHaveCount(0);
+    await expect(sheet.cell(0, 0)).toBeVisible();
+    expect(await onEntry()).toBe(false);
+    // Each way of closing takes the drawer's step back off, so opening it
+    // again doesn't pile up steps for the back button to wade through.
+    await sheet.pastButton().click();
+    await expect.poll(onEntry).toBe(true);
+    await page.keyboard.press("Escape");
+    await expect.poll(onEntry).toBe(false);
+    await sheet.pastButton().click();
+    await expect.poll(onEntry).toBe(true);
+    await page.getByRole("button", { name: "Close ✕" }).click();
+    await expect.poll(onEntry).toBe(false);
+    await sheet.pastButton().click();
+    await expect.poll(onEntry).toBe(true);
+    // A step left behind would have added to the history instead.
+    expect(await steps()).toBe(length);
+    await page.goBack();
+    await expect(drawer(page)).toHaveCount(0);
+  });
+
+  test("reopened before the step back lands, it keeps a step of its own", async ({ page }) => {
+    const sheet = await openApp(page);
+    await endQuickGame(sheet);
+    await sheet.pastButton().click();
+    await expect.poll(() => depth(page)).toBe(1);
+    const steps = await page.evaluate(() => window.history.length);
+    // Open again the moment the step back starts, before it arrives.
+    await page.evaluate(() => {
+      const go = window.history.go.bind(window.history);
+      window.history.go = steps => {
+        window.history.go = go;
+        go(steps);
+        document.querySelector<HTMLElement>(".history-link")!.click();
+      };
+      document.querySelector<HTMLElement>(".past-drawer .past-close")!.click();
+    });
+    await expect(drawer(page)).toBeVisible();
+    await expect.poll(() => depth(page)).toBe(1);
+    expect(await page.evaluate(() => window.history.length)).toBe(steps);
+    await page.goBack();
+    await expect(drawer(page)).toHaveCount(0);
+  });
+
+  test("after a reload with it open, closing it doesn't load the app again", async ({ page }) => {
+    const sheet = await openApp(page);
+    await endQuickGame(sheet);
+    await sheet.pastButton().click();
+    await expect.poll(() => depth(page)).toBe(1);
+    await page.reload();
+    await sheet.pastButton().click();
+    await expect.poll(() => depth(page)).toBe(1);
+    await page.evaluate(() => ((window as unknown as { stayed: boolean }).stayed = true));
+    await page.getByRole("button", { name: "Close ✕" }).click();
+    await expect(drawer(page)).toHaveCount(0);
+    await sheet.pastButton().click();
+    await expect.poll(() => depth(page)).toBe(1);
+    await page.goBack();
+    await expect(drawer(page)).toHaveCount(0);
+    expect(await page.evaluate(() => (window as unknown as { stayed?: boolean }).stayed)).toBe(true);
+  });
+
+  test("back cancels a question first, then closes the drawer", async ({ page }) => {
+    const sheet = await openApp(page);
+    await endQuickGame(sheet);
+    await openFirstSlip(sheet, page);
+    await page.locator(".past-actions").getByRole("button", { name: "Delete" }).click();
+    await expect(page.locator("dialog[open]")).toBeVisible();
+    await expect.poll(() => depth(page)).toBe(2);
+    await page.goBack();
+    await noDialog(page);
+    await expect(full(page)).toBeVisible();
+    expect(await history(page)).toHaveLength(1);
+    // Nothing is pushed back on the way: the drawer keeps the step it had.
+    expect(await depth(page)).toBe(1);
+    await page.goBack();
+    await expect(drawer(page)).toHaveCount(0);
+  });
+
+  test("forward after back doesn't leave a step that does nothing", async ({ page }) => {
+    const sheet = await openApp(page);
+    await endQuickGame(sheet);
+    await sheet.pastButton().click();
+    await expect.poll(() => depth(page)).toBe(1);
+    await page.goBack();
+    await page.goForward();
+    await expect(drawer(page)).toHaveCount(0);
+    await expect.poll(() => depth(page)).toBe(0);
   });
 
   test("the page behind doesn't scroll while it's open", async ({ page }) => {
@@ -454,6 +570,22 @@ test.describe("editing a past game", () => {
     expect(after[0].finishedAt).toBe(before.finishedAt);
     await page.keyboard.press("Escape");
     await expect(sheet.cell(0, 0)).toHaveValue("7");
+  });
+
+  test("back leaves an edit first, dropping its changes; a second back closes", async ({ page }) => {
+    const sheet = await openApp(page);
+    await endQuickGame(sheet);
+    await openFirstSlip(sheet, page);
+    await edit(page).click();
+    await expect.poll(() => depth(page)).toBe(2);
+    await pastCell(page, 0, 0).fill("99");
+    await page.goBack();
+    await expect(edit(page)).toBeVisible();
+    expect(await depth(page)).toBe(1);
+    await expect(full(page).locator(".sheet-result")).toHaveText("Jordan won with 60");
+    await page.goBack();
+    await expect(drawer(page)).toHaveCount(0);
+    expect((await history(page))[0].summary).toBe("Jordan won with 60");
   });
 
   test("Cancel and Escape drop the changes; a second Escape closes", async ({ page }) => {

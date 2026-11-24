@@ -1,4 +1,4 @@
-import { expect, KEYS, openApp, playQuickGame, readStorage, respond, Sheet, test } from "./helpers";
+import { expect, KEYS, openApp, openOtherTab, playQuickGame, readStorage, respond, Sheet, test } from "./helpers";
 
 test.describe("keeping things between visits", () => {
   test("a reload keeps the sheet exactly as it was", async ({ page }) => {
@@ -141,10 +141,9 @@ test.describe("bad or missing storage", () => {
 });
 
 test.describe("two tabs open", () => {
-  test("a game saved in one shows up in the other", async ({ page, context }) => {
+  test("a game saved in one shows up in the other", async ({ page }) => {
     const a = await openApp(page);
-    const other = await context.newPage();
-    await other.goto("/");
+    const other = await openOtherTab(page);
     const b = new Sheet(other);
     await expect(b.pastButton()).toHaveCount(0);
     await playQuickGame(a);
@@ -152,10 +151,9 @@ test.describe("two tabs open", () => {
     await expect(b.pastButton()).toHaveText("Past games · 1");
   });
 
-  test("the sheet follows along in the other tab", async ({ page, context }) => {
+  test("the sheet follows along in the other tab", async ({ page }) => {
     const a = await openApp(page);
-    const other = await context.newPage();
-    await other.goto("/");
+    const other = await openOtherTab(page);
     const b = new Sheet(other);
     await a.setName(0, "Jordan");
     await a.cell(0, 0).fill("42");
@@ -169,27 +167,27 @@ test.describe("two tabs open", () => {
     await expect(a.cell(0, 0)).toHaveValue("42");
   });
 
-  test("ending games in both keeps both games", async ({ page, context }) => {
+  test("ending games in both keeps both games", async ({ page }) => {
     const a = await openApp(page);
-    const other = await context.newPage();
-    await other.goto("/");
+    const other = await openOtherTab(page);
     const b = new Sheet(other);
     await playQuickGame(a, "Alex", "Blake");
     await a.endButton().click();
     await expect(b.endButton()).toBeDisabled();
+    await other.bringToFront();
     await playQuickGame(b, "Casey", "Drew");
     await b.endButton().click();
+    await page.bringToFront();
     const history = await readStorage(page, KEYS.history);
     expect(history).toHaveLength(2);
     await expect(a.pastButton()).toHaveText("Past games · 2");
   });
 
-  test("deleting in one tab removes it from the other", async ({ page, context }) => {
+  test("deleting in one tab removes it from the other", async ({ page }) => {
     const a = await openApp(page);
     await playQuickGame(a);
     await a.endButton().click();
-    const other = await context.newPage();
-    await other.goto("/");
+    const other = await openOtherTab(page);
     const b = new Sheet(other);
     await b.pastButton().click();
     await other.locator("button.past-slip").click();
@@ -200,12 +198,11 @@ test.describe("two tabs open", () => {
 });
 
 test.describe("two tabs, changes crossing", () => {
-  test("a question answered after the other tab changed the sheet does nothing", async ({ page, context }) => {
+  test("a question answered after the other tab changed the sheet does nothing", async ({ page }) => {
     const a = await openApp(page);
     await a.setName(0, "Jordan");
     await a.cell(0, 0).fill("5");
-    const other = await context.newPage();
-    await other.goto("/");
+    const other = await openOtherTab(page);
     const b = new Sheet(other);
     await a.endButton().click();
     await expect(page.locator("dialog[open]")).toBeVisible();
@@ -217,7 +214,7 @@ test.describe("two tabs, changes crossing", () => {
     await expect(a.cell(0, 0)).toHaveValue("5");
   });
 
-  test("an edit open on a game deleted in the other tab can't land on another game", async ({ page, context }) => {
+  test("an edit open on a game deleted in the other tab can't land on another game", async ({ page }) => {
     const a = await openApp(page);
     await playQuickGame(a, "Alex", "Blake");
     await a.endButton().click();
@@ -227,8 +224,7 @@ test.describe("two tabs, changes crossing", () => {
     await page.locator("button.past-slip").first().click();
     await page.locator(".past-actions").getByRole("button", { name: "Edit" }).click();
     await page.locator("#past-cell-0-0").fill("99");
-    const other = await context.newPage();
-    await other.goto("/");
+    const other = await openOtherTab(page);
     await new Sheet(other).pastButton().click();
     await other.locator("button.past-slip").first().click();
     await other.locator(".past-actions").getByRole("button", { name: "Delete" }).click();
@@ -241,7 +237,7 @@ test.describe("two tabs, changes crossing", () => {
     expect(left.players.map((p: { name: string }) => p.name)).toEqual(["Alex", "Blake"]);
   });
 
-  test("two tabs editing the same past game: the second save can't undo the first", async ({ page, context }) => {
+  test("two tabs editing the same past game: the second save can't undo the first", async ({ page }) => {
     const a = await openApp(page);
     await playQuickGame(a);
     await a.endButton().click();
@@ -252,8 +248,7 @@ test.describe("two tabs, changes crossing", () => {
     };
     await openEdit(page);
     await page.locator("#past-cell-0-0").fill("11");
-    const other = await context.newPage();
-    await other.goto("/");
+    const other = await openOtherTab(page);
     await openEdit(other);
     await other.locator("#past-cell-0-1").fill("22");
     await other.getByRole("button", { name: "Save changes" }).click();
@@ -273,10 +268,9 @@ test.describe("two tabs, changes crossing", () => {
   test.describe("with motion", () => {
     test.use({ reducedMotion: "no-preference" });
 
-    test("a change from the other tab while the sheet clears wins", async ({ page, context }) => {
+    test("a change from the other tab while the sheet clears wins", async ({ page }) => {
       const a = await openApp(page);
-      const other = await context.newPage();
-      await other.goto("/");
+      const other = await openOtherTab(page);
       await playQuickGame(a);
       await a.endButton().click();
       await other.evaluate(key => {

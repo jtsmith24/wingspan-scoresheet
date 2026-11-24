@@ -1,5 +1,6 @@
 "use client";
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useBackButton } from "./useBackButton";
 
 export interface DialogAction {
   id: string;
@@ -97,6 +98,8 @@ const AppDialog = ({
     ref.current?.close();
     onDone(choice);
   };
+  // The back button cancels, like Escape.
+  useBackButton(() => finish(null));
 
   const cancel = (
     <button
